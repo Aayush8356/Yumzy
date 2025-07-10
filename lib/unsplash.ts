@@ -44,8 +44,8 @@ export async function searchFoodImages(
   }
 
   try {
-    // Enhanced food-specific search query
-    const foodQuery = `${query} food delicious meal restaurant`
+    // More focused search query for better image matching
+    const foodQuery = query.includes('food') ? query : `${query} food`
     
     const result = await unsplash.search.getPhotos({
       query: foodQuery,
@@ -93,17 +93,15 @@ export async function getFoodImage(
   category: string = '',
   itemId: string = ''
 ): Promise<string> {
-  // Create a comprehensive search query
-  const searchTerms = [
+  // Create a more specific search query for better matching
+  const primarySearchTerms = [
     foodName,
     category,
-    'food',
-    'delicious',
-    'restaurant'
+    'food'
   ].filter(Boolean).join(' ')
 
   try {
-    const images = await searchFoodImages(searchTerms, 20)
+    const images = await searchFoodImages(primarySearchTerms, 20)
     
     if (images.length === 0) {
       return getFallbackImage(category)
