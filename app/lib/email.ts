@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 // Generate auto-reply email content
 function generateAutoReplyEmail(name: string, subject: string, ticketNumber: string) {
   return {
-    subject: `Re: ${subject} - Thank you for contacting SavoryStack [${ticketNumber}]`,
+    subject: `Re: ${subject} - Thank you for contacting Yumzy [${ticketNumber}]`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -24,14 +24,14 @@ function generateAutoReplyEmail(name: string, subject: string, ticketNumber: str
       <body>
         <div class="container">
           <div class="header">
-            <h1>🍕 SavoryStack</h1>
+            <h1>🍕 Yumzy</h1>
             <p>Thank you for reaching out to us!</p>
           </div>
           
           <div class="content">
             <h2>Hi ${name}!</h2>
             
-            <p>Thank you for contacting SavoryStack support. We've received your message and wanted to let you know that we're on it!</p>
+            <p>Thank you for contacting Yumzy support. We've received your message and wanted to let you know that we're on it!</p>
             
             <div class="ticket-box">
               <h3>📋 Your Support Ticket</h3>
@@ -48,7 +48,7 @@ function generateAutoReplyEmail(name: string, subject: string, ticketNumber: str
             <div class="contact-info">
               <h3>📞 Need Immediate Help?</h3>
               <p><strong>Phone:</strong> +1 (555) 123-FOOD (24/7)</p>
-              <p><strong>Email:</strong> support@savorystack.com</p>
+              <p><strong>Email:</strong> support@yumzy.com</p>
               <p><strong>Live Chat:</strong> Available on our website 9 AM - 11 PM</p>
             </div>
             
@@ -56,8 +56,8 @@ function generateAutoReplyEmail(name: string, subject: string, ticketNumber: str
             
             <a href="#" class="button">Track Your Ticket</a>
             
-            <p>Thanks for choosing SavoryStack!</p>
-            <p>The SavoryStack Support Team</p>
+            <p>Thanks for choosing Yumzy!</p>
+            <p>The Yumzy Support Team</p>
           </div>
           
           <div class="footer">
@@ -120,7 +120,7 @@ function generateAdminNotificationEmail(name: string, email: string, subject: st
             
             <p><strong>Response Required:</strong> Please respond to this customer within 24 hours.</p>
             
-            <a href="mailto:${email}?subject=Re: ${subject}&body=Hi ${name},%0A%0AThank you for contacting SavoryStack." 
+            <a href="mailto:${email}?subject=Re: ${subject}&body=Hi ${name},%0A%0AThank you for contacting Yumzy." 
                style="display: inline-block; background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 10px 0;">
               Reply to Customer
             </a>

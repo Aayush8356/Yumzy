@@ -258,10 +258,10 @@ function generateResolutionEmail(message: any) {
               <li><strong>Live Chat:</strong> Available on our website</li>
             </ul>
             
-            <p>Thank you for choosing SavoryStack, and we appreciate your patience while we worked to resolve your issue!</p>
+            <p>Thank you for choosing Yumzy, and we appreciate your patience while we worked to resolve your issue!</p>
             
             <p>Best regards,<br>
-            The SavoryStack Support Team</p>
+            The Yumzy Support Team</p>
           </div>
           
           <div class="footer">

@@ -123,7 +123,7 @@ class ProfessionalNotificationSystem {
       notifications.push({
         id: `welcome-${userId}`,
         type: 'system',
-        title: '👋 Welcome to SavoryStack!',
+        title: '👋 Welcome to Yumzy!',
         message: 'Thank you for joining us! Enjoy premium cuisine delivered fast.',
         isRead: false,
         isImportant: false,

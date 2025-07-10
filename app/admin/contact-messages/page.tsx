@@ -368,7 +368,7 @@ export default function ContactMessagesAdmin() {
                       asChild
                     >
                       <a 
-                        href={`mailto:${message.email}?subject=Re: ${message.subject}&body=Hi ${message.name},%0A%0AThank you for contacting SavoryStack support.%0A%0A`}
+                        href={`mailto:${message.email}?subject=Re: ${message.subject}&body=Hi ${message.name},%0A%0AThank you for contacting Yumzy support.%0A%0A`}
                         className="flex items-center gap-1"
                       >
                         <ExternalLink className="w-3 h-3" />
