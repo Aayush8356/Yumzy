@@ -298,13 +298,13 @@ export default function CheckoutPage() {
 
   if (!cart || cart.items.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center p-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl"
+          className="text-center p-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-xl"
         >
-          <h1 className="text-2xl font-bold mb-4">Your cart is empty</h1>
+          <h1 className="text-2xl font-bold mb-4 dark:text-white">Your cart is empty</h1>
           <Link href="/menu">
             <Button className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
               Browse Menu
@@ -316,9 +316,9 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-orange-100 sticky top-0 z-10">
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-orange-100 dark:border-gray-700 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
@@ -351,7 +351,7 @@ export default function CheckoutPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <Card className="border-0 shadow-xl bg-white/70 backdrop-blur-sm">
+              <Card className="border-0 shadow-xl bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
                 <CardHeader className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-t-lg">
                   <CardTitle className="flex items-center gap-3">
                     <div className="p-2 bg-white/20 rounded-lg">
@@ -447,7 +447,7 @@ export default function CheckoutPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <Card className="border-0 shadow-xl bg-white/70 backdrop-blur-sm">
+              <Card className="border-0 shadow-xl bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
                 <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-t-lg">
                   <CardTitle className="flex items-center gap-3">
                     <div className="p-2 bg-white/20 rounded-lg">
@@ -485,7 +485,7 @@ export default function CheckoutPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <Card className="border-0 shadow-xl bg-white/70 backdrop-blur-sm">
+              <Card className="border-0 shadow-xl bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
                 <CardHeader className="bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-t-lg">
                   <CardTitle className="flex items-center gap-3">
                     <div className="p-2 bg-white/20 rounded-lg">
@@ -525,7 +525,7 @@ export default function CheckoutPage() {
               transition={{ delay: 0.4 }}
               className="sticky top-24"
             >
-              <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm overflow-hidden">
+              <Card className="border-0 shadow-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm overflow-hidden">
                 <CardHeader className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 text-white">
                   <CardTitle className="text-xl font-bold">Order Summary</CardTitle>
                   <p className="text-orange-100 text-sm">Review your delicious order</p>
