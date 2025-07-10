@@ -3,12 +3,14 @@
 ## 1. GitHub Deployment
 
 ### Step 1: Create GitHub Repository
+
 1. Go to [GitHub](https://github.com) and create a new repository
 2. Name it `yumzy` (or your preferred name)
 3. Keep it public or private as per your preference
 4. **DO NOT** initialize with README, .gitignore, or license (we already have these)
 
 ### Step 2: Push to GitHub
+
 ```bash
 # Navigate to your project directory
 cd /Users/aayushgupta/Desktop/project/WebFood/Yumzy
@@ -52,6 +54,7 @@ git push -u origin main
 ```
 
 ### Step 3: Verify Upload
+
 - Check that all files are uploaded to GitHub
 - Verify the README.md displays correctly
 - Ensure .env.local is NOT uploaded (should be in .gitignore)
@@ -59,18 +62,21 @@ git push -u origin main
 ## 2. Vercel Deployment
 
 ### Step 1: Connect to Vercel
+
 1. Go to [Vercel](https://vercel.com)
 2. Sign in with your GitHub account
 3. Click "New Project"
 4. Import your `yumzy` repository
 
 ### Step 2: Configure Build Settings
+
 - **Framework Preset**: Next.js
 - **Build Command**: `npm run build`
 - **Output Directory**: Leave empty (default)
 - **Install Command**: `npm install`
 
 ### Step 3: Environment Variables
+
 Add these environment variables in Vercel dashboard:
 
 ```bash
@@ -95,6 +101,7 @@ ENABLE_DEMO_DATA=true
 ```
 
 ### Step 4: Deploy
+
 1. Click "Deploy"
 2. Wait for build to complete
 3. Your app will be live at `https://your-project-name.vercel.app`
@@ -102,6 +109,7 @@ ENABLE_DEMO_DATA=true
 ## 3. Supabase Database Setup
 
 ### Step 1: Create Supabase Project
+
 1. Go to [Supabase](https://supabase.com)
 2. Click "New Project"
 3. Choose organization and project name
@@ -110,12 +118,14 @@ ENABLE_DEMO_DATA=true
 6. Wait for project to be ready
 
 ### Step 2: Get Database URL
+
 1. Go to Project Settings → Database
 2. Copy the connection string
 3. Replace `[YOUR-PASSWORD]` with your actual password
 4. Format: `postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres`
 
 ### Step 3: Run Database Migrations
+
 ```bash
 # Install dependencies
 npm install
@@ -134,6 +144,7 @@ npm run db:seed
 ### Step 4: Configure Supabase Features
 
 #### Enable Row Level Security (RLS)
+
 ```sql
 -- Enable RLS on all tables
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -149,6 +160,7 @@ ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
 ```
 
 #### Create Policies
+
 ```sql
 -- Users can only see their own data
 CREATE POLICY "Users can view own data" ON users FOR SELECT USING (auth.uid() = id::text);
@@ -164,23 +176,27 @@ CREATE POLICY "Users can create own orders" ON orders FOR INSERT WITH CHECK (aut
 ### Step 5: Supabase Dashboard Features
 
 #### Authentication
+
 - Go to Authentication → Settings
 - Configure email templates
 - Set up social providers (Google, Facebook, etc.)
 - Configure JWT settings
 
 #### Database
+
 - Use SQL Editor for custom queries
 - Monitor database performance
 - Set up backups
 - View table relationships
 
 #### Storage (Optional)
+
 - Create buckets for file uploads
 - Configure policies for user uploads
 - Set up CDN for images
 
 #### Edge Functions (Optional)
+
 - Deploy serverless functions
 - Handle webhooks
 - Process background tasks
@@ -188,6 +204,7 @@ CREATE POLICY "Users can create own orders" ON orders FOR INSERT WITH CHECK (aut
 ### Step 6: Production Optimizations
 
 #### Database Indexing
+
 ```sql
 -- Add indexes for better performance
 CREATE INDEX idx_orders_user_id ON orders(user_id);
@@ -199,11 +216,13 @@ CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 ```
 
 #### Connection Pooling
+
 - Enable connection pooling in Supabase
 - Configure pool size based on your needs
 - Monitor connection usage
 
 #### Monitoring
+
 - Set up alerts for database performance
 - Monitor query performance
 - Track user activity
@@ -211,6 +230,7 @@ CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 ## 4. Post-Deployment Checklist
 
 ### Testing
+
 - [ ] User registration/login works
 - [ ] Menu items load correctly
 - [ ] Cart functionality works
@@ -221,6 +241,7 @@ CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 - [ ] Database queries optimized
 
 ### Security
+
 - [ ] Environment variables secured
 - [ ] CORS configured properly
 - [ ] Rate limiting enabled
@@ -229,6 +250,7 @@ CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 - [ ] XSS protection enabled
 
 ### Performance
+
 - [ ] Images optimized
 - [ ] Database queries optimized
 - [ ] Caching implemented
@@ -236,6 +258,7 @@ CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 - [ ] Bundle size optimized
 
 ### Monitoring
+
 - [ ] Error tracking setup
 - [ ] Performance monitoring
 - [ ] User analytics
@@ -245,6 +268,7 @@ CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 ## 5. Maintenance
 
 ### Regular Tasks
+
 - Monitor database performance
 - Update dependencies
 - Review error logs
@@ -252,6 +276,7 @@ CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 - Update security patches
 
 ### Scaling
+
 - Monitor user growth
 - Optimize database queries
 - Consider read replicas
@@ -261,6 +286,7 @@ CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 ## Support
 
 If you encounter issues:
+
 1. Check Vercel deployment logs
 2. Review Supabase database logs
 3. Verify environment variables
@@ -268,3 +294,13 @@ If you encounter issues:
 5. Check browser console for errors
 
 Your Yumzy app is now ready for production! 🚀
+
+<!-- DATABASE_URL = postgresql://postgres:Aayush%401076@db.bnigaokzunwsfaijkzva.supabase.co:5432/postgres
+POSTGRES_URL = postgresql://postgres:Aayush%401076@db.bnigaokzunwsfaijkzva.supabase.co:5432/postgres
+NODE_ENV = production
+NEXT_PUBLIC_APP_URL = https://yumzy-five.vercel.app/
+JWT_SECRET = your-super-secret-jwt-key-for-yumzy-app-2024
+UNSPLASH_ACCESS_KEY = kWDk-NvD5EmOwEX1ff54RVExiWbGEW9qpuIs0wSvZGY
+UNSPLASH_SECRET_KEY = _qo9Pp_VvReY2a_tKJSu37uzM_RwLCqYefhChBdI5Qs
+NEXT_PUBLIC_RAZORPAY_KEY_ID = rzp_live_Id6ureskMPEgy9
+RAZORPAY_KEY_SECRET = 5DswpMfZj6Xcqg2fJMFfxK3W -->

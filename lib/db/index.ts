@@ -5,9 +5,13 @@ import * as schema from './schema'
 // Database connection
 const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL || 'postgresql://localhost:5432/yumzy'
 
-// Create the connection
+// Create the connection with Vercel/serverless optimized settings
 const client = postgres(connectionString, {
+  prepare: false,
   max: 1,
+  idle_timeout: 20,
+  max_lifetime: 60 * 30,
+  ssl: { rejectUnauthorized: false },
   onnotice: () => {}, // Disable notice logs
 })
 
