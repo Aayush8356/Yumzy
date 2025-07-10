@@ -16,13 +16,77 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by email
-    const users = await db
+    let users = await db
       .select()
       .from(usersTable)
       .where(eq(usersTable.email, email))
       .limit(1)
 
-    if (users.length === 0) {
+    // Auto-create demo users if they don't exist and demo is enabled
+    const isDemoEnabled = process.env.ENABLE_DEMO_DATA === 'true' || process.env.SEED_DEMO_DATA === 'true'
+    
+    if (users.length === 0 && isDemoEnabled) {
+      // Check if this is a demo user email
+      const demoUsers = {
+        'demo@yumzy.com': {
+          email: 'demo@yumzy.com',
+          name: 'Demo User',
+          phone: '+1 (555) 987-6543',
+          role: 'user',
+          isVerified: true,
+          preferences: {
+            notifications: true,
+            newsletter: false,
+            dietaryRestrictions: ['Vegetarian'],
+          },
+        },
+        'guptaaayush537@gmail.com': {
+          email: 'guptaaayush537@gmail.com',
+          name: 'Aayush Gupta',
+          phone: '+1 (555) 123-4567',
+          role: 'admin',
+          isVerified: true,
+          preferences: {
+            notifications: true,
+            newsletter: true,
+            dietaryRestrictions: [],
+          },
+        }
+      }
+
+      if (demoUsers[email as keyof typeof demoUsers]) {
+        // Create the demo user
+        const newUser = await db
+          .insert(usersTable)
+          .values(demoUsers[email as keyof typeof demoUsers])
+          .returning()
+        
+        users = newUser
+        console.log(`✅ Auto-created demo user: ${email}`)
+      } else {
+        // For any other email in demo mode, create a generic demo user
+        const genericDemoUser = {
+          email: email,
+          name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1),
+          phone: '+1 (555) 000-0000',
+          role: 'user',
+          isVerified: true,
+          preferences: {
+            notifications: true,
+            newsletter: false,
+            dietaryRestrictions: [],
+          },
+        }
+
+        const newUser = await db
+          .insert(usersTable)
+          .values(genericDemoUser)
+          .returning()
+        
+        users = newUser
+        console.log(`✅ Auto-created generic demo user: ${email}`)
+      }
+    } else if (users.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Invalid email or password' },
         { status: 401 }

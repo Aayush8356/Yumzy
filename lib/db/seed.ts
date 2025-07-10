@@ -137,7 +137,7 @@ const sampleFoodItems = generateDatabaseFoodItems()
 
 // Sample users - only create if SEED_DEMO_DATA environment variable is set
 const createSampleUsers = () => {
-  const shouldSeedDemo = process.env.SEED_DEMO_DATA === 'true'
+  const shouldSeedDemo = process.env.SEED_DEMO_DATA === 'true' || process.env.ENABLE_DEMO_DATA === 'true'
   
   if (!shouldSeedDemo) {
     console.log('ℹ️  Skipping demo users (set SEED_DEMO_DATA=true to enable)')
@@ -178,7 +178,7 @@ const sampleUsers = createSampleUsers()
 
 // Sample notifications - only create if SEED_DEMO_DATA environment variable is set
 const createSampleNotifications = () => {
-  const shouldSeedDemo = process.env.SEED_DEMO_DATA === 'true'
+  const shouldSeedDemo = process.env.SEED_DEMO_DATA === 'true' || process.env.ENABLE_DEMO_DATA === 'true'
   
   if (!shouldSeedDemo) {
     console.log('ℹ️  Skipping demo notifications (set SEED_DEMO_DATA=true to enable)')
