@@ -13,6 +13,14 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Yumzy",
   description: "Delicious food delivery platform",
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', type: 'image/x-icon' }
+    ],
+    apple: '/icon.svg',
+    shortcut: '/favicon.ico'
+  },
 };
 
 export default function RootLayout({
