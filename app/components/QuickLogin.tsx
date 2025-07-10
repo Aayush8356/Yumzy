@@ -82,9 +82,16 @@ export function QuickLogin() {
           <LogIn className="w-5 h-5" />
           Quick Demo Login
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Use any email (e.g., user@example.com) and any password to test the demo.
-        </p>
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Try these demo credentials or use any email/password:
+          </p>
+          <div className="p-3 bg-muted rounded-lg text-xs space-y-1">
+            <div><strong>Demo User:</strong> demo@yumzy.com</div>
+            <div><strong>Admin:</strong> guptaaayush537@gmail.com</div>
+            <div><strong>Password:</strong> Any password works</div>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleLogin} className="space-y-4">
@@ -110,13 +117,43 @@ export function QuickLogin() {
               required
             />
           </div>
-          <Button 
-            type="submit" 
-            className="w-full"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Logging in...' : 'Login to View Menu'}
-          </Button>
+          <div className="space-y-2">
+            <Button 
+              type="submit" 
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Logging in...' : 'Login to View Menu'}
+            </Button>
+            
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEmail('demo@yumzy.com')
+                  setPassword('demo')
+                }}
+                className="text-xs"
+              >
+                Fill Demo User
+              </Button>
+              <Button 
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEmail('guptaaayush537@gmail.com')
+                  setPassword('admin')
+                }}
+                className="text-xs"
+              >
+                Fill Admin
+              </Button>
+            </div>
+          </div>
+          
           <p className="text-xs text-muted-foreground text-center">
             Use any email and password to login and see the premium menu
           </p>
