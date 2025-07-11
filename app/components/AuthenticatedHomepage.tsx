@@ -61,7 +61,11 @@ interface TrendingItem {
   category: string
 }
 
-export function AuthenticatedHomepage() {
+interface AuthenticatedHomepageProps {
+  isDemoUser?: boolean
+}
+
+export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomepageProps) {
   const { user } = useAuth()
   const { cart } = useCart()
   const { toast } = useToast()
@@ -172,11 +176,22 @@ export function AuthenticatedHomepage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold mb-2">
-                {getGreeting()}, {user?.name?.split(' ')[0]}! 👋
+                {getGreeting()}, {user?.name?.split(' ')[0]}! 
+                {isDemoUser ? ' 🎯' : ' 👋'}
               </h1>
               <p className="text-muted-foreground">
-                What are you craving today?
+                {isDemoUser 
+                  ? "Explore our demo menu and features (checkout is read-only)"
+                  : "Welcome to your personalized food experience!"
+                }
               </p>
+              {isDemoUser && (
+                <div className="mt-2">
+                  <Badge variant="secondary" className="text-xs">
+                    Demo Account - Limited Features
+                  </Badge>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-4">
               {cartItems.length > 0 && (
@@ -187,12 +202,20 @@ export function AuthenticatedHomepage() {
                   </Button>
                 </Link>
               )}
-              <Link href="/dashboard">
-                <Button variant="outline" className="gap-2">
-                  <Activity className="w-4 h-4" />
-                  Dashboard
+              {!isDemoUser && (
+                <Link href="/dashboard">
+                  <Button variant="outline" className="gap-2">
+                    <Activity className="w-4 h-4" />
+                    My Dashboard
+                  </Button>
+                </Link>
+              )}
+              {isDemoUser && (
+                <Button variant="outline" className="gap-2" disabled>
+                  <Zap className="w-4 h-4" />
+                  Demo Mode
                 </Button>
-              </Link>
+              )}
             </div>
           </div>
         </motion.div>

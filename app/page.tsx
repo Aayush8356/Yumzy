@@ -4,6 +4,7 @@ import { Navigation } from '@/components/Navigation'
 import { HeroSection } from '@/components/HeroSection'
 import { FoodCategories } from '@/components/FoodCategories'
 import { AuthenticatedHomepage } from '@/components/AuthenticatedHomepage'
+import { PremiumDashboard } from '@/components/PremiumDashboard'
 import { QuickLogin } from '@/components/QuickLogin'
 import { FeaturedFood } from '@/components/FeaturedFood'
 import { StatsSection } from '@/components/StatsSection'
@@ -12,9 +13,12 @@ import { ContactSection } from '@/components/ContactSection'
 import { Footer } from '@/components/Footer'
 import { PerformanceIndicator } from '@/components/PerformanceIndicator'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 
 export default function Home() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, user } = useAuth()
+  const router = useRouter()
 
   if (isLoading) {
     return (
@@ -34,12 +38,48 @@ export default function Home() {
     )
   }
 
+  // Redirect admin users to admin dashboard
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'admin') {
+      router.push('/admin')
+    }
+  }, [isAuthenticated, user, router])
+
   if (isAuthenticated) {
+    // If admin, don't render anything (redirecting)
+    if (user?.role === 'admin') {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Redirecting to Admin Dashboard...</p>
+          </div>
+        </div>
+      )
+    }
+
+    // Check if demo user
+    const isDemoUser = user?.email === 'demo@yumzy.com' || user?.email?.includes('demo')
+    
+    if (isDemoUser) {
+      // Demo users get limited homepage experience
+      return (
+        <div className="min-h-screen bg-background smooth-scroll">
+          <Navigation />
+          <main className="gpu-accelerated">
+            <AuthenticatedHomepage isDemoUser={true} />
+          </main>
+          <PerformanceIndicator />
+        </div>
+      )
+    }
+    
+    // Normal users get premium dashboard experience
     return (
       <div className="min-h-screen bg-background smooth-scroll">
         <Navigation />
         <main className="gpu-accelerated">
-          <AuthenticatedHomepage />
+          <PremiumDashboard />
         </main>
         <PerformanceIndicator />
       </div>

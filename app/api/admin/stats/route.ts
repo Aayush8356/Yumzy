@@ -22,9 +22,14 @@ export async function GET(request: NextRequest) {
   try {
     const [totalOrders] = await db.select({ value: count() }).from(ordersTable);
     
-    // Count only regular users (exclude admin users)
+    // Count only regular users (exclude admin and demo users)
     const [totalUsers] = await db.select({ value: count() }).from(usersTable)
-      .where(ne(usersTable.role, 'admin'));
+      .where(
+        and(
+          ne(usersTable.role, 'admin'),
+          not(like(usersTable.email, '%demo%'))
+        )
+      );
     
     const [totalMenuItems] = await db.select({ value: count() }).from(foodItemsTable);
 
