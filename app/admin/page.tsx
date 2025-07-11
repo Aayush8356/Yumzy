@@ -220,14 +220,6 @@ function AdminPage() {
             </div>
             <div className="flex items-center gap-4">
               <Button
-                variant="outline"
-                onClick={() => window.open('/', '_blank')}
-                className="gap-2"
-              >
-                <Home className="w-4 h-4" />
-                Preview Site
-              </Button>
-              <Button
                 variant="destructive"
                 onClick={handleLogout}
                 className="gap-2"

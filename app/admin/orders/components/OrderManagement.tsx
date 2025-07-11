@@ -42,10 +42,16 @@ export function OrderManagement() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch('/api/admin/orders');
+        const response = await fetch('/api/admin/orders', {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
         const data = await response.json();
+        console.log('Orders API response:', data); // Debug log
         if (data.success) {
-          setOrders(data.orders);
+          setOrders(data.orders || []);
         }
       } catch (error) {
         console.error("Failed to fetch orders:", error);
@@ -148,108 +154,125 @@ export function OrderManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-mono text-sm">
-                    {order.id.slice(0, 8)}...
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{order.customerName || 'Unknown'}</div>
-                      <div className="text-sm text-gray-500">{order.customerEmail}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">${order.total}</TableCell>
-                  <TableCell>
-                    <Badge className={getStatusBadge(order.status)}>
-                      {order.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setSelectedOrder(order)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle>Order Details</DialogTitle>
-                          </DialogHeader>
-                          {selectedOrder && (
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <label className="font-medium">Order ID:</label>
-                                  <p className="font-mono text-sm">{selectedOrder.id}</p>
-                                </div>
-                                <div>
-                                  <label className="font-medium">Status:</label>
-                                  <Badge className={getStatusBadge(selectedOrder.status)}>
-                                    {selectedOrder.status}
-                                  </Badge>
-                                </div>
-                              </div>
-                              <div>
-                                <label className="font-medium">Customer:</label>
-                                <p>{selectedOrder.customerName || 'Unknown'}</p>
-                                <p className="text-sm text-gray-500">{selectedOrder.customerEmail}</p>
-                              </div>
-                              {selectedOrder.deliveryAddress && (
-                                <div>
-                                  <label className="font-medium">Delivery Address:</label>
-                                  <p>{selectedOrder.deliveryAddress}</p>
-                                </div>
-                              )}
-                              <div>
-                                <label className="font-medium">Order Items:</label>
-                                <div className="mt-2 space-y-2">
-                                  {selectedOrder.items?.map((item, index) => (
-                                    <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                                      <div>
-                                        <span className="font-medium">{item.name}</span>
-                                        <span className="text-sm text-gray-500 ml-2">×{item.quantity}</span>
-                                      </div>
-                                      <span>${(item.price * item.quantity).toFixed(2)}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              <div className="border-t pt-4">
-                                <div className="flex justify-between items-center font-medium">
-                                  <span>Total:</span>
-                                  <span>${selectedOrder.total}</span>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </DialogContent>
-                      </Dialog>
-                      <Select 
-                        value={order.status} 
-                        onValueChange={(newStatus) => handleStatusChange(order.id, newStatus)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="preparing">Preparing</SelectItem>
-                          <SelectItem value="on-the-way">On the way</SelectItem>
-                          <SelectItem value="delivered">Delivered</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
+              {filteredOrders.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <div className="text-gray-500 dark:text-gray-400">
+                      {orders.length === 0 ? (
+                        <div>
+                          <p className="mb-2">No orders found in the database.</p>
+                          <p className="text-sm">Orders will appear here once customers place orders.</p>
+                        </div>
+                      ) : (
+                        <p>No orders match your search criteria.</p>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredOrders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-mono text-sm">
+                      {order.id.slice(0, 8)}...
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{order.customerName || 'Unknown'}</div>
+                        <div className="text-sm text-gray-500">{order.customerEmail}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">${order.total}</TableCell>
+                    <TableCell>
+                      <Badge className={getStatusBadge(order.status)}>
+                        {order.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setSelectedOrder(order)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Order Details</DialogTitle>
+                            </DialogHeader>
+                            {selectedOrder && (
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <label className="font-medium">Order ID:</label>
+                                    <p className="font-mono text-sm">{selectedOrder.id}</p>
+                                  </div>
+                                  <div>
+                                    <label className="font-medium">Status:</label>
+                                    <Badge className={getStatusBadge(selectedOrder.status)}>
+                                      {selectedOrder.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="font-medium">Customer:</label>
+                                  <p>{selectedOrder.customerName || 'Unknown'}</p>
+                                  <p className="text-sm text-gray-500">{selectedOrder.customerEmail}</p>
+                                </div>
+                                {selectedOrder.deliveryAddress && (
+                                  <div>
+                                    <label className="font-medium">Delivery Address:</label>
+                                    <p>{selectedOrder.deliveryAddress}</p>
+                                  </div>
+                                )}
+                                <div>
+                                  <label className="font-medium">Order Items:</label>
+                                  <div className="mt-2 space-y-2">
+                                    {selectedOrder.items?.map((item, index) => (
+                                      <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                                        <div>
+                                          <span className="font-medium">{item.name}</span>
+                                          <span className="text-sm text-gray-500 ml-2">×{item.quantity}</span>
+                                        </div>
+                                        <span>${(item.price * item.quantity).toFixed(2)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="border-t pt-4">
+                                  <div className="flex justify-between items-center font-medium">
+                                    <span>Total:</span>
+                                    <span>${selectedOrder.total}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                        <Select 
+                          value={order.status} 
+                          onValueChange={(newStatus) => handleStatusChange(order.id, newStatus)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="preparing">Preparing</SelectItem>
+                            <SelectItem value="on-the-way">On the way</SelectItem>
+                            <SelectItem value="delivered">Delivered</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

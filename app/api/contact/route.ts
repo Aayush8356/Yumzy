@@ -4,6 +4,8 @@ import { contactMessages, users } from '@/lib/db/schema'
 import { eq, desc, count } from 'drizzle-orm'
 import { sendAutoReplyEmail, sendAdminNotificationEmail } from '@/lib/email'
 
+export const dynamic = 'force-dynamic'
+
 // Contact message interface
 interface ContactMessage {
   name: string
@@ -107,8 +109,15 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
+    const countOnly = searchParams.get('countOnly') === 'true'
 
     const whereClause = status && status !== 'all' ? eq(contactMessages.status, status) : undefined
+
+    if (countOnly) {
+      const totalResult = await db.select({ count: count() }).from(contactMessages).where(whereClause)
+      const totalMessages = totalResult[0].count
+      return NextResponse.json({ success: true, count: totalMessages })
+    }
 
     const messages = await db
       .select()

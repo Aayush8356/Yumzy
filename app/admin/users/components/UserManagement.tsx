@@ -12,10 +12,16 @@ export function UserManagement() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch('/api/admin/users');
+        const response = await fetch('/api/admin/users', {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
         const data = await response.json();
+        console.log('Users API response:', data); // Debug log
         if (data.success) {
-          setUsers(data.users);
+          setUsers(data.users || []);
         }
       } catch (error) {
         console.error("Failed to fetch users:", error);
@@ -57,38 +63,63 @@ export function UserManagement() {
     );
   }
 
+  if (users.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500 dark:text-gray-400 mb-4">No users found in the database.</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500">
+          Users will appear here once people register for your application.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>User ID</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Role</TableHead>
-          <TableHead>Verified</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {users.map((user: any) => (
-          <TableRow key={user.id}>
-            <TableCell>{user.id.slice(0, 8)}</TableCell>
-            <TableCell>{user.name}</TableCell>
-            <TableCell>{user.email}</TableCell>
-            <TableCell>
-              <Select value={user.role} onValueChange={(newRole) => handleRoleChange(user.id, newRole)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </TableCell>
-            <TableCell>{user.isVerified ? 'Yes' : 'No'}</TableCell>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>User ID</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead>Verified</TableHead>
+            <TableHead>Created</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {users.map((user: any) => (
+            <TableRow key={user.id}>
+              <TableCell className="font-mono text-sm">{user.id.slice(0, 8)}...</TableCell>
+              <TableCell className="font-medium">{user.name}</TableCell>
+              <TableCell>{user.email}</TableCell>
+              <TableCell>
+                <Select value={user.role} onValueChange={(newRole) => handleRoleChange(user.id, newRole)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </TableCell>
+              <TableCell>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  user.isVerified 
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' 
+                    : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                }`}>
+                  {user.isVerified ? 'Verified' : 'Pending'}
+                </span>
+              </TableCell>
+              <TableCell className="text-sm text-gray-500 dark:text-gray-400">
+                {new Date(user.createdAt).toLocaleDateString()}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
