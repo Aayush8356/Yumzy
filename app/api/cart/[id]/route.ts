@@ -20,9 +20,17 @@ export async function PATCH(
       )
     }
 
-    if (quantity !== undefined && quantity < 1) {
+    if (quantity !== undefined && quantity < 0) {
       return NextResponse.json(
-        { success: false, error: 'Quantity must be at least 1' },
+        { success: false, error: 'Quantity cannot be negative' },
+        { status: 400 }
+      )
+    }
+
+    // If quantity is 0, this should be handled by the DELETE endpoint instead
+    if (quantity !== undefined && quantity === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Use DELETE endpoint to remove items with quantity 0' },
         { status: 400 }
       )
     }

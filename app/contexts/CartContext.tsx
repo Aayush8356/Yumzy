@@ -223,7 +223,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const itemInCart = cart?.items.find(item => item.foodItem.id === foodItemId);
 
     if (!itemInCart) {
-      return await addToCart(foodItemId, quantity, specialInstructions);
+      if (quantity > 0) {
+        return await addToCart(foodItemId, quantity, specialInstructions);
+      }
+      return true; // No item to remove
+    }
+
+    // If quantity is 0, remove the item instead of updating
+    if (quantity === 0) {
+      return await removeFromCart(itemInCart.id);
     }
 
     try {

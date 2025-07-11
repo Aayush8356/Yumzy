@@ -31,11 +31,11 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
     router.push('/menu')
   }
 
-  const updateQuantity = async (cartItemId: string, newQuantity: number) => {
+  const updateQuantity = async (cartItemId: string, foodItemId: string, newQuantity: number) => {
     if (newQuantity === 0) {
       await removeFromCart(cartItemId)
     } else {
-      await updateCartItem(cartItemId, newQuantity)
+      await updateCartItem(foodItemId, newQuantity)
     }
   }
 
@@ -126,7 +126,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                                 variant="outline"
                                 size="icon"
                                 className="h-8 w-8"
-                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                onClick={() => updateQuantity(item.id, item.foodItem.id, item.quantity - 1)}
                                 disabled={isLoading}
                               >
                                 <Minus className="h-3 w-3" />
@@ -136,7 +136,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                                 variant="outline"
                                 size="icon"
                                 className="h-8 w-8"
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                onClick={() => updateQuantity(item.id, item.foodItem.id, item.quantity + 1)}
                                 disabled={isLoading}
                               >
                                 <Plus className="h-3 w-3" />

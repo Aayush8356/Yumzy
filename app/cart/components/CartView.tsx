@@ -39,7 +39,7 @@ export function CartView() {
                 quantity={item.quantity}
                 onQuantityChange={(newQuantity) => {
                   if (newQuantity > 0) {
-                    updateCartItem(item.id, newQuantity);
+                    updateCartItem(item.foodItem.id, newQuantity);
                   } else {
                     removeFromCart(item.id);
                   }
