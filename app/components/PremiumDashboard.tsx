@@ -58,7 +58,7 @@ interface RecommendedItem {
 
 export function PremiumDashboard() {
   const { user } = useAuth()
-  const { cart } = useCart()
+  const { cart, addToCart } = useCart()
   const { toast } = useToast()
   
   const [loading, setLoading] = useState(true)
@@ -75,6 +75,42 @@ export function PremiumDashboard() {
     if (hour < 12) return 'Good morning'
     if (hour < 17) return 'Good afternoon'
     return 'Good evening'
+  }
+
+  const handleAddToCart = async (item: RecommendedItem) => {
+    if (!user?.id) {
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to add items to cart.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      await addToCart({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        image: item.image,
+        description: item.description,
+        category: item.category,
+        cookTime: item.cookTime,
+        quantity: 1
+      })
+
+      toast({
+        title: "Added to cart!",
+        description: `${item.name} has been added to your cart.`,
+      })
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   useEffect(() => {
@@ -129,22 +165,50 @@ export function PremiumDashboard() {
           setFavoriteCount(favoritesData.favorites?.length || 0)
         }
 
-        // Fetch recommended food items (real menu items)
-        const menuResponse = await fetch('/api/menu?limit=2&featured=true')
+        // Fetch recommended food items (real menu items) - fallback to regular menu if featured fails
+        let menuResponse = await fetch('/api/menu?limit=2&featured=true')
+        if (!menuResponse.ok) {
+          menuResponse = await fetch('/api/menu?limit=2')
+        }
+        
         if (menuResponse.ok) {
           const menuData = await menuResponse.json()
           if (menuData.success && menuData.items?.length > 0) {
             const formattedItems = menuData.items.map((item: any) => ({
               id: item.id,
               name: item.name,
-              image: item.image,
+              image: item.image || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=300&fit=crop', // fallback image
               price: parseFloat(item.price),
               rating: parseFloat(item.rating || '4.5'),
-              description: item.description,
-              cookTime: item.cookTime,
+              description: item.description || 'Delicious dish made with fresh ingredients.',
+              cookTime: item.cookTime || '15-20 min',
               category: item.category?.name || 'Popular'
             }))
             setRecommendedItems(formattedItems)
+          } else {
+            // If no items from API, show some default recommendations
+            setRecommendedItems([
+              {
+                id: 'default_1',
+                name: 'Chef\'s Special Pizza',
+                image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop',
+                price: 24.99,
+                rating: 4.8,
+                description: 'Wood-fired pizza with fresh mozzarella and basil',
+                cookTime: '15 min',
+                category: 'Pizza'
+              },
+              {
+                id: 'default_2',
+                name: 'Grilled Salmon',
+                image: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400&h=300&fit=crop',
+                price: 32.99,
+                rating: 4.9,
+                description: 'Fresh Atlantic salmon with seasonal vegetables',
+                cookTime: '20 min',
+                category: 'Seafood'
+              }
+            ])
           }
         }
 
@@ -192,7 +256,7 @@ export function PremiumDashboard() {
                 <h1 className="text-3xl font-bold">
                   {getGreeting()}, {user?.name?.split(' ')[0]}! 
                 </h1>
-                <Crown className="w-8 h-8 text-yellow-500" />
+                {user?.role === 'admin' && <Crown className="w-8 h-8 text-yellow-500" />}
               </div>
               <p className="text-muted-foreground text-lg">
                 Your personalized culinary experience awaits
@@ -372,7 +436,11 @@ export function PremiumDashboard() {
                         </span>
                         <Badge variant="outline">{item.category}</Badge>
                       </div>
-                      <Button size="sm" className="gap-1">
+                      <Button 
+                        size="sm" 
+                        className="gap-1"
+                        onClick={() => handleAddToCart(item)}
+                      >
                         <Plus className="w-3 h-3" />
                         Add
                       </Button>
