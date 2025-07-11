@@ -341,7 +341,7 @@ export function PremiumDashboard() {
                           <Clock className="w-3 h-3" />
                           {item.cookTime}
                         </span>
-                        <Badge variant="outline" size="sm">{item.category}</Badge>
+                        <Badge variant="outline">{item.category}</Badge>
                       </div>
                       <Button size="sm" className="gap-1">
                         <Plus className="w-3 h-3" />
