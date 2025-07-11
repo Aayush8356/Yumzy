@@ -226,7 +226,7 @@ export function HeroSection() {
                             </div>
                           </div>
                           <div className="text-right sm:text-right">
-                            {dailySpecial.originalPrice && dailySpecial.originalPrice > 0 && (
+                            {dailySpecial.originalPrice && Number(dailySpecial.originalPrice) > 0 && (
                               <span className="text-sm text-gray-300 line-through block">₹{dailySpecial.originalPrice}</span>
                             )}
                             <div className="text-2xl md:text-3xl font-bold text-emerald-400">₹{dailySpecial.price}</div>
