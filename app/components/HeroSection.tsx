@@ -195,10 +195,10 @@ export function HeroSection() {
                       decoding="async"
                       onError={handleImageError}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     
-                    <div className="absolute bottom-0 left-0 right-0 p-4 md:p-8 text-white">
-                      <div className="space-y-2 md:space-y-4">
+                    <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 text-white">
+                      <div className="space-y-3 md:space-y-4">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
                             <h3 className="text-xl md:text-2xl lg:text-3xl font-bold mb-1 md:mb-2 leading-tight">{dailySpecial.name}</h3>
@@ -214,7 +214,7 @@ export function HeroSection() {
                           )}
                         </div>
                         
-                        <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                           <div className="flex items-center space-x-4">
                             <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5">
                               <Star className="w-4 h-4 text-yellow-400 fill-current" />
@@ -225,32 +225,33 @@ export function HeroSection() {
                               <span className="text-sm font-semibold">{dailySpecial.cookTime}</span>
                             </div>
                           </div>
-                          <div className="text-right sm:text-right mt-2 sm:mt-0">
+                          <div className="text-right sm:text-right">
                             {dailySpecial.originalPrice && (
                               <span className="text-sm text-gray-300 line-through block">${dailySpecial.originalPrice}</span>
                             )}
-                            <div className="text-2xl md:text-3xl font-bold text-emerald-400">${dailySpecial.price}</div>
+                            <div className="text-2xl md:text-3xl font-bold text-emerald-400">₹{dailySpecial.price}</div>
                           </div>
                         </div>
+
+                        {/* Integrated Order Button */}
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.6, delay: 1.4 }}
+                          className="pt-4 border-t border-white/20"
+                        >
+                          <Button 
+                            size="lg" 
+                            className="w-full bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 hover:from-orange-600 hover:via-red-600 hover:to-orange-600 text-white px-6 py-4 text-base md:text-lg font-semibold rounded-xl shadow-[0_8px_30px_-8px_rgba(255,69,0,0.4)] hover:shadow-[0_12px_40px_-8px_rgba(255,69,0,0.5)] transition-all duration-300 group"
+                            onClick={handleAddToCart}
+                          >
+                            <ShoppingCart className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />
+                            Order Now - ₹{dailySpecial.price}
+                          </Button>
+                        </motion.div>
                       </div>
                     </div>
                   </div>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 1.4 }}
-                  className="flex justify-center mt-8"
-                >
-                  <Button 
-                    size="lg" 
-                    className="bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 hover:from-orange-600 hover:via-red-600 hover:to-orange-600 text-white px-10 py-6 text-lg font-semibold rounded-2xl shadow-[0_10px_40px_-10px_rgba(255,69,0,0.4)] hover:shadow-[0_20px_60px_-10px_rgba(255,69,0,0.5)] transition-all duration-300 group"
-                    onClick={handleAddToCart}
-                  >
-                    <ShoppingCart className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />
-                    Order Now - ₹{dailySpecial.price}
-                  </Button>
                 </motion.div>
               </div>
             ) : (
