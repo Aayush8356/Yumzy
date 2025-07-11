@@ -127,15 +127,32 @@ export function QuickLogin() {
             
             <Button 
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
-              onClick={() => {
-                setEmail('demo@yumzy.com')
-                setPassword('demo')
+              onClick={async () => {
+                setIsLoading(true)
+                const success = await login({ 
+                  email: 'demo@yumzy.com', 
+                  password: 'demo' 
+                })
+                if (success) {
+                  toast({
+                    title: "Demo Login Successful!",
+                    description: "You're now using the demo account with limited checkout access.",
+                  })
+                } else {
+                  toast({
+                    title: "Demo login failed",
+                    description: "Please try again.",
+                    variant: "destructive"
+                  })
+                }
+                setIsLoading(false)
               }}
               className="w-full text-xs"
+              disabled={isLoading}
             >
-              Fill Demo User Credentials
+              {isLoading ? 'Logging in...' : '🚀 Demo Login (Instant)'}
             </Button>
           </div>
           

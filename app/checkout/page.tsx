@@ -45,6 +45,9 @@ export default function CheckoutPage() {
   const { toast } = useToast()
   const router = useRouter()
   
+  // Check if current user is demo user
+  const isDemoUser = user?.email === 'demo@yumzy.com' || user?.email?.includes('demo')
+  
   const [deliveryAddress, setDeliveryAddress] = useState({
     street: '',
     city: '',
@@ -583,7 +586,7 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
-                  {!razorpayKeyId && (
+                  {!razorpayKeyId && !isDemoUser && (
                     <div className="mx-6 mb-6 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-xl">
                       <div className="flex items-center gap-2 text-orange-700">
                         <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
@@ -595,11 +598,33 @@ export default function CheckoutPage() {
                     </div>
                   )}
 
+                  {isDemoUser && (
+                    <div className="mx-6 mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl">
+                      <div className="flex items-center gap-2 text-blue-700">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm font-medium">Demo Mode</span>
+                      </div>
+                      <p className="text-xs text-blue-600 mt-1">
+                        You're using a demo account. Checkout is read-only for demonstration purposes.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="p-6">
                     <Button 
-                      onClick={handleProceedToPayment}
+                      onClick={isDemoUser ? () => {
+                        toast({
+                          title: "Demo Mode",
+                          description: "This is a demo account. Real checkout is disabled for demonstration purposes.",
+                          variant: "default"
+                        })
+                      } : handleProceedToPayment}
                       disabled={isLoading}
-                      className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                      className={`w-full h-14 text-lg font-semibold rounded-xl shadow-lg transition-all duration-300 ${
+                        isDemoUser 
+                          ? 'bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 hover:shadow-xl transform hover:scale-[1.02]'
+                      } text-white`}
                     >
                       {isLoading ? (
                         <div className="flex items-center gap-2">
@@ -609,9 +634,11 @@ export default function CheckoutPage() {
                       ) : (
                         <div className="flex items-center gap-2">
                           <Shield className="w-5 h-5" />
-                          {!razorpayKeyId ? 
-                            `Create Order (Dev) - ₹${cart.summary.total.toFixed(2)}` : 
-                            `Secure Payment - ₹${cart.summary.total.toFixed(2)}`
+                          {isDemoUser ? 
+                            `Demo Mode - ₹${cart.summary.total.toFixed(2)}` :
+                            !razorpayKeyId ? 
+                              `Create Order (Dev) - ₹${cart.summary.total.toFixed(2)}` : 
+                              `Secure Payment - ₹${cart.summary.total.toFixed(2)}`
                           }
                         </div>
                       )}
