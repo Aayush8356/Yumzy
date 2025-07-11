@@ -88,12 +88,32 @@ function AdminPage() {
     return 'Just now';
   };
 
-  const getActivityColor = (type: string) => {
+  const getActivityStyles = (type: string) => {
     switch (type) {
-      case 'user_registration': return 'green';
-      case 'order_placed': return 'blue';
-      case 'system_update': return 'yellow';
-      default: return 'gray';
+      case 'user_registration': 
+        return {
+          bg: 'bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800',
+          dot: 'bg-green-500',
+          text: 'text-green-900 dark:text-green-100'
+        };
+      case 'order_placed': 
+        return {
+          bg: 'bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800',
+          dot: 'bg-blue-500',
+          text: 'text-blue-900 dark:text-blue-100'
+        };
+      case 'system_update': 
+        return {
+          bg: 'bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800',
+          dot: 'bg-amber-500',
+          text: 'text-amber-900 dark:text-amber-100'
+        };
+      default: 
+        return {
+          bg: 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+          dot: 'bg-gray-500',
+          text: 'text-gray-900 dark:text-gray-100'
+        };
     }
   };
 
@@ -193,17 +213,19 @@ function AdminPage() {
                   ))}
                 </div>
               ) : recentActivity.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {recentActivity.map((activity) => {
-                    const color = getActivityColor(activity.type);
+                    const styles = getActivityStyles(activity.type);
                     return (
                       <div 
                         key={activity.id} 
-                        className={`flex items-center gap-3 p-3 bg-${color}-50 dark:bg-${color}-900/50 rounded-lg`}
+                        className={`flex items-center gap-3 p-4 rounded-lg transition-colors hover:opacity-80 ${styles.bg}`}
                       >
-                        <div className={`w-2 h-2 bg-${color}-500 rounded-full`}></div>
-                        <p className="text-sm text-gray-900 dark:text-gray-100 flex-1">{activity.message}</p>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${styles.dot}`}></div>
+                        <p className={`text-sm flex-1 font-medium ${styles.text}`}>
+                          {activity.message}
+                        </p>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                           {formatTimeAgo(activity.timestamp)}
                         </span>
                       </div>
