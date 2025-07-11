@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const minPrice = searchParams.get('minPrice')
     const maxPrice = searchParams.get('maxPrice')
     const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || (isAuthenticated ? '1000' : '6'))
+    const limit = parseInt(searchParams.get('limit') || (isAuthenticated ? '12' : '6'))
     const isPublicOnly = searchParams.get('public') === 'true'
     
     // Simulate a small delay for realistic API behavior

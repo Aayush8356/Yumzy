@@ -33,6 +33,9 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const typeFilter = searchParams.get('type');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const offset = (page - 1) * limit;
     
     const activities: ActivityItem[] = [];
 
@@ -159,15 +162,25 @@ export async function GET(request: NextRequest) {
     // Sort all activities by timestamp (most recent first)
     activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-    // Take only the most recent activities based on filter
-    const limit = typeFilter && typeFilter !== 'all' ? 20 : 15;
-    const recentActivities = activities.slice(0, limit);
+    // Apply pagination
+    const totalActivities = activities.length;
+    const paginatedActivities = activities.slice(offset, offset + limit);
+    const totalPages = Math.ceil(totalActivities / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
 
     return NextResponse.json({
       success: true,
-      activities: recentActivities,
-      filter: typeFilter || 'all',
-      total: activities.length
+      activities: paginatedActivities,
+      pagination: {
+        page,
+        limit,
+        total: totalActivities,
+        totalPages,
+        hasNextPage,
+        hasPrevPage
+      },
+      filter: typeFilter || 'all'
     });
   } catch (error) {
     console.error('Failed to fetch recent activity:', error);

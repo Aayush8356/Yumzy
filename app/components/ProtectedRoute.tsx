@@ -58,19 +58,21 @@ export function ProtectedRoute({
 // Public route component (redirects authenticated users)
 export function PublicRoute({ 
   children, 
-  redirectTo = '/dashboard' 
+  redirectTo 
 }: { 
   children: React.ReactNode
   redirectTo?: string 
 }) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, user } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.push(redirectTo)
+      // Determine redirect based on user role if not explicitly specified
+      const destination = redirectTo || (user?.role === 'admin' ? '/admin' : '/dashboard')
+      router.push(destination)
     }
-  }, [isLoading, isAuthenticated, router, redirectTo])
+  }, [isLoading, isAuthenticated, user, router, redirectTo])
 
   if (isLoading) {
     return (

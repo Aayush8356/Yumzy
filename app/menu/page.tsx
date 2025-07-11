@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Star, Clock, Filter, Search, ShoppingCart, Heart, Info, Leaf, Award, Zap } from 'lucide-react'
+import { Star, Clock, Filter, Search, ShoppingCart, Heart, Info, Leaf, Award, Zap, ChevronLeft, ChevronRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -77,6 +77,16 @@ export default function MenuPage() {
   const [sortBy, setSortBy] = useState('name')
   const [sortOrder, setSortOrder] = useState('asc')
   
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 12, // Show 12 items per page
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  })
+  
   // Filters
   const [filters, setFilters] = useState({
     vegetarian: false,
@@ -138,6 +148,8 @@ export default function MenuPage() {
           glutenFree: filters.glutenFree.toString(),
           spicy: filters.spicy.toString(),
           popular: filters.popular.toString(),
+          page: pagination.page.toString(),
+          limit: pagination.limit.toString(),
         })
 
         const response = await fetch(`/api/menu?${params}`, { headers })
@@ -145,6 +157,11 @@ export default function MenuPage() {
         
         if (data.success) {
           setItems(data.items)
+          
+          // Update pagination state
+          if (data.pagination) {
+            setPagination(data.pagination)
+          }
           
           // Show notification if user is not authenticated about limited view
           if (!isAuthenticated && data.items.length < data.totalAvailable) {
@@ -169,13 +186,49 @@ export default function MenuPage() {
 
     const debounceTimer = setTimeout(fetchItems, 300)
     return () => clearTimeout(debounceTimer)
-  }, [searchTerm, selectedCategory, sortBy, sortOrder, filters, toast, isAuthenticated])
+  }, [searchTerm, selectedCategory, sortBy, sortOrder, filters, pagination.page, pagination.limit, toast, isAuthenticated])
 
   const handleFilterChange = (filterKey: keyof typeof filters, checked: boolean) => {
     setFilters(prev => ({
       ...prev,
       [filterKey]: checked
     }))
+    // Reset to first page when filters change
+    setPagination(prev => ({ ...prev, page: 1 }))
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, page: newPage }))
+    // Scroll to top when page changes
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleLimitChange = (newLimit: number) => {
+    setPagination(prev => ({ ...prev, limit: newLimit, page: 1 }))
+  }
+
+  // Reset pagination when search or category changes
+  const resetPagination = () => {
+    setPagination(prev => ({ ...prev, page: 1 }))
+  }
+
+  // Update search term and reset pagination
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value)
+    resetPagination()
+  }
+
+  // Update category and reset pagination
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category)
+    resetPagination()
+  }
+
+  // Update sort and reset pagination
+  const handleSortChange = (sortBy: string, sortOrder: string) => {
+    setSortBy(sortBy)
+    setSortOrder(sortOrder)
+    resetPagination()
   }
 
   return (
@@ -217,7 +270,7 @@ export default function MenuPage() {
                 <Input
                   placeholder="Search for dishes, cuisines, or ingredients..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -226,7 +279,7 @@ export default function MenuPage() {
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant={selectedCategory === 'all' ? 'default' : 'outline'}
-                  onClick={() => setSelectedCategory('all')}
+                  onClick={() => handleCategoryChange('all')}
                   size="sm"
                 >
                   All Categories
@@ -235,7 +288,7 @@ export default function MenuPage() {
                   <Button
                     key={category.id}
                     variant={selectedCategory === category.name ? 'default' : 'outline'}
-                    onClick={() => setSelectedCategory(category.name)}
+                    onClick={() => handleCategoryChange(category.name)}
                     size="sm"
                   >
                     {category.name} ({category.itemCount})
@@ -267,7 +320,7 @@ export default function MenuPage() {
 
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Sort by:</span>
-                  <Select value={sortBy} onValueChange={setSortBy}>
+                  <Select value={sortBy} onValueChange={(value) => handleSortChange(value, sortOrder)}>
                     <SelectTrigger className="w-32">
                       <SelectValue />
                     </SelectTrigger>
@@ -278,7 +331,7 @@ export default function MenuPage() {
                       <SelectItem value="popularity">Popularity</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={sortOrder} onValueChange={setSortOrder}>
+                  <Select value={sortOrder} onValueChange={(value) => handleSortChange(sortBy, value)}>
                     <SelectTrigger className="w-20">
                       <SelectValue />
                     </SelectTrigger>
@@ -309,6 +362,44 @@ export default function MenuPage() {
           </div>
         )}
 
+        {/* Results Summary */}
+        {!loading && items.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mb-6"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-muted/50 rounded-lg p-4">
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-muted-foreground">
+                  Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} items
+                </span>
+                {pagination.total > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Items per page:</span>
+                    <Select value={pagination.limit.toString()} onValueChange={(value) => handleLimitChange(parseInt(value))}>
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="6">6</SelectItem>
+                        <SelectItem value="12">12</SelectItem>
+                        <SelectItem value="24">24</SelectItem>
+                        <SelectItem value="48">48</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+              
+              {/* Page Info */}
+              <div className="text-sm text-muted-foreground">
+                Page {pagination.page} of {pagination.totalPages}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Menu Items Grid */}
         {!loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -320,6 +411,108 @@ export default function MenuPage() {
               />
             ))}
           </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && pagination.totalPages > 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-12 flex justify-center"
+          >
+            <div className="flex items-center gap-2">
+              {/* Previous Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={!pagination.hasPrev}
+                className="flex items-center gap-1"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+
+              {/* Page Numbers */}
+              <div className="flex items-center gap-1">
+                {/* First page */}
+                {pagination.page > 3 && (
+                  <>
+                    <Button
+                      variant={1 === pagination.page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(1)}
+                    >
+                      1
+                    </Button>
+                    {pagination.page > 4 && (
+                      <span className="px-2 text-muted-foreground">...</span>
+                    )}
+                  </>
+                )}
+
+                {/* Previous pages */}
+                {pagination.page > 2 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.page - 1)}
+                  >
+                    {pagination.page - 1}
+                  </Button>
+                )}
+
+                {/* Current page */}
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="cursor-default"
+                >
+                  {pagination.page}
+                </Button>
+
+                {/* Next pages */}
+                {pagination.page < pagination.totalPages - 1 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.page + 1)}
+                  >
+                    {pagination.page + 1}
+                  </Button>
+                )}
+
+                {/* Last page */}
+                {pagination.page < pagination.totalPages - 2 && (
+                  <>
+                    {pagination.page < pagination.totalPages - 3 && (
+                      <span className="px-2 text-muted-foreground">...</span>
+                    )}
+                    <Button
+                      variant={pagination.totalPages === pagination.page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.totalPages)}
+                    >
+                      {pagination.totalPages}
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {/* Next Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={!pagination.hasNext}
+                className="flex items-center gap-1"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </motion.div>
         )}
 
         {!loading && items.length === 0 && (

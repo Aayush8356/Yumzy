@@ -19,7 +19,9 @@ import {
   BarChart3,
   Home,
   RefreshCw,
-  Filter
+  Filter,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +41,15 @@ function AdminPage() {
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [loadingActivity, setLoadingActivity] = useState(true);
   const [activityFilter, setActivityFilter] = useState<string>('all');
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityPagination, setActivityPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
   const [quickActionCounts, setQuickActionCounts] = useState({
     users: 0,
     orders: 0,
@@ -65,13 +76,20 @@ function AdminPage() {
     }
   };
 
-  const fetchRecentActivity = async () => {
+  const fetchRecentActivity = async (page: number = activityPage, resetPage: boolean = false) => {
     try {
       setLoadingActivity(true);
-      const url = activityFilter === 'all' 
-        ? '/api/admin/recent-activity'
-        : `/api/admin/recent-activity?type=${activityFilter}`;
-        
+      const params = new URLSearchParams({
+        page: (resetPage ? 1 : page).toString(),
+        limit: '10'
+      });
+      
+      if (activityFilter !== 'all') {
+        params.set('type', activityFilter);
+      }
+      
+      const url = `/api/admin/recent-activity?${params.toString()}`;
+      
       const response = await fetch(url, {
         cache: 'no-cache',
         headers: {
@@ -86,6 +104,18 @@ function AdminPage() {
           timestamp: new Date(activity.timestamp)
         }));
         setRecentActivity(activitiesWithDates);
+        setActivityPagination(data.pagination || {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPrevPage: false
+        });
+        
+        if (resetPage) {
+          setActivityPage(1);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch recent activity:', error);
@@ -129,18 +159,24 @@ function AdminPage() {
   useEffect(() => {
     // Only fetch if user is authenticated and is admin
     if (user?.role === 'admin') {
-      fetchRecentActivity();
+      // Reset to page 1 when filter changes
+      fetchRecentActivity(1, true);
       fetchQuickActionCounts();
-      
-      // Set up real-time updates every 30 seconds
+    }
+  }, [user?.role, activityFilter]); // Re-fetch when user role or filter changes
+
+  // Separate effect for real-time updates (less frequent)
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      // Set up real-time updates every 60 seconds (reduced frequency)
       const interval = setInterval(() => {
-        fetchRecentActivity();
+        fetchRecentActivity(activityPage);
         fetchQuickActionCounts();
-      }, 30000);
+      }, 60000);
 
       return () => clearInterval(interval);
     }
-  }, [user?.role, activityFilter]); // Re-fetch when user role or filter changes
+  }, [user?.role, activityPage]); // Re-setup interval when page changes
 
   const formatTimeAgo = (timestamp: Date) => {
     const now = new Date();
@@ -336,7 +372,7 @@ function AdminPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  fetchRecentActivity();
+                  fetchRecentActivity(activityPage);
                   fetchQuickActionCounts();
                 }}
                 className="gap-2"
@@ -385,6 +421,50 @@ function AdminPage() {
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   <p>No recent activity found.</p>
                   <p className="text-sm mt-1">Activity will appear here as users interact with your platform.</p>
+                </div>
+              )}
+              
+              {/* Pagination Controls */}
+              {!loadingActivity && recentActivity.length > 0 && activityPagination.totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Showing {((activityPagination.page - 1) * activityPagination.limit) + 1} to{' '}
+                    {Math.min(activityPagination.page * activityPagination.limit, activityPagination.total)} of{' '}
+                    {activityPagination.total} activities
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newPage = activityPage - 1;
+                        setActivityPage(newPage);
+                        fetchRecentActivity(newPage);
+                      }}
+                      disabled={!activityPagination.hasPrevPage || loadingActivity}
+                      className="gap-1"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Previous
+                    </Button>
+                    <span className="text-sm font-medium px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded">
+                      {activityPagination.page} of {activityPagination.totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newPage = activityPage + 1;
+                        setActivityPage(newPage);
+                        fetchRecentActivity(newPage);
+                      }}
+                      disabled={!activityPagination.hasNextPage || loadingActivity}
+                      className="gap-1"
+                    >
+                      Next
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
