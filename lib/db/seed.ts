@@ -216,12 +216,27 @@ export async function seedDatabase() {
   try {
     console.log('🌱 Starting database seeding...')
 
-    // Clean existing data
-    await db.delete(cart)
-    await db.delete(notifications)
-    await db.delete(users)
-    await db.delete(foodItems)
-    await db.delete(categories)
+    // Check if data already exists before cleaning
+    const existingCategories = await db.select().from(categories).limit(1)
+    const existingFoodItems = await db.select().from(foodItems).limit(1)
+    
+    if (existingCategories.length > 0 || existingFoodItems.length > 0) {
+      console.log('ℹ️  Data already exists. Skipping clean up to preserve existing data.')
+      console.log('ℹ️  To force re-seed, manually truncate tables first.')
+      return true
+    }
+
+    // Clean existing data only if no important data exists
+    try {
+      await db.delete(cart)
+      await db.delete(notifications) 
+      await db.delete(users)
+      await db.delete(foodItems)
+      await db.delete(categories)
+      console.log('✅ Cleaned existing data')
+    } catch (cleanError) {
+      console.log('ℹ️  Could not clean existing data, proceeding with insertion...')
+    }
 
     // Insert categories
     console.log('📂 Inserting categories...')

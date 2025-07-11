@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import withAdminAuth from '@/app/components/withAdminAuth';
 import { AdminDashboard } from './components/AdminDashboard';
 import { Button } from '@/components/ui/button';
@@ -21,10 +21,20 @@ import {
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
+interface ActivityItem {
+  id: string;
+  type: 'user_registration' | 'order_placed' | 'system_update';
+  message: string;
+  timestamp: Date;
+  data?: any;
+}
+
 function AdminPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(true);
 
   const handleLogout = async () => {
     try {
@@ -41,6 +51,49 @@ function AdminPage() {
         description: "Please try again.",
         variant: "destructive"
       });
+    }
+  };
+
+  useEffect(() => {
+    const fetchRecentActivity = async () => {
+      try {
+        const response = await fetch('/api/admin/recent-activity');
+        const data = await response.json();
+        if (data.success) {
+          // Convert timestamp strings back to Date objects
+          const activitiesWithDates = data.activities.map((activity: any) => ({
+            ...activity,
+            timestamp: new Date(activity.timestamp)
+          }));
+          setRecentActivity(activitiesWithDates);
+        }
+      } catch (error) {
+        console.error('Failed to fetch recent activity:', error);
+      } finally {
+        setLoadingActivity(false);
+      }
+    };
+
+    fetchRecentActivity();
+  }, []);
+
+  const formatTimeAgo = (timestamp: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - timestamp.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    return 'Just now';
+  };
+
+  const getActivityColor = (type: string) => {
+    switch (type) {
+      case 'user_registration': return 'green';
+      case 'order_placed': return 'blue';
+      case 'system_update': return 'yellow';
+      default: return 'gray';
     }
   };
 
@@ -121,23 +174,40 @@ function AdminPage() {
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Recent Activity</h2>
           <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/50 rounded-lg">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <p className="text-sm text-gray-900 dark:text-gray-100">New user registration: mink bhai</p>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">2 hours ago</span>
+              {loadingActivity ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="animate-pulse flex items-center gap-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                      <div className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                      <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded flex-1"></div>
+                      <div className="h-3 w-16 bg-gray-300 dark:bg-gray-600 rounded"></div>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/50 rounded-lg">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <p className="text-sm text-gray-900 dark:text-gray-100">System deployment completed successfully</p>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">4 hours ago</span>
+              ) : recentActivity.length > 0 ? (
+                <div className="space-y-4">
+                  {recentActivity.map((activity) => {
+                    const color = getActivityColor(activity.type);
+                    return (
+                      <div 
+                        key={activity.id} 
+                        className={`flex items-center gap-3 p-3 bg-${color}-50 dark:bg-${color}-900/50 rounded-lg`}
+                      >
+                        <div className={`w-2 h-2 bg-${color}-500 rounded-full`}></div>
+                        <p className="text-sm text-gray-900 dark:text-gray-100 flex-1">{activity.message}</p>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatTimeAgo(activity.timestamp)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="flex items-center gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/50 rounded-lg">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                  <p className="text-sm text-gray-900 dark:text-gray-100">Database maintenance scheduled</p>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">1 day ago</span>
+              ) : (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <p>No recent activity found.</p>
+                  <p className="text-sm mt-1">Activity will appear here as users interact with your platform.</p>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>

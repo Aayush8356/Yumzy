@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { ordersTable, usersTable, foodItemsTable } from '@/lib/db/schema';
+import { orders, users, foodItems } from '@/lib/db/schema';
 import { count } from 'drizzle-orm';
 import { getAuth } from '@clerk/nextjs/server';
 import { eq, ne, and, not, like } from 'drizzle-orm';
@@ -9,7 +9,7 @@ async function verifyAdmin(request: NextRequest) {
   const { userId } = getAuth(request);
   if (!userId) return false;
 
-  const user = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   return user.length > 0 && user[0].role === 'admin';
 }
 
@@ -20,18 +20,18 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [totalOrders] = await db.select({ value: count() }).from(ordersTable);
+    const [totalOrders] = await db.select({ value: count() }).from(orders);
     
     // Count only regular users (exclude admin and demo users)
-    const [totalUsers] = await db.select({ value: count() }).from(usersTable)
+    const [totalUsers] = await db.select({ value: count() }).from(users)
       .where(
         and(
-          ne(usersTable.role, 'admin'),
-          not(like(usersTable.email, '%demo%'))
+          ne(users.role, 'admin'),
+          not(like(users.email, '%demo%'))
         )
       );
     
-    const [totalMenuItems] = await db.select({ value: count() }).from(foodItemsTable);
+    const [totalMenuItems] = await db.select({ value: count() }).from(foodItems);
 
     return NextResponse.json({
       success: true,
