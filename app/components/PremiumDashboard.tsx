@@ -80,45 +80,74 @@ export function PremiumDashboard() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Simulate API calls for user personalization
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // Mock personalized data
-        setActiveOrder({
-          id: 'order_123',
-          items: ['Gourmet Pizza', 'Caesar Salad'],
-          total: 45.99,
-          status: 'preparing',
-          estimatedDelivery: '25-30 min',
-          createdAt: new Date().toISOString()
-        })
-        
-        setRecommendedItems([
-          {
-            id: '1',
-            name: 'Truffle Pasta',
-            image: 'https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=400',
-            price: 28.99,
-            rating: 4.9,
-            description: 'Handmade pasta with black truffle and parmesan',
-            cookTime: '15 min',
-            category: 'Italian'
-          },
-          {
-            id: '2', 
-            name: 'Wagyu Steak',
-            image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400',
-            price: 65.99,
-            rating: 5.0,
-            description: 'Premium A5 Wagyu with roasted vegetables',
-            cookTime: '20 min',
-            category: 'Premium'
+        if (!user?.id) {
+          setLoading(false)
+          return
+        }
+
+        // Fetch real user orders
+        const ordersResponse = await fetch(`/api/orders?userId=${user.id}`)
+        if (ordersResponse.ok) {
+          const ordersData = await ordersResponse.json()
+          
+          // Find active order (preparing, on-the-way)
+          const activeOrders = ordersData.orders?.filter((order: any) => 
+            order.status === 'preparing' || order.status === 'on-the-way'
+          ) || []
+          
+          if (activeOrders.length > 0) {
+            const latestActiveOrder = activeOrders[0]
+            setActiveOrder({
+              id: latestActiveOrder.id,
+              items: latestActiveOrder.items?.map((item: any) => item.name) || [],
+              total: parseFloat(latestActiveOrder.total),
+              status: latestActiveOrder.status,
+              estimatedDelivery: latestActiveOrder.estimatedDeliveryTime || '30-45 min',
+              createdAt: latestActiveOrder.createdAt
+            })
           }
-        ])
-        
-        setWeeklySpent(156.50)
-        setTotalOrders(12)
-        setFavoriteCount(8)
+
+          // Calculate user stats from real orders
+          const completedOrders = ordersData.orders?.filter((order: any) => order.status === 'delivered') || []
+          setTotalOrders(completedOrders.length)
+          
+          const thisWeekStart = new Date()
+          thisWeekStart.setDate(thisWeekStart.getDate() - 7)
+          const weeklyOrders = completedOrders.filter((order: any) => 
+            new Date(order.createdAt) >= thisWeekStart
+          )
+          const weeklyTotal = weeklyOrders.reduce((sum: number, order: any) => 
+            sum + parseFloat(order.total), 0
+          )
+          setWeeklySpent(weeklyTotal)
+        }
+
+        // Fetch user's favorite food items
+        const favoritesResponse = await fetch(`/api/favorites?userId=${user.id}`)
+        if (favoritesResponse.ok) {
+          const favoritesData = await favoritesResponse.json()
+          setFavoriteCount(favoritesData.favorites?.length || 0)
+        }
+
+        // Fetch recommended food items (real menu items)
+        const menuResponse = await fetch('/api/menu?limit=2&featured=true')
+        if (menuResponse.ok) {
+          const menuData = await menuResponse.json()
+          if (menuData.success && menuData.items?.length > 0) {
+            const formattedItems = menuData.items.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              image: item.image,
+              price: parseFloat(item.price),
+              rating: parseFloat(item.rating || '4.5'),
+              description: item.description,
+              cookTime: item.cookTime,
+              category: item.category?.name || 'Popular'
+            }))
+            setRecommendedItems(formattedItems)
+          }
+        }
+
       } catch (error) {
         console.error('Error fetching user data:', error)
       } finally {
@@ -127,7 +156,7 @@ export function PremiumDashboard() {
     }
 
     fetchUserData()
-  }, [])
+  }, [user?.id])
 
   if (loading) {
     return (

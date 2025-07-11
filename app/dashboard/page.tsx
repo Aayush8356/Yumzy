@@ -55,6 +55,7 @@ export default function DashboardPage() {
   const [orderStats, setOrderStats] = useState<OrderStats | null>(null)
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([])
   const [monthlyProgress, setMonthlyProgress] = useState(75)
+  const [favoriteCount, setFavoriteCount] = useState(0)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -71,43 +72,77 @@ export default function DashboardPage() {
 
     const fetchDashboardData = async () => {
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        setOrderStats({
-          thisMonth: 8,
-          lastMonth: 5,
-          totalSpent: 2840.50,
-          avgOrderValue: 355.06,
-          favoriteCuisine: 'Italian',
-          totalOrders: 24
-        })
+        if (!user?.id) {
+          setLoading(false)
+          return
+        }
 
-        setRecentOrders([
-          {
-            id: 'ORD-001',
-            date: '2025-07-09',
-            items: ['Truffle Pizza', 'Caesar Salad', 'Tiramisu'],
-            total: 58.99,
-            status: 'delivered',
-            rating: 5
-          },
-          {
-            id: 'ORD-002', 
-            date: '2025-07-07',
-            items: ['Wagyu Burger', 'Truffle Fries'],
-            total: 45.50,
-            status: 'delivered',
-            rating: 4
-          },
-          {
-            id: 'ORD-003',
-            date: '2025-07-05',
-            items: ['Sushi Platter', 'Miso Soup'],
-            total: 72.99,
-            status: 'delivered'
-          }
-        ])
+        // Fetch real user orders
+        const ordersResponse = await fetch(`/api/orders?userId=${user.id}`)
+        if (ordersResponse.ok) {
+          const ordersData = await ordersResponse.json()
+          const orders = ordersData.orders || []
+
+          // Calculate real stats
+          const now = new Date()
+          const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+          const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+          const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
+
+          const thisMonthOrders = orders.filter((order: any) => 
+            new Date(order.createdAt) >= thisMonth
+          )
+          const lastMonthOrders = orders.filter((order: any) => 
+            new Date(order.createdAt) >= lastMonth && new Date(order.createdAt) <= lastMonthEnd
+          )
+
+          const totalSpent = orders.reduce((sum: number, order: any) => 
+            sum + parseFloat(order.total || '0'), 0
+          )
+          const avgOrderValue = orders.length > 0 ? totalSpent / orders.length : 0
+
+          // Get most frequent cuisine from orders (simplified)
+          const cuisines = orders.flatMap((order: any) => 
+            order.items?.map((item: any) => item.category) || []
+          )
+          const cuisineCount = cuisines.reduce((acc: any, cuisine: string) => {
+            acc[cuisine] = (acc[cuisine] || 0) + 1
+            return acc
+          }, {})
+          const favoriteCuisine = Object.keys(cuisineCount).length > 0 
+            ? Object.keys(cuisineCount).reduce((a, b) => cuisineCount[a] > cuisineCount[b] ? a : b)
+            : 'None yet'
+
+          setOrderStats({
+            thisMonth: thisMonthOrders.length,
+            lastMonth: lastMonthOrders.length,
+            totalSpent: totalSpent,
+            avgOrderValue: avgOrderValue,
+            favoriteCuisine: favoriteCuisine,
+            totalOrders: orders.length
+          })
+
+          // Set recent orders (real data)
+          const formattedOrders = orders
+            .slice(0, 3)
+            .map((order: any) => ({
+              id: order.id,
+              date: order.createdAt,
+              items: order.items?.map((item: any) => item.name) || [],
+              total: parseFloat(order.total || '0'),
+              status: order.status,
+              rating: order.rating
+            }))
+          setRecentOrders(formattedOrders)
+        }
+
+        // Fetch user favorites count
+        const favoritesResponse = await fetch(`/api/favorites?userId=${user.id}`)
+        if (favoritesResponse.ok) {
+          const favoritesData = await favoritesResponse.json()
+          setFavoriteCount(favoritesData.favorites?.length || 0)
+        }
+
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
       } finally {
@@ -367,19 +402,19 @@ export default function DashboardPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center p-4 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg">
                   <Timer className="w-8 h-8 mx-auto mb-2 text-indigo-500" />
-                  <p className="text-2xl font-bold text-indigo-700">18 min</p>
+                  <p className="text-2xl font-bold text-indigo-700">-</p>
                   <p className="text-sm text-indigo-600">Avg Delivery Time</p>
                 </div>
                 
                 <div className="text-center p-4 bg-gradient-to-br from-pink-50 to-rose-50 rounded-lg">
                   <Heart className="w-8 h-8 mx-auto mb-2 text-pink-500" />
-                  <p className="text-2xl font-bold text-pink-700">12</p>
+                  <p className="text-2xl font-bold text-pink-700">{favoriteCount}</p>
                   <p className="text-sm text-pink-600">Favorite Items</p>
                 </div>
                 
                 <div className="text-center p-4 bg-gradient-to-br from-teal-50 to-green-50 rounded-lg">
                   <MapPin className="w-8 h-8 mx-auto mb-2 text-teal-500" />
-                  <p className="text-2xl font-bold text-teal-700">3</p>
+                  <p className="text-2xl font-bold text-teal-700">-</p>
                   <p className="text-sm text-teal-600">Delivery Locations</p>
                 </div>
               </div>
