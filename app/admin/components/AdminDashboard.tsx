@@ -3,6 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -11,11 +12,18 @@ export function AdminDashboard() {
     totalMenuItems: 0,
   });
   const [loading, setLoading] = useState(true);
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/admin/stats');
+        setLoading(true);
+        const response = await fetch('/api/admin/stats', {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
         const data = await response.json();
         if (data.success) {
           setStats(data.stats);
@@ -27,8 +35,11 @@ export function AdminDashboard() {
       }
     };
 
-    fetchStats();
-  }, []);
+    // Only fetch if user is authenticated and is admin
+    if (isAuthenticated && user?.role === 'admin') {
+      fetchStats();
+    }
+  }, [isAuthenticated, user?.role]); // Re-fetch when auth state changes
 
   if (loading) {
     return <div>Loading...</div>;

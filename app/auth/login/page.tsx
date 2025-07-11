@@ -44,7 +44,23 @@ export default function LoginPage() {
         title: "Welcome back!",
         description: "You have been successfully logged in.",
       })
-      // Redirect based on user role - this will be handled by the main page useEffect
+      
+      // Check if admin user and redirect directly to admin panel
+      const savedUser = localStorage.getItem('user')
+      if (savedUser) {
+        try {
+          const user = JSON.parse(savedUser)
+          if (user.role === 'admin') {
+            router.push('/admin')
+            setIsLoading(false)
+            return
+          }
+        } catch (error) {
+          console.error('Error parsing user data:', error)
+        }
+      }
+      
+      // Non-admin users go to main page
       router.push('/')
     } else {
       toast({
@@ -74,7 +90,23 @@ export default function LoginPage() {
         title: "Demo login successful!",
         description: "Welcome to the demo account.",
       })
-      // Redirect to home - role-based redirect will handle the rest
+      
+      // Check if admin user and redirect directly to admin panel
+      const savedUser = localStorage.getItem('user')
+      if (savedUser) {
+        try {
+          const user = JSON.parse(savedUser)
+          if (user.role === 'admin') {
+            router.push('/admin')
+            setIsLoading(false)
+            return
+          }
+        } catch (error) {
+          console.error('Error parsing user data:', error)
+        }
+      }
+      
+      // Non-admin users go to main page
       router.push('/')
     }
     

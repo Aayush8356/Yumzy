@@ -57,7 +57,13 @@ function AdminPage() {
   useEffect(() => {
     const fetchRecentActivity = async () => {
       try {
-        const response = await fetch('/api/admin/recent-activity');
+        setLoadingActivity(true);
+        const response = await fetch('/api/admin/recent-activity', {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
         const data = await response.json();
         if (data.success) {
           // Convert timestamp strings back to Date objects
@@ -74,8 +80,11 @@ function AdminPage() {
       }
     };
 
-    fetchRecentActivity();
-  }, []);
+    // Only fetch if user is authenticated and is admin
+    if (user?.role === 'admin') {
+      fetchRecentActivity();
+    }
+  }, [user?.role]); // Re-fetch when user role changes
 
   const formatTimeAgo = (timestamp: Date) => {
     const now = new Date();
