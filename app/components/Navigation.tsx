@@ -152,15 +152,15 @@ export function Navigation() {
               </Link>
               {isAuthenticated && (
                 <Link 
-                  href="/dashboard" 
+                  href={user?.role === 'admin' ? '/admin' : '/dashboard'}
                   className={`transition-colors font-medium relative ${
-                    isActive('/dashboard') 
+                    (user?.role === 'admin' ? isActive('/admin') : isActive('/dashboard'))
                       ? 'text-primary' 
                       : 'text-foreground hover:text-primary'
                   }`}
                 >
                   Dashboard
-                  {isActive('/dashboard') && (
+                  {(user?.role === 'admin' ? isActive('/admin') : isActive('/dashboard')) && (
                     <motion.div
                       layoutId="activeDesktop"
                       className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full"
@@ -231,7 +231,10 @@ export function Navigation() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/dashboard" className={isActive('/dashboard') ? 'text-primary font-medium' : ''}>
+                      <Link 
+                        href={user?.role === 'admin' ? '/admin' : '/dashboard'} 
+                        className={(user?.role === 'admin' ? isActive('/admin') : isActive('/dashboard')) ? 'text-primary font-medium' : ''}
+                      >
                         <Settings className="mr-2 h-4 w-4" />
                         Dashboard
                       </Link>
@@ -381,10 +384,10 @@ export function Navigation() {
               
               {!isLoading && isAuthenticated && (
                 <Link 
-                  href="/dashboard"
+                  href={user?.role === 'admin' ? '/admin' : '/dashboard'}
                   onClick={() => setIsOpen(false)}
                   className={`block w-full text-left px-3 py-2 rounded-md transition-colors ${
-                    isActive('/dashboard') 
+                    (user?.role === 'admin' ? isActive('/admin') : isActive('/dashboard'))
                       ? 'text-primary bg-primary/10 font-medium' 
                       : 'text-foreground hover:text-primary hover:bg-accent'
                   }`}

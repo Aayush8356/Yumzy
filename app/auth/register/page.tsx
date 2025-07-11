@@ -66,7 +66,8 @@ export default function RegisterPage() {
         title: "Account created successfully!",
         description: "Welcome to Yumzy! You can now start ordering.",
       })
-      router.push('/dashboard')
+      // Redirect to home - role-based redirect will handle the rest
+      router.push('/')
     } else {
       toast({
         title: "Registration failed",
