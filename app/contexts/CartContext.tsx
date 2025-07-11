@@ -363,7 +363,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const authToken = localStorage.getItem('authToken')
-      const response = await fetch(`/api/cart/${cartItemId}`, {
+      const response = await fetch(`/api/cart/${cartItemId}?userId=${user.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authToken}`,

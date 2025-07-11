@@ -3,47 +3,51 @@
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { useCart } from '@/contexts/CartContext'
+import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/hooks/use-toast'
+import Link from 'next/link'
 
 const featuredFoods = [
   {
-    id: 1,
+    id: 'featured-1',
     name: 'Truffle Beef Burger',
     description: 'Premium beef patty with truffle sauce, aged cheddar, and caramelized onions',
-    price: '$24.99',
-    originalPrice: '$29.99',
+    price: '24.99',
+    originalPrice: '29.99',
     rating: 4.9,
     image: '🍔',
     badge: 'Chef\'s Special',
     category: 'Burgers'
   },
   {
-    id: 2,
+    id: 'featured-2',
     name: 'Margherita Suprema',
     description: 'Wood-fired pizza with San Marzano tomatoes, buffalo mozzarella, and fresh basil',
-    price: '$18.99',
-    originalPrice: '$22.99',
+    price: '18.99',
+    originalPrice: '22.99',
     rating: 4.8,
     image: '🍕',
     badge: 'Best Seller',
     category: 'Pizza'
   },
   {
-    id: 3,
+    id: 'featured-3',
     name: 'Dragon Roll Deluxe',
     description: 'Premium sushi roll with tempura shrimp, avocado, and spicy mayo drizzle',
-    price: '$32.99',
-    originalPrice: '$38.99',
+    price: '32.99',
+    originalPrice: '38.99',
     rating: 5.0,
     image: '🍣',
     badge: 'Premium',
     category: 'Sushi'
   },
   {
-    id: 4,
+    id: 'featured-4',
     name: 'Quinoa Power Bowl',
     description: 'Organic quinoa with grilled chicken, avocado, and superfood dressing',
-    price: '$16.99',
-    originalPrice: '$19.99',
+    price: '16.99',
+    originalPrice: '19.99',
     rating: 4.7,
     image: '🥗',
     badge: 'Healthy Choice',
@@ -52,6 +56,38 @@ const featuredFoods = [
 ]
 
 export function FeaturedFood() {
+  const { addToCart } = useCart()
+  const { user } = useAuth()
+  const { toast } = useToast()
+
+  const handleAddToCart = async (foodId: string, foodName: string) => {
+    if (!user) {
+      toast({
+        title: "Please sign in",
+        description: "You need to be logged in to add items to cart",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      const success = await addToCart(foodId, 1)
+      if (success) {
+        toast({
+          title: "Added to cart",
+          description: `${foodName} has been added to your cart`,
+        })
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
   return (
     <section className="py-20 bg-gradient-to-b from-muted/20 to-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -120,10 +156,10 @@ export function FeaturedFood() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <span className="text-2xl font-bold text-primary">
-                          {food.price}
+                          ${food.price}
                         </span>
                         <span className="text-sm text-muted-foreground line-through">
-                          {food.originalPrice}
+                          ${food.originalPrice}
                         </span>
                       </div>
                     </div>
@@ -133,6 +169,7 @@ export function FeaturedFood() {
                       variant="premium" 
                       size="lg" 
                       className="w-full group-hover:scale-105 transition-transform"
+                      onClick={() => handleAddToCart(food.id, food.name)}
                     >
                       Add to Cart
                     </Button>
@@ -145,13 +182,15 @@ export function FeaturedFood() {
 
         {/* View All Button */}
         <div className="text-center mt-16">
-          <Button 
-            variant="luxury" 
-            size="xl"
-            className="px-12"
-          >
-            View Full Menu
-          </Button>
+          <Link href="/menu">
+            <Button 
+              variant="luxury" 
+              size="xl"
+              className="px-12"
+            >
+              View Full Menu
+            </Button>
+          </Link>
         </div>
       </div>
     </section>

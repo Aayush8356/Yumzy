@@ -67,10 +67,38 @@ interface AuthenticatedHomepageProps {
 
 export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomepageProps) {
   const { user } = useAuth()
-  const { cart } = useCart()
+  const { cart, addToCart } = useCart()
   const { toast } = useToast()
   
   const cartItems = cart?.items || []
+
+  const handleAddToCart = async (foodItemId: string, foodName: string) => {
+    if (!user) {
+      toast({
+        title: "Please sign in",
+        description: "You need to be logged in to add items to cart",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      const success = await addToCart(foodItemId, 1)
+      if (success) {
+        toast({
+          title: "Added to cart",
+          description: `${foodName} has been added to your cart`,
+        })
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
   
   const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null)
   const [favorites, setFavorites] = useState<FavoriteItem[]>([])
@@ -339,7 +367,11 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
                           <h4 className="font-semibold mb-2">{item.name}</h4>
                           <div className="flex items-center justify-between">
                             <span className="text-lg font-bold">${item.price}</span>
-                            <Button size="sm" className="gap-2">
+                            <Button 
+                              size="sm" 
+                              className="gap-2"
+                              onClick={() => handleAddToCart(item.id, item.name)}
+                            >
                               <ShoppingCart className="w-4 h-4" />
                               Add to Cart
                             </Button>
@@ -414,7 +446,11 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
                                 <span>{item.rating}</span>
                               </div>
                             </div>
-                            <Button size="sm" className="gap-2">
+                            <Button 
+                              size="sm" 
+                              className="gap-2"
+                              onClick={() => handleAddToCart(item.id, item.name)}
+                            >
                               <ShoppingCart className="w-4 h-4" />
                               Add
                             </Button>

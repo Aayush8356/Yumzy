@@ -375,25 +375,25 @@ export function PremiumDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="mb-8"
+          className="mb-6"
         >
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
-                <Zap className="w-6 h-6 text-orange-500" />
+              <h2 className="text-xl font-bold mb-1 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-orange-500" />
                 Recommended for You
               </h2>
-              <p className="text-muted-foreground">Based on your taste preferences and order history</p>
+              <p className="text-sm text-muted-foreground">Based on your taste preferences and order history</p>
             </div>
             <Link href="/menu">
-              <Button variant="outline" className="gap-2">
+              <Button variant="outline" size="sm" className="gap-2">
                 View All
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-3 h-3" />
               </Button>
             </Link>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
             {recommendedItems.map((item, index) => (
               <motion.div
                 key={item.id}
@@ -401,48 +401,68 @@ export function PremiumDashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 + index * 0.1 }}
               >
-                <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group">
-                  <div className="relative h-48">
+                <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 hover:scale-[1.02]">
+                  <div className="relative h-24">
                     <ProfessionalFoodImage
                       src={item.image}
                       alt={item.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
-                    <div className="absolute top-4 right-4">
-                      <Badge className="bg-white/90 text-gray-800 gap-1">
-                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute top-1 right-1">
+                      <Badge className="bg-orange-500/90 text-white border-0 gap-1 text-xs px-1 py-0.5 text-[10px]">
+                        <Star className="w-2 h-2 fill-white text-white" />
                         {item.rating}
                       </Badge>
                     </div>
                   </div>
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-lg">{item.name}</h3>
-                      <p className="text-xl font-bold text-orange-600">₹{item.price}</p>
+                  <CardContent className="p-3">
+                    <div className="mb-2">
+                      <h3 className="font-bold text-sm leading-tight mb-1 group-hover:text-orange-600 transition-colors line-clamp-1">
+                        {item.name}
+                      </h3>
+                      <p className="text-xs text-muted-foreground line-clamp-1 leading-relaxed mb-2">
+                        {item.description}
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">{item.description}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {item.cookTime}
-                        </span>
-                        <Badge variant="outline">{item.category}</Badge>
+                    
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="w-2 h-2" />
+                        <span className="text-[10px]">{item.cookTime}</span>
                       </div>
-                      <Button 
-                        size="sm" 
-                        className="gap-1"
-                        onClick={() => handleAddToCart(item)}
-                      >
-                        <Plus className="w-3 h-3" />
-                        Add
-                      </Button>
+                      <p className="text-sm font-bold text-orange-600">₹{item.price}</p>
                     </div>
+                    
+                    <Button 
+                      size="sm" 
+                      className="w-full gap-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 border-0 font-medium text-xs h-7"
+                      onClick={() => handleAddToCart(item)}
+                    >
+                      <Plus className="w-2 h-2" />
+                      Add
+                    </Button>
                   </CardContent>
                 </Card>
               </motion.div>
             ))}
           </div>
+          
+          {recommendedItems.length === 0 && (
+            <Card className="border-dashed border-2 border-gray-200 dark:border-gray-700">
+              <CardContent className="p-8 text-center">
+                <Utensils className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-lg font-semibold mb-2 text-gray-600 dark:text-gray-400">No recommendations yet</h3>
+                <p className="text-sm text-muted-foreground mb-4">Order some food to get personalized recommendations!</p>
+                <Link href="/menu">
+                  <Button className="gap-2">
+                    <Utensils className="w-4 h-4" />
+                    Browse Menu
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
         </motion.div>
 
         {/* Quick Actions */}
