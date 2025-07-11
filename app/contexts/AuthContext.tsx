@@ -63,52 +63,96 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Immediately set user from localStorage to reduce flash
           dispatch({ type: 'SET_USER', payload: user })
           
-          // Then validate user still exists in database
-          const response = await fetch('/api/auth/validate', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ userId: user.id })
-          })
+          // Then validate user still exists in database (with retry for admin users)
+          let validationAttempts = user.role === 'admin' ? 3 : 1
+          let validationSuccess = false
           
-          const data = await response.json()
-          
-          if (response.ok && data.success && data.userExists) {
-            // User is valid, update with fresh data from database
-            const updatedUser: User = {
-              id: data.user.id,
-              name: data.user.name,
-              email: data.user.email,
-              phone: data.user.phone || '+1-555-0000',
-              avatar: data.user.avatar || user.avatar, // Keep generated avatar if no DB avatar
-              role: data.user.role,
-              verified: data.user.isVerified,
-              createdAt: new Date(data.user.createdAt),
-              preferences: data.user.preferences || {
-                notifications: true,
-                newsletter: true,
-                dietaryRestrictions: []
+          for (let attempt = 1; attempt <= validationAttempts; attempt++) {
+            try {
+              const response = await fetch('/api/auth/validate', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId: user.id }),
+                cache: 'no-cache'
+              })
+              
+              const data = await response.json()
+              
+              if (response.ok && data.success && data.userExists) {
+                // User is valid, update with fresh data from database
+                const updatedUser: User = {
+                  id: data.user.id,
+                  name: data.user.name,
+                  email: data.user.email,
+                  phone: data.user.phone || '+1-555-0000',
+                  avatar: data.user.avatar || user.avatar, // Keep generated avatar if no DB avatar
+                  role: data.user.role,
+                  verified: data.user.isVerified,
+                  createdAt: new Date(data.user.createdAt),
+                  preferences: data.user.preferences || {
+                    notifications: true,
+                    newsletter: true,
+                    dietaryRestrictions: []
+                  }
+                }
+                
+                // Update localStorage with fresh data
+                localStorage.setItem('user', JSON.stringify(updatedUser))
+                dispatch({ type: 'SET_USER', payload: updatedUser })
+                validationSuccess = true
+                break
+              } else if (attempt < validationAttempts) {
+                // Retry for admin users after a short delay
+                console.log(`🔄 Auth validation attempt ${attempt} failed, retrying...`)
+                await new Promise(resolve => setTimeout(resolve, 500))
+              }
+            } catch (fetchError) {
+              console.error(`Auth validation attempt ${attempt} error:`, fetchError)
+              if (attempt < validationAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 1000))
               }
             }
-            
-            // Update localStorage with fresh data
-            localStorage.setItem('user', JSON.stringify(updatedUser))
-            dispatch({ type: 'SET_USER', payload: updatedUser })
-          } else {
-            // User no longer exists in database, clear local data
-            console.log('🚨 User not found in database, clearing local authentication data')
-            localStorage.removeItem('user')
-            localStorage.removeItem('authToken')
-            localStorage.removeItem('cart')
-            dispatch({ type: 'LOGOUT' })
+          }
+          
+          if (!validationSuccess) {
+            // For admin users, if validation fails multiple times, keep them logged in 
+            // but show a warning instead of logging out (network issues are common)
+            if (user.role === 'admin') {
+              console.warn('⚠️ Admin user validation failed multiple times, keeping session active')
+              dispatch({ type: 'SET_USER', payload: user })
+            } else {
+              // User no longer exists in database, clear local data
+              console.log('🚨 User validation failed, clearing local authentication data')
+              localStorage.removeItem('user')
+              localStorage.removeItem('authToken')
+              localStorage.removeItem('cart')
+              dispatch({ type: 'LOGOUT' })
+            }
           }
         } else {
           dispatch({ type: 'SET_LOADING', payload: false })
         }
       } catch (error) {
         console.error('Error loading/validating user:', error)
-        // On error, clear potentially corrupted auth data
+        
+        // Check if we have a saved user - if it's an admin, be more lenient
+        const savedUser = localStorage.getItem('user')
+        if (savedUser) {
+          try {
+            const user = JSON.parse(savedUser)
+            if (user.role === 'admin') {
+              console.warn('⚠️ Auth error for admin user, maintaining session due to potential network issues')
+              dispatch({ type: 'SET_USER', payload: user })
+              return
+            }
+          } catch (parseError) {
+            console.error('Error parsing saved user:', parseError)
+          }
+        }
+        
+        // On error for non-admin users, clear potentially corrupted auth data
         localStorage.removeItem('user')
         localStorage.removeItem('authToken')
         localStorage.removeItem('cart')

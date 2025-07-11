@@ -44,7 +44,8 @@ export default function LoginPage() {
         title: "Welcome back!",
         description: "You have been successfully logged in.",
       })
-      router.push('/dashboard')
+      // Redirect based on user role - this will be handled by the main page useEffect
+      router.push('/')
     } else {
       toast({
         title: "Login failed",
@@ -73,7 +74,8 @@ export default function LoginPage() {
         title: "Demo login successful!",
         description: "Welcome to the demo account.",
       })
-      router.push('/dashboard')
+      // Redirect to home - role-based redirect will handle the rest
+      router.push('/')
     }
     
     setIsLoading(false)
