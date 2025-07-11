@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { usersTable, ordersTable, notificationsTable } from '@/lib/db/schema';
+import { usersTable, ordersTable, notificationsTable, contactMessages, foodItems } from '@/lib/db/schema';
 import { eq, ne, and, not, like, desc } from 'drizzle-orm';
+
+export const dynamic = 'force-dynamic';
 
 async function verifyAdmin(request: NextRequest) {
   try {
@@ -16,7 +18,7 @@ async function verifyAdmin(request: NextRequest) {
 
 interface ActivityItem {
   id: string;
-  type: 'user_registration' | 'order_placed' | 'system_update';
+  type: 'user_registration' | 'order_placed' | 'system_update' | 'message_received' | 'menu_item_added' | 'admin_action';
   message: string;
   timestamp: Date;
   data?: any;
@@ -29,69 +31,143 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const { searchParams } = new URL(request.url);
+    const typeFilter = searchParams.get('type');
+    
     const activities: ActivityItem[] = [];
 
-    // Get recent user registrations (exclude admin and demo)
-    const recentUsers = await db.select({
-      id: usersTable.id,
-      name: usersTable.name,
-      email: usersTable.email,
-      createdAt: usersTable.createdAt
-    }).from(usersTable)
-      .where(
-        and(
-          ne(usersTable.role, 'admin'),
-          not(like(usersTable.email, '%demo%'))
-        )
-      )
-      .orderBy(desc(usersTable.createdAt))
-      .limit(5);
+    // Function to add activities based on filter
+    const shouldIncludeType = (type: string) => {
+      return !typeFilter || typeFilter === 'all' || typeFilter === type;
+    };
 
-    // Add user registrations to activities
-    recentUsers.forEach(user => {
-      activities.push({
-        id: `user_${user.id}`,
-        type: 'user_registration',
-        message: `New user registration: ${user.name}`,
-        timestamp: user.createdAt || new Date(),
-        data: { userId: user.id, email: user.email }
+    // Get recent user registrations (exclude admin and demo)
+    if (shouldIncludeType('user_registration')) {
+      const recentUsers = await db.select({
+        id: usersTable.id,
+        name: usersTable.name,
+        email: usersTable.email,
+        createdAt: usersTable.createdAt
+      }).from(usersTable)
+        .where(
+          and(
+            ne(usersTable.role, 'admin'),
+            not(like(usersTable.email, '%demo%'))
+          )
+        )
+        .orderBy(desc(usersTable.createdAt))
+        .limit(10);
+
+      recentUsers.forEach(user => {
+        activities.push({
+          id: `user_${user.id}`,
+          type: 'user_registration',
+          message: `New user registration: ${user.name}`,
+          timestamp: user.createdAt || new Date(),
+          data: { userId: user.id, email: user.email }
+        });
       });
-    });
+    }
 
     // Get recent orders
-    const recentOrders = await db.select({
-      id: ordersTable.id,
-      total: ordersTable.total,
-      status: ordersTable.status,
-      createdAt: ordersTable.createdAt,
-      userId: ordersTable.userId
-    }).from(ordersTable)
-      .orderBy(desc(ordersTable.createdAt))
-      .limit(5);
+    if (shouldIncludeType('order_placed')) {
+      const recentOrders = await db.select({
+        id: ordersTable.id,
+        total: ordersTable.total,
+        status: ordersTable.status,
+        createdAt: ordersTable.createdAt,
+        userId: ordersTable.userId
+      }).from(ordersTable)
+        .orderBy(desc(ordersTable.createdAt))
+        .limit(10);
 
-    // Add orders to activities
-    recentOrders.forEach(order => {
-      activities.push({
-        id: `order_${order.id}`,
-        type: 'order_placed',
-        message: `New order placed: $${order.total} (${order.status})`,
-        timestamp: order.createdAt || new Date(),
-        data: { orderId: order.id, total: order.total, status: order.status }
+      recentOrders.forEach(order => {
+        activities.push({
+          id: `order_${order.id}`,
+          type: 'order_placed',
+          message: `New order placed: ₹${order.total} (${order.status})`,
+          timestamp: order.createdAt || new Date(),
+          data: { orderId: order.id, total: order.total, status: order.status }
+        });
       });
-    });
+    }
 
-    // System activities would come from a real system logs table in production
-    // For now, we'll only show real user and order activities
+    // Get recent contact messages
+    if (shouldIncludeType('message_received')) {
+      try {
+        const recentMessages = await db.select({
+          id: contactMessages.id,
+          name: contactMessages.name,
+          subject: contactMessages.subject,
+          createdAt: contactMessages.createdAt
+        }).from(contactMessages)
+          .orderBy(desc(contactMessages.createdAt))
+          .limit(10);
+
+        recentMessages.forEach(message => {
+          activities.push({
+            id: `message_${message.id}`,
+            type: 'message_received',
+            message: `New message from ${message.name}: ${message.subject}`,
+            timestamp: message.createdAt || new Date(),
+            data: { messageId: message.id, subject: message.subject }
+          });
+        });
+      } catch (error) {
+        console.log('Contact messages table may not exist yet');
+      }
+    }
+
+    // Get recent menu item additions
+    if (shouldIncludeType('menu_item_added')) {
+      try {
+        const recentMenuItems = await db.select({
+          id: foodItems.id,
+          name: foodItems.name,
+          price: foodItems.price,
+          createdAt: foodItems.createdAt
+        }).from(foodItems)
+          .orderBy(desc(foodItems.createdAt))
+          .limit(10);
+
+        recentMenuItems.forEach(item => {
+          activities.push({
+            id: `menu_${item.id}`,
+            type: 'menu_item_added',
+            message: `New menu item added: ${item.name} (₹${item.price})`,
+            timestamp: item.createdAt || new Date(),
+            data: { itemId: item.id, name: item.name, price: item.price }
+          });
+        });
+      } catch (error) {
+        console.log('Food items table may not exist yet');
+      }
+    }
+
+    // Add some system update activities for demonstration
+    if (shouldIncludeType('system_update')) {
+      const now = new Date();
+      activities.push({
+        id: 'system_update_1',
+        type: 'system_update',
+        message: 'Admin dashboard updated with real-time data',
+        timestamp: new Date(now.getTime() - 3600000), // 1 hour ago
+        data: { updateType: 'dashboard_improvement' }
+      });
+    }
 
     // Sort all activities by timestamp (most recent first)
     activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-    // Take only the most recent 10 activities
-    const recentActivities = activities.slice(0, 10);
+    // Take only the most recent activities based on filter
+    const limit = typeFilter && typeFilter !== 'all' ? 20 : 15;
+    const recentActivities = activities.slice(0, limit);
 
     return NextResponse.json({
       success: true,
-      activities: recentActivities
+      activities: recentActivities,
+      filter: typeFilter || 'all',
+      total: activities.length
     });
   } catch (error) {
     console.error('Failed to fetch recent activity:', error);

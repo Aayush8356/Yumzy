@@ -5,6 +5,7 @@ import withAdminAuth from '@/app/components/withAdminAuth';
 import { AdminDashboard } from './components/AdminDashboard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { 
@@ -16,14 +17,16 @@ import {
   LogOut,
   Settings,
   BarChart3,
-  Home
+  Home,
+  RefreshCw,
+  Filter
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
 interface ActivityItem {
   id: string;
-  type: 'user_registration' | 'order_placed' | 'system_update';
+  type: 'user_registration' | 'order_placed' | 'system_update' | 'message_received' | 'menu_item_added' | 'admin_action';
   message: string;
   timestamp: Date;
   data?: any;
@@ -35,6 +38,7 @@ function AdminPage() {
   const { toast } = useToast();
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [loadingActivity, setLoadingActivity] = useState(true);
+  const [activityFilter, setActivityFilter] = useState<string>('all');
   const [quickActionCounts, setQuickActionCounts] = useState({
     users: 0,
     orders: 0,
@@ -61,70 +65,82 @@ function AdminPage() {
     }
   };
 
-  useEffect(() => {
-    const fetchRecentActivity = async () => {
-      try {
-        setLoadingActivity(true);
-        const response = await fetch('/api/admin/recent-activity', {
-          cache: 'no-cache',
-          headers: {
-            'Cache-Control': 'no-cache',
-          },
-        });
-        const data = await response.json();
-        if (data.success) {
-          // Convert timestamp strings back to Date objects
-          const activitiesWithDates = data.activities.map((activity: any) => ({
-            ...activity,
-            timestamp: new Date(activity.timestamp)
-          }));
-          setRecentActivity(activitiesWithDates);
-        }
-      } catch (error) {
-        console.error('Failed to fetch recent activity:', error);
-      } finally {
-        setLoadingActivity(false);
-      }
-    };
-
-    const fetchQuickActionCounts = async () => {
-      try {
-        setQuickActionCounts(prev => ({ ...prev, loading: true }));
+  const fetchRecentActivity = async () => {
+    try {
+      setLoadingActivity(true);
+      const url = activityFilter === 'all' 
+        ? '/api/admin/recent-activity'
+        : `/api/admin/recent-activity?type=${activityFilter}`;
         
-        // Fetch all counts in parallel
-        const [usersRes, ordersRes, menuRes, messagesRes] = await Promise.all([
-          fetch('/api/admin/users?countOnly=true', { cache: 'no-cache' }),
-          fetch('/api/admin/orders?countOnly=true', { cache: 'no-cache' }),
-          fetch('/api/admin/menu?countOnly=true', { cache: 'no-cache' }),
-          fetch('/api/contact?countOnly=true', { cache: 'no-cache' })
-        ]);
-
-        const [usersData, ordersData, menuData, messagesData] = await Promise.all([
-          usersRes.json(),
-          ordersRes.json(),
-          menuRes.json(),
-          messagesRes.json()
-        ]);
-
-        setQuickActionCounts({
-          users: usersData.count || 0,
-          orders: ordersData.count || 0,
-          menuItems: menuData.count || 0,
-          messages: messagesData.count || 0,
-          loading: false
-        });
-      } catch (error) {
-        console.error('Failed to fetch quick action counts:', error);
-        setQuickActionCounts(prev => ({ ...prev, loading: false }));
+      const response = await fetch(url, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+      const data = await response.json();
+      if (data.success) {
+        // Convert timestamp strings back to Date objects
+        const activitiesWithDates = data.activities.map((activity: any) => ({
+          ...activity,
+          timestamp: new Date(activity.timestamp)
+        }));
+        setRecentActivity(activitiesWithDates);
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch recent activity:', error);
+    } finally {
+      setLoadingActivity(false);
+    }
+  };
 
+  const fetchQuickActionCounts = async () => {
+    try {
+      setQuickActionCounts(prev => ({ ...prev, loading: true }));
+      
+      // Fetch all counts in parallel
+      const [usersRes, ordersRes, menuRes, messagesRes] = await Promise.all([
+        fetch('/api/admin/users?countOnly=true', { cache: 'no-cache' }),
+        fetch('/api/admin/orders?countOnly=true', { cache: 'no-cache' }),
+        fetch('/api/admin/menu?countOnly=true', { cache: 'no-cache' }),
+        fetch('/api/contact?countOnly=true', { cache: 'no-cache' })
+      ]);
+
+      const [usersData, ordersData, menuData, messagesData] = await Promise.all([
+        usersRes.json(),
+        ordersRes.json(),
+        menuRes.json(),
+        messagesRes.json()
+      ]);
+
+      setQuickActionCounts({
+        users: usersData.count || 0,
+        orders: ordersData.count || 0,
+        menuItems: menuData.count || 0,
+        messages: messagesData.count || 0,
+        loading: false
+      });
+    } catch (error) {
+      console.error('Failed to fetch quick action counts:', error);
+      setQuickActionCounts(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  useEffect(() => {
     // Only fetch if user is authenticated and is admin
     if (user?.role === 'admin') {
       fetchRecentActivity();
       fetchQuickActionCounts();
+      
+      // Set up real-time updates every 30 seconds
+      const interval = setInterval(() => {
+        fetchRecentActivity();
+        fetchQuickActionCounts();
+      }, 30000);
+
+      return () => clearInterval(interval);
     }
-  }, [user?.role]); // Re-fetch when user role changes
+  }, [user?.role, activityFilter]); // Re-fetch when user role or filter changes
 
   const formatTimeAgo = (timestamp: Date) => {
     const now = new Date();
@@ -143,25 +159,50 @@ function AdminPage() {
         return {
           bg: 'bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800',
           dot: 'bg-green-500',
-          text: 'text-green-900 dark:text-green-100'
+          text: 'text-green-900 dark:text-green-100',
+          icon: '👤'
         };
       case 'order_placed': 
         return {
           bg: 'bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800',
           dot: 'bg-blue-500',
-          text: 'text-blue-900 dark:text-blue-100'
+          text: 'text-blue-900 dark:text-blue-100',
+          icon: '📦'
+        };
+      case 'message_received': 
+        return {
+          bg: 'bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800',
+          dot: 'bg-purple-500',
+          text: 'text-purple-900 dark:text-purple-100',
+          icon: '💬'
+        };
+      case 'menu_item_added': 
+        return {
+          bg: 'bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800',
+          dot: 'bg-orange-500',
+          text: 'text-orange-900 dark:text-orange-100',
+          icon: '🍽️'
+        };
+      case 'admin_action': 
+        return {
+          bg: 'bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800',
+          dot: 'bg-indigo-500',
+          text: 'text-indigo-900 dark:text-indigo-100',
+          icon: '⚙️'
         };
       case 'system_update': 
         return {
           bg: 'bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800',
           dot: 'bg-amber-500',
-          text: 'text-amber-900 dark:text-amber-100'
+          text: 'text-amber-900 dark:text-amber-100',
+          icon: '🔄'
         };
       default: 
         return {
           bg: 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
           dot: 'bg-gray-500',
-          text: 'text-gray-900 dark:text-gray-100'
+          text: 'text-gray-900 dark:text-gray-100',
+          icon: '📋'
         };
     }
   };
@@ -273,7 +314,38 @@ function AdminPage() {
 
         {/* Recent Activity */}
         <div>
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Recent Activity</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Recent Activity</h2>
+            <div className="flex items-center gap-3">
+              <Select value={activityFilter} onValueChange={setActivityFilter}>
+                <SelectTrigger className="w-48">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filter activities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Activities</SelectItem>
+                  <SelectItem value="user_registration">👤 User Registrations</SelectItem>
+                  <SelectItem value="order_placed">📦 Orders Placed</SelectItem>
+                  <SelectItem value="message_received">💬 Messages Received</SelectItem>
+                  <SelectItem value="menu_item_added">🍽️ Menu Items Added</SelectItem>
+                  <SelectItem value="admin_action">⚙️ Admin Actions</SelectItem>
+                  <SelectItem value="system_update">🔄 System Updates</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  fetchRecentActivity();
+                  fetchQuickActionCounts();
+                }}
+                className="gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </Button>
+            </div>
+          </div>
           <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardContent className="p-6">
               {loadingActivity ? (
@@ -293,9 +365,12 @@ function AdminPage() {
                     return (
                       <div 
                         key={activity.id} 
-                        className={`flex items-center gap-3 p-4 rounded-lg transition-colors hover:opacity-80 ${styles.bg}`}
+                        className={`flex items-center gap-4 p-4 rounded-lg transition-colors hover:opacity-80 ${styles.bg}`}
                       >
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${styles.dot}`}></div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">{styles.icon}</span>
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${styles.dot}`}></div>
+                        </div>
                         <p className={`text-sm flex-1 font-medium ${styles.text}`}>
                           {activity.message}
                         </p>
