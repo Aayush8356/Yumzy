@@ -46,6 +46,19 @@ export function Navigation() {
     }
   }
 
+  const handleLogoClick = () => {
+    // Role-based homepage redirect
+    if (isAuthenticated && user) {
+      if (user.role === 'admin') {
+        router.push('/admin')
+      } else {
+        router.push('/')
+      }
+    } else {
+      router.push('/')
+    }
+  }
+
   return (
     <>
       <nav className="fixed top-0 w-full bg-background/80 backdrop-blur-xl border-b z-50 gpu-accelerated">
@@ -53,14 +66,14 @@ export function Navigation() {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <motion.div 
-              className="flex items-center space-x-2 cursor-pointer"
+              className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5 }}
-              onClick={() => smoothScroll('home')}
+              onClick={handleLogoClick}
             >
               <div className="w-8 h-8 bg-gradient-hero rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">W</span>
+                <span className="text-white font-bold text-lg">Y</span>
               </div>
               <span className="text-xl font-bold bg-gradient-hero bg-clip-text text-transparent">
                 Yumzy

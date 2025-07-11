@@ -111,10 +111,18 @@ function AdminPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center gap-4">
-              <LayoutDashboard className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Panel</h1>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Welcome back, {user?.name}</p>
+              {/* Clickable Logo */}
+              <div 
+                className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => router.push('/admin')}
+              >
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">Y</span>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Panel</h1>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Welcome back, {user?.name}</p>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-4">
