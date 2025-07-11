@@ -206,7 +206,7 @@ export function HeroSection() {
                               {dailySpecial.description}
                             </p>
                           </div>
-                          {dailySpecial.discount && dailySpecial.discount > 0 && (
+                          {(Number(dailySpecial.discount) > 0) && (
                             <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg text-xs md:text-sm">
                               <Tag className="w-3 h-3 mr-1" />
                               {dailySpecial.discount}% OFF
