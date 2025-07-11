@@ -294,13 +294,3 @@ If you encounter issues:
 5. Check browser console for errors
 
 Your Yumzy app is now ready for production! 🚀
-
-<!-- DATABASE_URL = postgresql://postgres:Aayush%401076@db.bnigaokzunwsfaijkzva.supabase.co:5432/postgres
-POSTGRES_URL = postgresql://postgres:Aayush%401076@db.bnigaokzunwsfaijkzva.supabase.co:5432/postgres
-NODE_ENV = production
-NEXT_PUBLIC_APP_URL = https://yumzy-five.vercel.app/
-JWT_SECRET = your-super-secret-jwt-key-for-yumzy-app-2024
-UNSPLASH_ACCESS_KEY = kWDk-NvD5EmOwEX1ff54RVExiWbGEW9qpuIs0wSvZGY
-UNSPLASH_SECRET_KEY = _qo9Pp_VvReY2a_tKJSu37uzM_RwLCqYefhChBdI5Qs
-NEXT_PUBLIC_RAZORPAY_KEY_ID = rzp_live_Id6ureskMPEgy9
-RAZORPAY_KEY_SECRET = 5DswpMfZj6Xcqg2fJMFfxK3W -->
