@@ -88,21 +88,14 @@ export function PremiumDashboard() {
     }
 
     try {
-      await addToCart({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        image: item.image,
-        description: item.description,
-        category: item.category,
-        cookTime: item.cookTime,
-        quantity: 1
-      })
-
-      toast({
-        title: "Added to cart!",
-        description: `${item.name} has been added to your cart.`,
-      })
+      const success = await addToCart(item.id, 1)
+      
+      if (success) {
+        toast({
+          title: "Added to cart!",
+          description: `${item.name} has been added to your cart.`,
+        })
+      }
     } catch (error) {
       console.error('Error adding to cart:', error)
       toast({
