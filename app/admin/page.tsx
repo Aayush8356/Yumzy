@@ -35,6 +35,13 @@ function AdminPage() {
   const { toast } = useToast();
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [loadingActivity, setLoadingActivity] = useState(true);
+  const [quickActionCounts, setQuickActionCounts] = useState({
+    users: 0,
+    orders: 0,
+    menuItems: 0,
+    messages: 0,
+    loading: true
+  });
 
   const handleLogout = async () => {
     try {
@@ -80,9 +87,42 @@ function AdminPage() {
       }
     };
 
+    const fetchQuickActionCounts = async () => {
+      try {
+        setQuickActionCounts(prev => ({ ...prev, loading: true }));
+        
+        // Fetch all counts in parallel
+        const [usersRes, ordersRes, menuRes, messagesRes] = await Promise.all([
+          fetch('/api/admin/users?countOnly=true', { cache: 'no-cache' }),
+          fetch('/api/admin/orders?countOnly=true', { cache: 'no-cache' }),
+          fetch('/api/admin/menu?countOnly=true', { cache: 'no-cache' }),
+          fetch('/api/contact?countOnly=true', { cache: 'no-cache' })
+        ]);
+
+        const [usersData, ordersData, menuData, messagesData] = await Promise.all([
+          usersRes.json(),
+          ordersRes.json(),
+          menuRes.json(),
+          messagesRes.json()
+        ]);
+
+        setQuickActionCounts({
+          users: usersData.count || 0,
+          orders: ordersData.count || 0,
+          menuItems: menuData.count || 0,
+          messages: messagesData.count || 0,
+          loading: false
+        });
+      } catch (error) {
+        console.error('Failed to fetch quick action counts:', error);
+        setQuickActionCounts(prev => ({ ...prev, loading: false }));
+      }
+    };
+
     // Only fetch if user is authenticated and is admin
     if (user?.role === 'admin') {
       fetchRecentActivity();
+      fetchQuickActionCounts();
     }
   }, [user?.role]); // Re-fetch when user role changes
 
@@ -127,10 +167,34 @@ function AdminPage() {
   };
 
   const adminMenuItems = [
-    { href: '/admin/users', icon: Users, label: 'Users', description: 'Manage user accounts' },
-    { href: '/admin/orders', icon: ShoppingBag, label: 'Orders', description: 'View and manage orders' },
-    { href: '/admin/menu', icon: Utensils, label: 'Menu', description: 'Manage food items' },
-    { href: '/admin/contact-messages', icon: MessageSquare, label: 'Messages', description: 'Customer support' },
+    { 
+      href: '/admin/users', 
+      icon: Users, 
+      label: 'Users', 
+      description: 'Manage user accounts',
+      count: quickActionCounts.users
+    },
+    { 
+      href: '/admin/orders', 
+      icon: ShoppingBag, 
+      label: 'Orders', 
+      description: 'View and manage orders',
+      count: quickActionCounts.orders
+    },
+    { 
+      href: '/admin/menu', 
+      icon: Utensils, 
+      label: 'Menu', 
+      description: 'Manage food items',
+      count: quickActionCounts.menuItems
+    },
+    { 
+      href: '/admin/contact-messages', 
+      icon: MessageSquare, 
+      label: 'Messages', 
+      description: 'Customer support',
+      count: quickActionCounts.messages
+    },
   ];
 
   return (
@@ -157,11 +221,11 @@ function AdminPage() {
             <div className="flex items-center gap-4">
               <Button
                 variant="outline"
-                onClick={() => router.push('/')}
+                onClick={() => window.open('/', '_blank')}
                 className="gap-2"
               >
                 <Home className="w-4 h-4" />
-                View Site
+                Preview Site
               </Button>
               <Button
                 variant="destructive"
@@ -190,11 +254,20 @@ function AdminPage() {
               <Link key={item.href} href={item.href}>
                 <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                   <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-3 text-lg text-gray-900 dark:text-white">
-                      <div className="p-2 bg-blue-50 dark:bg-blue-900/50 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-800/50 transition-colors">
-                        <item.icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <CardTitle className="flex items-center justify-between text-lg text-gray-900 dark:text-white">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-50 dark:bg-blue-900/50 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-800/50 transition-colors">
+                          <item.icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        {item.label}
                       </div>
-                      {item.label}
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {quickActionCounts.loading ? (
+                          <div className="w-6 h-6 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          item.count
+                        )}
+                      </div>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
