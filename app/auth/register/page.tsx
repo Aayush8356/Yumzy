@@ -64,10 +64,10 @@ export default function RegisterPage() {
     if (success) {
       toast({
         title: "Account created successfully!",
-        description: "Welcome to Yumzy! You can now start ordering.",
+        description: "Please check your email to verify your account before logging in.",
       })
-      // Redirect to home - role-based redirect will handle the rest
-      router.push('/')
+      // Redirect to login page instead of home
+      router.push('/login?message=Please check your email to verify your account')
     } else {
       toast({
         title: "Registration failed",

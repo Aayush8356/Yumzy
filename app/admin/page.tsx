@@ -245,6 +245,13 @@ function AdminPage() {
 
   const adminMenuItems = [
     { 
+      href: '/admin/analytics', 
+      icon: BarChart3, 
+      label: 'Analytics', 
+      description: 'Business insights & reports',
+      count: null
+    },
+    { 
       href: '/admin/users', 
       icon: Users, 
       label: 'Users', 
@@ -331,7 +338,9 @@ function AdminPage() {
                         {item.label}
                       </div>
                       <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        {quickActionCounts.loading ? (
+                        {item.count === null ? (
+                          <BarChart3 className="w-6 h-6" />
+                        ) : quickActionCounts.loading ? (
                           <div className="w-6 h-6 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin"></div>
                         ) : (
                           item.count

@@ -3,6 +3,9 @@ import { db } from '@/lib/db'
 import { cart, foodItems, usersTable } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
+import { cartValidation, validateWithSchema } from '@/lib/validation'
+import { ErrorHandler, ValidationError, NotFoundError, AuthenticationError } from '@/lib/error-handler'
+import { AuthMiddleware } from '@/lib/auth'
 
 // GET /api/cart - Get user's cart items
 export async function GET(request: NextRequest) {
@@ -92,27 +95,16 @@ export async function GET(request: NextRequest) {
 
 // POST /api/cart - Add item to cart
 export async function POST(request: NextRequest) {
-  console.log('🛒 POST /api/cart - Starting add to cart request')
-  
-  try {
+  return ErrorHandler.handleAsyncError(async () => {
     const body = await request.json()
-    const { userId, foodItemId, quantity = 1, specialInstructions = '' } = body
     
-    console.log('📤 Add to cart request body:', {
-      userId,
-      foodItemId,
-      quantity,
-      specialInstructions,
-      bodyKeys: Object.keys(body)
-    })
-
-    if (!userId || !foodItemId) {
-      console.error('❌ Missing required fields:', { userId, foodItemId })
-      return NextResponse.json(
-        { success: false, error: 'User ID and Food Item ID are required' },
-        { status: 400 }
-      )
+    // Validate input
+    const validation = validateWithSchema(cartValidation.addItem, body)
+    if (!validation.success) {
+      throw new ValidationError('Invalid input data', validation.errors)
     }
+
+    const { userId, foodItemId, quantity, specialInstructions } = validation.data!
 
     // Log the received data for debugging
     console.log('📊 Received user ID:', userId)
@@ -126,19 +118,7 @@ export async function POST(request: NextRequest) {
       .limit(1)
 
     if (existingUser.length === 0) {
-      console.error('❌ User not found in database:', userId)
-      return NextResponse.json(
-        { success: false, error: 'User not found. Please sign in again.' },
-        { status: 401 }
-      )
-    }
-
-    // Validate quantity
-    if (quantity < 1 || quantity > 50) {
-      return NextResponse.json(
-        { success: false, error: 'Quantity must be between 1 and 50' },
-        { status: 400 }
-      )
+      throw new AuthenticationError('User not found. Please sign in again.')
     }
 
     // Validate food item exists
@@ -156,20 +136,12 @@ export async function POST(request: NextRequest) {
     })
 
     if (foodItem.length === 0) {
-      console.error('❌ Food item not found:', foodItemId)
-      return NextResponse.json(
-        { success: false, error: 'Food item not found' },
-        { status: 404 }
-      )
+      throw new NotFoundError('Food item not found')
     }
 
     // Check if food item is available
     if (!foodItem[0].isAvailable) {
-      console.error('❌ Food item unavailable:', { id: foodItemId, name: foodItem[0].name })
-      return NextResponse.json(
-        { success: false, error: 'This item is currently unavailable' },
-        { status: 400 }
-      )
+      throw new ValidationError('This item is currently unavailable')
     }
 
     // Check if item already exists in cart
@@ -201,84 +173,53 @@ export async function POST(request: NextRequest) {
       
       // Prevent excessive quantities
       if (newQuantity > 50) {
-        console.error('❌ Maximum quantity exceeded:', { newQuantity, limit: 50 })
-        return NextResponse.json(
-          { success: false, error: 'Maximum quantity limit reached (50 items)' },
-          { status: 400 }
-        )
+        throw new ValidationError('Maximum quantity limit reached (50 items)')
       }
 
-      try {
-        await db
-          .update(cart)
-          .set({ 
-            quantity: newQuantity,
-            specialInstructions: specialInstructions || existingCartItem[0].specialInstructions,
-            updatedAt: new Date()
-          })
-          .where(eq(cart.id, existingCartItem[0].id))
-
-        console.log('✅ Cart item updated successfully:', { id: existingCartItem[0].id, newQuantity })
-        return NextResponse.json({
-          success: true,
-          message: `${foodItem[0].name} quantity updated to ${newQuantity}`,
-          cartItem: {
-            id: existingCartItem[0].id,
-            quantity: newQuantity,
-            specialInstructions: specialInstructions || existingCartItem[0].specialInstructions
-          }
+      await db
+        .update(cart)
+        .set({ 
+          quantity: newQuantity,
+          specialInstructions: specialInstructions || existingCartItem[0].specialInstructions,
+          updatedAt: new Date()
         })
-      } catch (updateError) {
-        console.error('❌ Failed to update cart item:', updateError)
-        return NextResponse.json(
-          { success: false, error: 'Failed to update cart item' },
-          { status: 500 }
-        )
-      }
+        .where(eq(cart.id, existingCartItem[0].id))
+
+      console.log('✅ Cart item updated successfully:', { id: existingCartItem[0].id, newQuantity })
+      return NextResponse.json({
+        success: true,
+        message: `${foodItem[0].name} quantity updated to ${newQuantity}`,
+        cartItem: {
+          id: existingCartItem[0].id,
+          quantity: newQuantity,
+          specialInstructions: specialInstructions || existingCartItem[0].specialInstructions
+        }
+      })
     } else {
       // Add new item to cart
       console.log('➕ Adding new item to cart:', { userId, foodItemId, quantity })
       
-      try {
-        const newCartItem = await db
-          .insert(cart)
-          .values({
-            id: randomUUID(),
-            userId,
-            foodItemId,
-            quantity,
-            specialInstructions,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          })
-          .returning()
-
-        console.log('✅ New cart item added successfully:', newCartItem[0])
-        return NextResponse.json({
-          success: true,
-          message: `${foodItem[0].name} added to cart`,
-          cartItem: newCartItem[0]
+      const newCartItem = await db
+        .insert(cart)
+        .values({
+          id: randomUUID(),
+          userId,
+          foodItemId,
+          quantity,
+          specialInstructions,
+          createdAt: new Date(),
+          updatedAt: new Date()
         })
-      } catch (insertError) {
-        console.error('❌ Failed to insert new cart item:', insertError)
-        return NextResponse.json(
-          { success: false, error: 'Failed to add item to cart' },
-          { status: 500 }
-        )
-      }
+        .returning()
+
+      console.log('✅ New cart item added successfully:', newCartItem[0])
+      return NextResponse.json({
+        success: true,
+        message: `${foodItem[0].name} added to cart`,
+        cartItem: newCartItem[0]
+      })
     }
-  } catch (error) {
-    console.error('❌ Add to cart error:', error)
-    console.error('❌ Error details:', {
-      name: error instanceof Error ? error.name : 'Unknown',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : 'No stack trace'
-    })
-    return NextResponse.json(
-      { success: false, error: 'Failed to add item to cart. Please try again.' },
-      { status: 500 }
-    )
-  }
+  })
 }
 
 // DELETE /api/cart - Clear entire cart

@@ -59,8 +59,13 @@ export const users = pgTable('users', {
   name: text('name').notNull(),
   phone: text('phone'),
   avatar: text('avatar'),
+  passwordHash: text('password_hash'), // Optional for backward compatibility with demo users
   role: text('role').default('user'),
   isVerified: boolean('is_verified').default(false),
+  emailVerificationToken: text('email_verification_token'),
+  emailVerificationExpires: timestamp('email_verification_expires'),
+  passwordResetToken: text('password_reset_token'),
+  passwordResetExpires: timestamp('password_reset_expires'),
   preferences: jsonb('preferences').$type<{
     notifications: boolean
     newsletter: boolean

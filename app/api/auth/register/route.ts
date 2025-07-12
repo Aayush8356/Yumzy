@@ -2,51 +2,91 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { usersTable } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { ErrorHandler, ValidationError } from '@/lib/error-handler'
+import { PasswordManager, RateLimiter } from '@/lib/auth'
+import { auditLogger } from '@/lib/audit-logger'
+import { emailService } from '@/lib/email'
+import { userValidation } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
-  try {
+  return ErrorHandler.handleAsyncError(async () => {
     const body = await request.json()
-    const { name, email, phone, password } = body
+    
+    const validation = userValidation.register.safeParse(body)
+    if (!validation.success) {
+      throw new ValidationError('Invalid input data', validation.error.errors)
+    }
 
-    if (!name || !email || !password) {
-      return NextResponse.json(
-        { success: false, error: 'Name, email, and password are required' },
-        { status: 400 }
+    const { name, email, phone, password } = validation.data!
+
+    const ipAddress = request.headers.get('x-forwarded-for') || 
+                     request.headers.get('x-real-ip') || 
+                     'unknown'
+    const userAgent = request.headers.get('user-agent') || 'unknown'
+
+    // Rate limiting for registrations
+    const clientId = RateLimiter.getClientIdentifier(request)
+    if (!RateLimiter.check(clientId, 5, 60 * 60 * 1000)) { // 5 registrations per hour
+      await auditLogger.logRateLimitExceeded(
+        ipAddress,
+        userAgent,
+        '/api/auth/register'
       )
+      
+      throw new ValidationError('Too many registration attempts. Please try again later.')
     }
 
     // Check if user already exists
     const existingUsers = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.email, email))
+      .where(eq(usersTable.email, email.toLowerCase()))
       .limit(1)
 
     if (existingUsers.length > 0) {
-      return NextResponse.json(
-        { success: false, error: 'An account with this email already exists' },
-        { status: 409 }
-      )
+      // Log potential account enumeration attempt
+      await auditLogger.logSecurity({
+        type: 'suspicious_activity',
+        ipAddress,
+        userAgent,
+        details: { 
+          action: 'registration_duplicate_email',
+          email: email.toLowerCase() 
+        },
+        severity: 'low',
+        timestamp: new Date()
+      })
+
+      throw new ValidationError('An account with this email already exists')
     }
 
-    // In production, hash the password properly
-    // const hashedPassword = await bcrypt.hash(password, 10)
+    // Hash password
+    const hashedPassword = await PasswordManager.hash(password)
+
+    // Generate email verification token
+    const verificationToken = Math.random().toString(36).substring(2) + 
+                             Date.now().toString(36) + 
+                             Math.random().toString(36).substring(2)
+    
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
     // Create new user
     const [newUser] = await db
       .insert(usersTable)
       .values({
         name,
-        email,
+        email: email.toLowerCase(),
         phone: phone || null,
+        passwordHash: hashedPassword,
         role: 'user',
-        isVerified: false, // Users need to verify their email
+        isVerified: false,
+        emailVerificationToken: verificationToken,
+        emailVerificationExpires: verificationExpires,
         preferences: {
           notifications: true,
           newsletter: false,
           dietaryRestrictions: []
         }
-        // In production: passwordHash: hashedPassword
       })
       .returning({
         id: usersTable.id,
@@ -58,26 +98,42 @@ export async function POST(request: NextRequest) {
         createdAt: usersTable.createdAt
       })
 
-    return NextResponse.json({
+    // Send verification email
+    try {
+      await emailService.sendEmailVerification(newUser.email, verificationToken, newUser.name)
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError)
+      // Don't fail registration if email fails
+    }
+
+    // Log successful registration
+    await auditLogger.log({
+      userId: newUser.id,
+      userEmail: newUser.email,
+      action: 'user_registered',
+      resource: 'user_account',
+      resourceId: newUser.id,
+      method: 'POST',
+      endpoint: '/api/auth/register',
+      ipAddress,
+      userAgent,
       success: true,
-      message: 'Account created successfully',
-      user: newUser
+      severity: 'low',
+      category: 'authentication'
     })
 
-  } catch (error) {
-    console.error('Registration error:', error)
-    
-    // Check for unique constraint violation
-    if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
-      return NextResponse.json(
-        { success: false, error: 'An account with this email already exists' },
-        { status: 409 }
-      )
-    }
-    
-    return NextResponse.json(
-      { success: false, error: 'Failed to create account' },
-      { status: 500 }
-    )
-  }
+    return NextResponse.json({
+      success: true,
+      message: 'Account created successfully! Please check your email to verify your account.',
+      user: {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        phone: newUser.phone,
+        role: newUser.role,
+        isVerified: newUser.isVerified,
+        createdAt: newUser.createdAt
+      }
+    })
+  })
 }

@@ -176,8 +176,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SET_LOADING', payload: true })
     
     try {
-      // Call authentication API
-      const response = await fetch('/api/auth/login', {
+      // Call secure authentication API
+      const response = await fetch('/api/auth/secure-login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -287,9 +287,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await response.json()
 
       if (response.ok && result.success) {
-        // Auto-login after successful registration
-        const loginSuccess = await login({ email: data.email, password: data.password })
-        return loginSuccess
+        // For production: Don't auto-login, user needs to verify email first
+        // Instead, show success message about email verification
+        dispatch({ type: 'SET_LOADING', payload: false })
+        return true
       }
       
       dispatch({ type: 'SET_LOADING', payload: false })

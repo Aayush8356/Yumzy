@@ -4,25 +4,31 @@ A modern, full-featured food delivery application built with Next.js and TypeScr
 
 ## Features
 
-- **User Authentication**: Secure login/registration system
+- **User Authentication**: Secure login/registration with email verification
+- **Email System**: Gmail App Password integration for reliable email delivery
 - **Menu Management**: Browse categorized food items with professional images
 - **Cart & Checkout**: Add items to cart with Razorpay payment integration
 - **Order Tracking**: Real-time order status updates
 - **Favorites**: Save your favorite dishes
-- **Admin Dashboard**: Manage menu items, orders, and users
+- **Admin Dashboard**: Comprehensive analytics and management tools
 - **Responsive Design**: Works seamlessly on desktop and mobile
 - **Real-time Notifications**: Stay updated on order status
 - **Professional UI**: Clean, modern interface with smooth animations
+- **Production Ready**: Complete with caching, monitoring, and testing
 
 ## Tech Stack
 
 - **Frontend**: Next.js 14, React, TypeScript
 - **Styling**: Tailwind CSS, Shadcn/ui components
 - **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: JWT-based authentication
+- **Authentication**: JWT-based authentication with email verification
+- **Email**: Gmail App Password support (+ SendGrid, custom SMTP)
 - **Payment**: Razorpay integration
 - **Images**: Unsplash API for food images
-- **Deployment**: Vercel-ready
+- **Caching**: Redis with in-memory fallback
+- **Monitoring**: Error tracking and performance monitoring
+- **Testing**: Jest with comprehensive test coverage
+- **Deployment**: Vercel-ready with CI/CD pipeline
 
 ## Getting Started
 

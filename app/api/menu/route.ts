@@ -11,11 +11,13 @@ import {
 } from '@/data/professional-categories'
 import { ImageManager, ImageUrls } from '@/lib/image-manager'
 import { getFallbackImageForItem } from '@/data/fallback-images'
+import { CacheManager, CacheKeys, CACHE_TTL } from '@/lib/cache'
+import { ErrorHandler } from '@/lib/error-handler'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
-  try {
+  return ErrorHandler.handleAsyncError(async () => {
     const { searchParams } = new URL(request.url || '')
     
     // Check authorization header for logged-in users
@@ -40,6 +42,21 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || (isAuthenticated ? '12' : '6'))
     const isPublicOnly = searchParams.get('public') === 'true'
+
+    // Generate cache key based on all parameters
+    const filterString = [search, category, primaryCategory, cuisineCategory, sortBy, sortOrder, 
+      isVegetarian, isNonVegetarian, isVegan, isGlutenFree, isSpicy, isPopular, 
+      minPrice, maxPrice, page, limit, isAuthenticated].join(':')
+    const cacheKey = CacheKeys.menuItems(filterString)
+
+    // Try to get from cache first
+    const cachedResult = await CacheManager.get(cacheKey)
+    if (cachedResult) {
+      console.log(`📦 Cache hit for menu items: ${cacheKey}`)
+      return NextResponse.json(cachedResult)
+    }
+
+    console.log(`🔄 Cache miss for menu items: ${cacheKey}`)
     
     // Remove artificial delay for better performance
     
@@ -226,7 +243,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit
     const paginatedItems = filteredItems.slice(offset, offset + limit)
     
-    return NextResponse.json({
+    const result = {
       success: true,
       items: paginatedItems,
       pagination: {
@@ -262,14 +279,14 @@ export async function GET(request: NextRequest) {
         all: professionalCategories
       },
       professionalFilters
-    })
-  } catch (error) {
-    console.error('Menu API error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch menu items' },
-      { status: 500 }
-    )
-  }
+    }
+
+    // Cache the result for future requests
+    await CacheManager.set(cacheKey, result, CACHE_TTL.MENU_ITEMS)
+    console.log(`💾 Cached menu items: ${cacheKey}`)
+
+    return NextResponse.json(result)
+  })
 }
 
 // Helper function to generate mock ingredients based on category

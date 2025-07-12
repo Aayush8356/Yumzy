@@ -5,15 +5,12 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Star, Clock, Filter, Search, ShoppingCart, Heart, Info, Leaf, Award, Zap, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Leaf, Award, SlidersHorizontal } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useCart } from '@/contexts/CartContext'
 import { useToast } from '@/hooks/use-toast'
-import { Separator } from '@/components/ui/separator'
 import ProfessionalFoodCard from '@/components/ProfessionalFoodCard'
 
 interface FoodItem {
@@ -35,7 +32,6 @@ interface FoodItem {
   images: string[]
   optimizedImage?: string
   fallbackImage?: string
-  professionalCategories?: string[]
   ingredients: string[]
   allergens: string[]
   nutritionInfo: {
@@ -52,6 +48,7 @@ interface FoodItem {
   isGlutenFree: boolean
   isSpicy: boolean
   isPopular: boolean
+  isAvailable: boolean
   category: {
     id: string
     name: string
@@ -60,44 +57,19 @@ interface FoodItem {
   }
 }
 
-interface Category {
-  id: string
-  name: string
-  description: string
-  image: string
-  itemCount: number
-}
-
 export default function MenuPage() {
-  const [items, setItems] = useState<FoodItem[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const [foodItems, setFoodItems] = useState<FoodItem[]>([])
+  const [filteredItems, setFilteredItems] = useState<FoodItem[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('all')
   const [sortBy, setSortBy] = useState('name')
-  const [sortOrder, setSortOrder] = useState('asc')
-  
-  // Pagination state
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 12, // Show 12 items per page
-    total: 0,
-    totalPages: 0,
-    hasNext: false,
-    hasPrev: false,
-  })
-  
-  // Filters
-  const [filters, setFilters] = useState({
-    vegetarian: false,
-    nonVegetarian: false,
-    vegan: false,
-    glutenFree: false,
-    spicy: false,
-    popular: false,
-  })
+  const [priceRange, setPriceRange] = useState('all')
+  const [dietaryFilter, setDietaryFilter] = useState('all')
+  const [spiceLevelFilter, setSpiceLevelFilter] = useState('all')
+  const [ratingFilter, setRatingFilter] = useState('all')
+  const [showFilters, setShowFilters] = useState(false)
 
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated } = useAuth()
   const { toast } = useToast()
 
   // Redirect non-authenticated users
@@ -113,83 +85,42 @@ export default function MenuPage() {
     }
   }, [isAuthenticated, toast])
 
-  // Fetch categories
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        // Add authorization header if user is authenticated
-        const headers: HeadersInit = {}
-        if (isAuthenticated) {
-          const authToken = localStorage.getItem('authToken');
-          if (authToken) {
-            headers['Authorization'] = `Bearer ${authToken}`;
-          }
-        }
-
-        const response = await fetch('/api/categories', { headers })
-        const data = await response.json()
-        setCategories(data.categories || [])
-      } catch (error) {
-        console.error('Failed to fetch categories:', error)
-      }
-    }
-    fetchCategories()
-  }, [isAuthenticated])
-
   // Fetch menu items
   useEffect(() => {
     const fetchItems = async () => {
       setLoading(true)
       try {
-        // Add authorization header if user is authenticated
         const headers: HeadersInit = {}
         if (isAuthenticated) {
-          const authToken = localStorage.getItem('authToken');
+          const authToken = localStorage.getItem('authToken')
           if (authToken) {
-            headers['Authorization'] = `Bearer ${authToken}`;
+            headers['Authorization'] = `Bearer ${authToken}`
           }
         }
 
-        const params = new URLSearchParams({
-          search: searchTerm,
-          category: selectedCategory !== 'all' ? selectedCategory : '',
-          sortBy,
-          sortOrder,
-          vegetarian: filters.vegetarian.toString(),
-          nonVegetarian: filters.nonVegetarian.toString(),
-          vegan: filters.vegan.toString(),
-          glutenFree: filters.glutenFree.toString(),
-          spicy: filters.spicy.toString(),
-          popular: filters.popular.toString(),
-          page: pagination.page.toString(),
-          limit: pagination.limit.toString(),
+        const response = await fetch('/api/menu', { 
+          headers,
+          cache: 'no-cache'
         })
-
-        const response = await fetch(`/api/menu?${params}`, { headers })
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch menu items')
+        }
+        
         const data = await response.json()
         
-        if (data.success) {
-          setItems(data.items)
-          
-          // Update pagination state
-          if (data.pagination) {
-            setPagination(data.pagination)
-          }
-          
-          // Show notification if user is not authenticated about limited view
-          if (!isAuthenticated && data.items.length < data.totalAvailable) {
-            toast({
-              title: "Limited Menu View",
-              description: `Showing ${data.items.length} sample items. Login to see all ${data.totalAvailable} items!`,
-              duration: 5000,
-            })
-          }
+        if (data.success && data.foodItems) {
+          setFoodItems(data.foodItems)
+          setFilteredItems(data.foodItems)
+        } else {
+          setFoodItems([])
+          setFilteredItems([])
         }
       } catch (error) {
         console.error('Failed to fetch menu items:', error)
         toast({
-          title: "Error loading menu",
-          description: "Please try again later.",
+          title: "Failed to load menu",
+          description: "Please try refreshing the page.",
           variant: "destructive"
         })
       } finally {
@@ -197,373 +128,376 @@ export default function MenuPage() {
       }
     }
 
-    const debounceTimer = setTimeout(fetchItems, 300)
-    return () => clearTimeout(debounceTimer)
-  }, [searchTerm, selectedCategory, sortBy, sortOrder, filters, pagination.page, pagination.limit, toast, isAuthenticated])
+    if (isAuthenticated) {
+      fetchItems()
+    }
+  }, [isAuthenticated, toast])
 
-  const handleFilterChange = (filterKey: keyof typeof filters, checked: boolean) => {
-    setFilters(prev => ({
-      ...prev,
-      [filterKey]: checked
-    }))
-    // Reset to first page when filters change
-    setPagination(prev => ({ ...prev, page: 1 }))
+  // Apply filters and sorting
+  useEffect(() => {
+    let filtered = [...foodItems]
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.ingredients.some(ingredient => 
+          ingredient.toLowerCase().includes(searchTerm.toLowerCase())
+        ) ||
+        item.tags.some(tag => 
+          tag.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      )
+    }
+
+    // Price range filter
+    if (priceRange !== 'all') {
+      switch (priceRange) {
+        case 'under10':
+          filtered = filtered.filter(item => parseFloat(item.price) < 10)
+          break
+        case '10to20':
+          filtered = filtered.filter(item => {
+            const price = parseFloat(item.price)
+            return price >= 10 && price <= 20
+          })
+          break
+        case '20to30':
+          filtered = filtered.filter(item => {
+            const price = parseFloat(item.price)
+            return price >= 20 && price <= 30
+          })
+          break
+        case 'over30':
+          filtered = filtered.filter(item => parseFloat(item.price) > 30)
+          break
+      }
+    }
+
+    // Dietary filter
+    if (dietaryFilter !== 'all') {
+      switch (dietaryFilter) {
+        case 'vegetarian':
+          filtered = filtered.filter(item => item.isVegetarian)
+          break
+        case 'vegan':
+          filtered = filtered.filter(item => item.isVegan)
+          break
+        case 'glutenFree':
+          filtered = filtered.filter(item => item.isGlutenFree)
+          break
+        case 'popular':
+          filtered = filtered.filter(item => item.isPopular)
+          break
+      }
+    }
+
+    // Spice level filter
+    if (spiceLevelFilter !== 'all') {
+      const spiceLevel = parseInt(spiceLevelFilter)
+      filtered = filtered.filter(item => item.spiceLevel <= spiceLevel)
+    }
+
+    // Rating filter
+    if (ratingFilter !== 'all') {
+      const minRating = parseFloat(ratingFilter)
+      filtered = filtered.filter(item => parseFloat(item.rating) >= minRating)
+    }
+
+    // Sorting
+    switch (sortBy) {
+      case 'price':
+        filtered.sort((a, b) => parseFloat(a.price) - parseFloat(b.price))
+        break
+      case 'priceDesc':
+        filtered.sort((a, b) => parseFloat(b.price) - parseFloat(a.price))
+        break
+      case 'rating':
+        filtered.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating))
+        break
+      case 'popularity':
+        filtered.sort((a, b) => b.reviewCount - a.reviewCount)
+        break
+      case 'calories':
+        filtered.sort((a, b) => a.calories - b.calories)
+        break
+      default:
+        filtered.sort((a, b) => a.name.localeCompare(b.name))
+    }
+
+    setFilteredItems(filtered)
+  }, [foodItems, searchTerm, sortBy, priceRange, dietaryFilter, spiceLevelFilter, ratingFilter])
+
+
+  const clearAllFilters = () => {
+    setSearchTerm('')
+    setSortBy('name')
+    setPriceRange('all')
+    setDietaryFilter('all')
+    setSpiceLevelFilter('all')
+    setRatingFilter('all')
   }
 
-  const handlePageChange = (newPage: number) => {
-    setPagination(prev => ({ ...prev, page: newPage }))
-    // Scroll to top when page changes
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  const activeFiltersCount = [
+    searchTerm,
+    priceRange !== 'all' ? priceRange : null,
+    dietaryFilter !== 'all' ? dietaryFilter : null,
+    spiceLevelFilter !== 'all' ? spiceLevelFilter : null,
+    ratingFilter !== 'all' ? ratingFilter : null
+  ].filter(Boolean).length
 
-  const handleLimitChange = (newLimit: number) => {
-    setPagination(prev => ({ ...prev, limit: newLimit, page: 1 }))
-  }
-
-  // Reset pagination when search or category changes
-  const resetPagination = () => {
-    setPagination(prev => ({ ...prev, page: 1 }))
-  }
-
-  // Update search term and reset pagination
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value)
-    resetPagination()
-  }
-
-  // Update category and reset pagination
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category)
-    resetPagination()
-  }
-
-  // Update sort and reset pagination
-  const handleSortChange = (sortBy: string, sortOrder: string) => {
-    setSortBy(sortBy)
-    setSortOrder(sortOrder)
-    resetPagination()
-  }
-
-  // Don't render menu if user is not authenticated
   if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="pt-24 flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-lg text-muted-foreground">Redirecting to login...</p>
-          </div>
-        </div>
-      </div>
-    )
+    return null // Will redirect
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <Navigation />
       
-      {/* Header */}
-      <section className="pt-24 pb-8 bg-gradient-to-br from-primary/10 via-accent/5 to-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center"
-          >
-            <h1 className="text-4xl md:text-6xl font-bold mb-4">
-              Our <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Premium</span> Menu
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Discover our carefully crafted collection of gourmet dishes, made with the finest ingredients
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Filters */}
-        <motion.div
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+        {/* Header */}
+        <motion.div 
+          className="text-center mb-12"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mb-8"
+          transition={{ duration: 0.6 }}
         >
-          <Card className="p-6">
-            <div className="space-y-6">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search for dishes, cuisines, or ingredients..."
-                  value={searchTerm}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              {/* Category Filter */}
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={selectedCategory === 'all' ? 'default' : 'outline'}
-                  onClick={() => handleCategoryChange('all')}
-                  size="sm"
-                >
-                  All Categories
-                </Button>
-                {categories.map((category) => (
-                  <Button
-                    key={category.id}
-                    variant={selectedCategory === category.name ? 'default' : 'outline'}
-                    onClick={() => handleCategoryChange(category.name)}
-                    size="sm"
-                  >
-                    {category.name} ({category.itemCount})
-                  </Button>
-                ))}
-              </div>
-
-              {/* Filters and Sort */}
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-4">
-                  <Filter className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex flex-wrap gap-4">
-                    {Object.entries(filters).map(([key, value]) => (
-                      <div key={key} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={key}
-                          checked={value}
-                          onCheckedChange={(checked) => handleFilterChange(key as keyof typeof filters, !!checked)}
-                        />
-                        <label htmlFor={key} className="text-sm font-medium capitalize">
-                          {key.replace(/([A-Z])/g, ' $1').trim()}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator orientation="vertical" className="h-6" />
-
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Sort by:</span>
-                  <Select value={sortBy} onValueChange={(value) => handleSortChange(value, sortOrder)}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="name">Name</SelectItem>
-                      <SelectItem value="price">Price</SelectItem>
-                      <SelectItem value="rating">Rating</SelectItem>
-                      <SelectItem value="popularity">Popularity</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={sortOrder} onValueChange={(value) => handleSortChange(sortBy, value)}>
-                    <SelectTrigger className="w-20">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="asc">Asc</SelectItem>
-                      <SelectItem value="desc">Desc</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          </Card>
+          <h1 className="text-4xl sm:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            Our Premium Menu
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Discover delicious dishes crafted with premium ingredients, exclusively for our members
+          </p>
         </motion.div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <div className="h-60 bg-muted" />
-                <CardContent className="p-4">
-                  <div className="h-4 bg-muted rounded mb-2" />
-                  <div className="h-3 bg-muted rounded mb-4" />
-                  <div className="h-6 bg-muted rounded" />
-                </CardContent>
-              </Card>
-            ))}
+        {/* Search and Filter Controls */}
+        <motion.div
+          className="bg-card/50 backdrop-blur-sm rounded-xl border p-6 mb-8 space-y-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          {/* Search and Quick Filters Row */}
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            {/* Search */}
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search dishes, ingredients, or cuisines..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-12 text-base"
+              />
+            </div>
+
+            {/* Sort By */}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-full sm:w-48 h-12">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name (A-Z)</SelectItem>
+                <SelectItem value="price">Price (Low to High)</SelectItem>
+                <SelectItem value="priceDesc">Price (High to Low)</SelectItem>
+                <SelectItem value="rating">Highest Rated</SelectItem>
+                <SelectItem value="popularity">Most Popular</SelectItem>
+                <SelectItem value="calories">Lowest Calories</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Filters Toggle */}
+            <Button
+              variant={showFilters ? "default" : "outline"}
+              className="w-full sm:w-auto h-12 gap-2"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Filters
+              {activeFiltersCount > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] flex items-center justify-center">
+                  {activeFiltersCount}
+                </Badge>
+              )}
+            </Button>
           </div>
-        )}
+
+          {/* Advanced Filters Panel */}
+          {showFilters && (
+            <motion.div
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {/* Price Range */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Price Range</label>
+                <Select value={priceRange} onValueChange={setPriceRange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any price" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any price</SelectItem>
+                    <SelectItem value="under10">Under $10</SelectItem>
+                    <SelectItem value="10to20">$10 - $20</SelectItem>
+                    <SelectItem value="20to30">$20 - $30</SelectItem>
+                    <SelectItem value="over30">Over $30</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Dietary Options */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Dietary Options</label>
+                <Select value={dietaryFilter} onValueChange={setDietaryFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All dishes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All dishes</SelectItem>
+                    <SelectItem value="vegetarian">
+                      <div className="flex items-center gap-2">
+                        <Leaf className="h-4 w-4 text-green-600" />
+                        Vegetarian
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="vegan">
+                      <div className="flex items-center gap-2">
+                        <Leaf className="h-4 w-4 text-green-600" />
+                        Vegan
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="glutenFree">Gluten-Free</SelectItem>
+                    <SelectItem value="popular">
+                      <div className="flex items-center gap-2">
+                        <Award className="h-4 w-4 text-yellow-600" />
+                        Popular
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Spice Level */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Max Spice Level</label>
+                <Select value={spiceLevelFilter} onValueChange={setSpiceLevelFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any spice level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any spice level</SelectItem>
+                    <SelectItem value="0">🌶️ Mild</SelectItem>
+                    <SelectItem value="1">🌶️🌶️ Medium</SelectItem>
+                    <SelectItem value="2">🌶️🌶️🌶️ Hot</SelectItem>
+                    <SelectItem value="3">🌶️🌶️🌶️🌶️ Very Hot</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Rating */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Minimum Rating</label>
+                <Select value={ratingFilter} onValueChange={setRatingFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any rating" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any rating</SelectItem>
+                    <SelectItem value="4.5">⭐ 4.5+ stars</SelectItem>
+                    <SelectItem value="4.0">⭐ 4.0+ stars</SelectItem>
+                    <SelectItem value="3.5">⭐ 3.5+ stars</SelectItem>
+                    <SelectItem value="3.0">⭐ 3.0+ stars</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Clear Filters */}
+          {activeFiltersCount > 0 && (
+            <div className="flex justify-between items-center pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                {filteredItems.length} of {foodItems.length} dishes shown
+              </p>
+              <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+                Clear all filters
+              </Button>
+            </div>
+          )}
+        </motion.div>
 
         {/* Results Summary */}
-        {!loading && items.length > 0 && (
+        {!loading && (
           <motion.div
+            className="mb-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mb-6"
+            transition={{ duration: 0.4 }}
           >
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-muted/50 rounded-lg p-4">
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-muted-foreground">
-                  Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} items
-                </span>
-                {pagination.total > 0 && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Items per page:</span>
-                    <Select value={pagination.limit.toString()} onValueChange={(value) => handleLimitChange(parseInt(value))}>
-                      <SelectTrigger className="w-20">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="6">6</SelectItem>
-                        <SelectItem value="12">12</SelectItem>
-                        <SelectItem value="24">24</SelectItem>
-                        <SelectItem value="48">48</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-              
-              {/* Page Info */}
-              <div className="text-sm text-muted-foreground">
-                Page {pagination.page} of {pagination.totalPages}
-              </div>
-            </div>
+            <p className="text-lg text-muted-foreground">
+              {filteredItems.length === 0 ? (
+                "No dishes match your current filters"
+              ) : (
+                `Showing ${filteredItems.length} delicious ${filteredItems.length === 1 ? 'dish' : 'dishes'}`
+              )}
+            </p>
           </motion.div>
         )}
 
         {/* Menu Items Grid */}
-        {!loading && (
-          <div className={`grid gap-4 ${
-            pagination.limit <= 6 
-              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6' 
-              : pagination.limit <= 12
-              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-              : pagination.limit <= 24
-              ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'
-              : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8'
-          }`}>
-            {items.map((item, index) => (
-              <ProfessionalFoodCard 
-                key={item.id}
-                item={item}
-                index={index}
-              />
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <Card key={index} className="animate-pulse">
+                <div className="h-48 bg-muted rounded-t-lg"></div>
+                <CardContent className="p-4 space-y-3">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-full"></div>
+                  <div className="h-3 bg-muted rounded w-1/2"></div>
+                </CardContent>
+              </Card>
             ))}
           </div>
-        )}
-
-        {/* Pagination Controls */}
-        {!loading && pagination.totalPages > 1 && (
+        ) : filteredItems.length === 0 ? (
           <motion.div
+            className="text-center py-16"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mt-12 flex justify-center"
+            transition={{ duration: 0.6 }}
           >
-            <div className="flex items-center gap-2">
-              {/* Previous Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={!pagination.hasPrev}
-                className="flex items-center gap-1"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-
-              {/* Page Numbers */}
-              <div className="flex items-center gap-1">
-                {/* First page */}
-                {pagination.page > 3 && (
-                  <>
-                    <Button
-                      variant={1 === pagination.page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handlePageChange(1)}
-                    >
-                      1
-                    </Button>
-                    {pagination.page > 4 && (
-                      <span className="px-2 text-muted-foreground">...</span>
-                    )}
-                  </>
-                )}
-
-                {/* Previous pages */}
-                {pagination.page > 2 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(pagination.page - 1)}
-                  >
-                    {pagination.page - 1}
-                  </Button>
-                )}
-
-                {/* Current page */}
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="cursor-default"
-                >
-                  {pagination.page}
-                </Button>
-
-                {/* Next pages */}
-                {pagination.page < pagination.totalPages - 1 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(pagination.page + 1)}
-                  >
-                    {pagination.page + 1}
-                  </Button>
-                )}
-
-                {/* Last page */}
-                {pagination.page < pagination.totalPages - 2 && (
-                  <>
-                    {pagination.page < pagination.totalPages - 3 && (
-                      <span className="px-2 text-muted-foreground">...</span>
-                    )}
-                    <Button
-                      variant={pagination.totalPages === pagination.page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handlePageChange(pagination.totalPages)}
-                    >
-                      {pagination.totalPages}
-                    </Button>
-                  </>
-                )}
-              </div>
-
-              {/* Next Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={!pagination.hasNext}
-                className="flex items-center gap-1"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
+              <Search className="h-12 w-12 text-muted-foreground" />
             </div>
+            <h3 className="text-xl font-semibold mb-2">No dishes found</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              Try adjusting your search terms or filters to find what you're looking for.
+            </p>
+            <Button variant="outline" onClick={clearAllFilters}>
+              Clear all filters
+            </Button>
           </motion.div>
-        )}
-
-        {!loading && items.length === 0 && (
+        ) : (
           <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-12"
+            transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <div className="max-w-md mx-auto">
-              <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-xl font-semibold mb-2">No items found</h3>
-              <p className="text-muted-foreground">
-                Try adjusting your search terms or filters to find what you're looking for.
-              </p>
-            </div>
+            {filteredItems.map((item, index) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+              >
+                <ProfessionalFoodCard
+                  item={item}
+                />
+              </motion.div>
+            ))}
           </motion.div>
         )}
       </div>

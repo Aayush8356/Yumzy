@@ -99,23 +99,26 @@ export function Navigation() {
                   />
                 )}
               </Link>
-              <Link 
-                href="/menu" 
-                className={`transition-colors font-medium relative ${
-                  isActive('/menu') 
-                    ? 'text-primary' 
-                    : 'text-foreground hover:text-primary'
-                }`}
-              >
-                Menu
-                {isActive('/menu') && (
-                  <motion.div
-                    layoutId="activeDesktop"
-                    className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                  />
-                )}
-              </Link>
+              {/* Menu - Only show for authenticated users */}
+              {isAuthenticated && (
+                <Link 
+                  href="/menu" 
+                  className={`transition-colors font-medium relative ${
+                    isActive('/menu') 
+                      ? 'text-primary' 
+                      : 'text-foreground hover:text-primary'
+                  }`}
+                >
+                  Menu
+                  {isActive('/menu') && (
+                    <motion.div
+                      layoutId="activeDesktop"
+                      className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </Link>
+              )}
               <Link 
                 href="/about" 
                 className={`transition-colors font-medium relative ${
@@ -277,8 +280,8 @@ export function Navigation() {
                     className="px-6"
                     asChild
                   >
-                    <Link href="/menu">
-                      Order Now
+                    <Link href="/auth/register">
+                      Get Started
                     </Link>
                   </Button>
                 </>
@@ -348,17 +351,20 @@ export function Navigation() {
               >
                 Home
               </Link>
-              <Link 
-                href="/menu"
-                onClick={() => setIsOpen(false)}
-                className={`block w-full text-left px-3 py-2 rounded-md transition-colors ${
-                  isActive('/menu') 
-                    ? 'text-primary bg-primary/10 font-medium' 
-                    : 'text-foreground hover:text-primary hover:bg-accent'
-                }`}
-              >
-                Menu
-              </Link>
+              {/* Menu - Only show for authenticated users */}
+              {isAuthenticated && (
+                <Link 
+                  href="/menu"
+                  onClick={() => setIsOpen(false)}
+                  className={`block w-full text-left px-3 py-2 rounded-md transition-colors ${
+                    isActive('/menu') 
+                      ? 'text-primary bg-primary/10 font-medium' 
+                      : 'text-foreground hover:text-primary hover:bg-accent'
+                  }`}
+                >
+                  Menu
+                </Link>
+              )}
               <Link 
                 href="/about"
                 onClick={() => setIsOpen(false)}
@@ -476,8 +482,8 @@ export function Navigation() {
                     className="flex-1"
                     asChild
                   >
-                    <Link href="/menu" onClick={() => setIsOpen(false)}>
-                      Order Now
+                    <Link href="/auth/register" onClick={() => setIsOpen(false)}>
+                      Get Started
                     </Link>
                   </Button>
                 </div>

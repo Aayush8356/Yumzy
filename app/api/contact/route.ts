@@ -66,21 +66,14 @@ export async function POST(request: NextRequest) {
       .where(eq(contactMessages.id, newMessage.id))
 
     // Send auto-reply email
-    const autoReplyResult = await sendAutoReplyEmail({
-      name,
-      email,
-      subject,
-      messageId: newMessage.id,
-      ticketNumber,
-    })
+    const autoReplyResult = await sendAutoReplyEmail(email, name, subject)
 
     // Send notification email to admin
     const adminNotificationResult = await sendAdminNotificationEmail({
       name,
       email,
       subject,
-      message,
-      messageId: newMessage.id,
+      message
     })
 
     return NextResponse.json({
@@ -89,8 +82,8 @@ export async function POST(request: NextRequest) {
       data: {
         ticketNumber,
         messageId: newMessage.id,
-        autoReplyStatus: autoReplyResult.success,
-        adminNotified: adminNotificationResult.success,
+        autoReplyStatus: autoReplyResult,
+        adminNotified: adminNotificationResult,
         estimatedResponseTime: '24 hours',
       },
     })

@@ -95,17 +95,38 @@ export async function POST(request: NextRequest) {
 
     const user = users[0]
 
-    // For demo purposes, we'll accept any password for existing users
-    // In production, you would hash passwords and compare them properly
-    // const isValidPassword = await bcrypt.compare(password, user.passwordHash)
+    // Check password (demo mode vs production)
+    let isValidPassword = false
     
-    // Demo password validation - in production use proper password hashing
-    const isValidPassword = password.length >= 1 // Accept any non-empty password for demo
+    if (isDemoEnabled && !user.passwordHash) {
+      // Demo mode: accept any non-empty password for users without passwordHash
+      isValidPassword = password.length >= 1
+    } else if (user.passwordHash) {
+      // Production mode: verify against hashed password
+      const { PasswordManager } = await import('@/lib/auth')
+      isValidPassword = await PasswordManager.verify(password, user.passwordHash)
+    } else {
+      // User exists but no password set
+      isValidPassword = false
+    }
 
     if (!isValidPassword) {
       return NextResponse.json(
         { success: false, error: 'Invalid email or password' },
         { status: 401 }
+      )
+    }
+
+    // Check if email is verified (skip check for demo users or admin)
+    if (!user.isVerified && user.role !== 'admin' && !isDemoEnabled) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Please verify your email before logging in',
+          code: 'EMAIL_NOT_VERIFIED',
+          email: user.email
+        },
+        { status: 403 }
       )
     }
 
