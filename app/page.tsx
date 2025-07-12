@@ -19,6 +19,13 @@ export default function Home() {
   const { isAuthenticated, isLoading, user } = useAuth()
   const router = useRouter()
 
+  // Redirect admin users to admin dashboard
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'admin') {
+      router.push('/admin')
+    }
+  }, [isAuthenticated, user, router])
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background smooth-scroll">
@@ -36,13 +43,6 @@ export default function Home() {
       </div>
     )
   }
-
-  // Redirect admin users to admin dashboard
-  useEffect(() => {
-    if (isAuthenticated && user?.role === 'admin') {
-      router.push('/admin')
-    }
-  }, [isAuthenticated, user, router])
 
   if (isAuthenticated) {
     // If admin, don't render anything (redirecting)

@@ -77,7 +77,7 @@ export default function AboutPage() {
               About <span className="bg-gradient-hero bg-clip-text text-transparent">Yumzy</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              We're passionate about bringing you the finest culinary experiences, 
+              We&apos;re passionate about bringing you the finest culinary experiences, 
               delivered fresh to your doorstep with unmatched speed and quality.
             </p>
           </motion.div>
@@ -107,7 +107,7 @@ export default function AboutPage() {
                   convenient food delivery.
                 </p>
                 <p>
-                  Today, we've grown into a trusted platform serving thousands of customers daily, 
+                  Today, we&apos;ve grown into a trusted platform serving thousands of customers daily, 
                   but our core values remain unchanged. Every dish is prepared with the same care 
                   and attention to detail that made us who we are.
                 </p>
