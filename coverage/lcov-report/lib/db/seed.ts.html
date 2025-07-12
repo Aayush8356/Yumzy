@@ -1,0 +1,991 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for lib/db/seed.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">lib/db</a> seed.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/96</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/76</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/16</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/85</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a>
+<a name='L161'></a><a href='#L161'>161</a>
+<a name='L162'></a><a href='#L162'>162</a>
+<a name='L163'></a><a href='#L163'>163</a>
+<a name='L164'></a><a href='#L164'>164</a>
+<a name='L165'></a><a href='#L165'>165</a>
+<a name='L166'></a><a href='#L166'>166</a>
+<a name='L167'></a><a href='#L167'>167</a>
+<a name='L168'></a><a href='#L168'>168</a>
+<a name='L169'></a><a href='#L169'>169</a>
+<a name='L170'></a><a href='#L170'>170</a>
+<a name='L171'></a><a href='#L171'>171</a>
+<a name='L172'></a><a href='#L172'>172</a>
+<a name='L173'></a><a href='#L173'>173</a>
+<a name='L174'></a><a href='#L174'>174</a>
+<a name='L175'></a><a href='#L175'>175</a>
+<a name='L176'></a><a href='#L176'>176</a>
+<a name='L177'></a><a href='#L177'>177</a>
+<a name='L178'></a><a href='#L178'>178</a>
+<a name='L179'></a><a href='#L179'>179</a>
+<a name='L180'></a><a href='#L180'>180</a>
+<a name='L181'></a><a href='#L181'>181</a>
+<a name='L182'></a><a href='#L182'>182</a>
+<a name='L183'></a><a href='#L183'>183</a>
+<a name='L184'></a><a href='#L184'>184</a>
+<a name='L185'></a><a href='#L185'>185</a>
+<a name='L186'></a><a href='#L186'>186</a>
+<a name='L187'></a><a href='#L187'>187</a>
+<a name='L188'></a><a href='#L188'>188</a>
+<a name='L189'></a><a href='#L189'>189</a>
+<a name='L190'></a><a href='#L190'>190</a>
+<a name='L191'></a><a href='#L191'>191</a>
+<a name='L192'></a><a href='#L192'>192</a>
+<a name='L193'></a><a href='#L193'>193</a>
+<a name='L194'></a><a href='#L194'>194</a>
+<a name='L195'></a><a href='#L195'>195</a>
+<a name='L196'></a><a href='#L196'>196</a>
+<a name='L197'></a><a href='#L197'>197</a>
+<a name='L198'></a><a href='#L198'>198</a>
+<a name='L199'></a><a href='#L199'>199</a>
+<a name='L200'></a><a href='#L200'>200</a>
+<a name='L201'></a><a href='#L201'>201</a>
+<a name='L202'></a><a href='#L202'>202</a>
+<a name='L203'></a><a href='#L203'>203</a>
+<a name='L204'></a><a href='#L204'>204</a>
+<a name='L205'></a><a href='#L205'>205</a>
+<a name='L206'></a><a href='#L206'>206</a>
+<a name='L207'></a><a href='#L207'>207</a>
+<a name='L208'></a><a href='#L208'>208</a>
+<a name='L209'></a><a href='#L209'>209</a>
+<a name='L210'></a><a href='#L210'>210</a>
+<a name='L211'></a><a href='#L211'>211</a>
+<a name='L212'></a><a href='#L212'>212</a>
+<a name='L213'></a><a href='#L213'>213</a>
+<a name='L214'></a><a href='#L214'>214</a>
+<a name='L215'></a><a href='#L215'>215</a>
+<a name='L216'></a><a href='#L216'>216</a>
+<a name='L217'></a><a href='#L217'>217</a>
+<a name='L218'></a><a href='#L218'>218</a>
+<a name='L219'></a><a href='#L219'>219</a>
+<a name='L220'></a><a href='#L220'>220</a>
+<a name='L221'></a><a href='#L221'>221</a>
+<a name='L222'></a><a href='#L222'>222</a>
+<a name='L223'></a><a href='#L223'>223</a>
+<a name='L224'></a><a href='#L224'>224</a>
+<a name='L225'></a><a href='#L225'>225</a>
+<a name='L226'></a><a href='#L226'>226</a>
+<a name='L227'></a><a href='#L227'>227</a>
+<a name='L228'></a><a href='#L228'>228</a>
+<a name='L229'></a><a href='#L229'>229</a>
+<a name='L230'></a><a href='#L230'>230</a>
+<a name='L231'></a><a href='#L231'>231</a>
+<a name='L232'></a><a href='#L232'>232</a>
+<a name='L233'></a><a href='#L233'>233</a>
+<a name='L234'></a><a href='#L234'>234</a>
+<a name='L235'></a><a href='#L235'>235</a>
+<a name='L236'></a><a href='#L236'>236</a>
+<a name='L237'></a><a href='#L237'>237</a>
+<a name='L238'></a><a href='#L238'>238</a>
+<a name='L239'></a><a href='#L239'>239</a>
+<a name='L240'></a><a href='#L240'>240</a>
+<a name='L241'></a><a href='#L241'>241</a>
+<a name='L242'></a><a href='#L242'>242</a>
+<a name='L243'></a><a href='#L243'>243</a>
+<a name='L244'></a><a href='#L244'>244</a>
+<a name='L245'></a><a href='#L245'>245</a>
+<a name='L246'></a><a href='#L246'>246</a>
+<a name='L247'></a><a href='#L247'>247</a>
+<a name='L248'></a><a href='#L248'>248</a>
+<a name='L249'></a><a href='#L249'>249</a>
+<a name='L250'></a><a href='#L250'>250</a>
+<a name='L251'></a><a href='#L251'>251</a>
+<a name='L252'></a><a href='#L252'>252</a>
+<a name='L253'></a><a href='#L253'>253</a>
+<a name='L254'></a><a href='#L254'>254</a>
+<a name='L255'></a><a href='#L255'>255</a>
+<a name='L256'></a><a href='#L256'>256</a>
+<a name='L257'></a><a href='#L257'>257</a>
+<a name='L258'></a><a href='#L258'>258</a>
+<a name='L259'></a><a href='#L259'>259</a>
+<a name='L260'></a><a href='#L260'>260</a>
+<a name='L261'></a><a href='#L261'>261</a>
+<a name='L262'></a><a href='#L262'>262</a>
+<a name='L263'></a><a href='#L263'>263</a>
+<a name='L264'></a><a href='#L264'>264</a>
+<a name='L265'></a><a href='#L265'>265</a>
+<a name='L266'></a><a href='#L266'>266</a>
+<a name='L267'></a><a href='#L267'>267</a>
+<a name='L268'></a><a href='#L268'>268</a>
+<a name='L269'></a><a href='#L269'>269</a>
+<a name='L270'></a><a href='#L270'>270</a>
+<a name='L271'></a><a href='#L271'>271</a>
+<a name='L272'></a><a href='#L272'>272</a>
+<a name='L273'></a><a href='#L273'>273</a>
+<a name='L274'></a><a href='#L274'>274</a>
+<a name='L275'></a><a href='#L275'>275</a>
+<a name='L276'></a><a href='#L276'>276</a>
+<a name='L277'></a><a href='#L277'>277</a>
+<a name='L278'></a><a href='#L278'>278</a>
+<a name='L279'></a><a href='#L279'>279</a>
+<a name='L280'></a><a href='#L280'>280</a>
+<a name='L281'></a><a href='#L281'>281</a>
+<a name='L282'></a><a href='#L282'>282</a>
+<a name='L283'></a><a href='#L283'>283</a>
+<a name='L284'></a><a href='#L284'>284</a>
+<a name='L285'></a><a href='#L285'>285</a>
+<a name='L286'></a><a href='#L286'>286</a>
+<a name='L287'></a><a href='#L287'>287</a>
+<a name='L288'></a><a href='#L288'>288</a>
+<a name='L289'></a><a href='#L289'>289</a>
+<a name='L290'></a><a href='#L290'>290</a>
+<a name='L291'></a><a href='#L291'>291</a>
+<a name='L292'></a><a href='#L292'>292</a>
+<a name='L293'></a><a href='#L293'>293</a>
+<a name='L294'></a><a href='#L294'>294</a>
+<a name='L295'></a><a href='#L295'>295</a>
+<a name='L296'></a><a href='#L296'>296</a>
+<a name='L297'></a><a href='#L297'>297</a>
+<a name='L298'></a><a href='#L298'>298</a>
+<a name='L299'></a><a href='#L299'>299</a>
+<a name='L300'></a><a href='#L300'>300</a>
+<a name='L301'></a><a href='#L301'>301</a>
+<a name='L302'></a><a href='#L302'>302</a>
+<a name='L303'></a><a href='#L303'>303</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { db } from <span class="cstat-no" title="statement not covered" >'./index'</span>
+import { categories, foodItems, users, notifications, cart } from <span class="cstat-no" title="statement not covered" >'./schema'</span>
+import { eq } from 'drizzle-orm'
+import { foodItems as staticFoodItems, getCategoriesWithCounts } from <span class="cstat-no" title="statement not covered" >'@/data/food-items'</span>
+&nbsp;
+// Generate categories from the food items data
+const generateCategoriesFromFoodItems = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >() =&gt; {</span></span>
+  const categoriesWithCounts = <span class="cstat-no" title="statement not covered" >getCategoriesWithCounts(staticFoodItems)</span>
+  const categoryImages: Record&lt;string, string&gt; = <span class="cstat-no" title="statement not covered" >{</span>
+    'Burgers': 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=300&amp;h=200&amp;fit=crop',
+    'Pizza': 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=300&amp;h=200&amp;fit=crop',
+    'Asian': 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=300&amp;h=200&amp;fit=crop',
+    'Healthy': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=300&amp;h=200&amp;fit=crop',
+    'Desserts': 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=300&amp;h=200&amp;fit=crop',
+    'Beverages': 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=300&amp;h=200&amp;fit=crop',
+    'Indian': 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=300&amp;h=200&amp;fit=crop',
+    'Mexican': 'https://images.unsplash.com/photo-1590736969955-71cc94901144?w=300&amp;h=200&amp;fit=crop',
+    'Italian': 'https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=300&amp;h=200&amp;fit=crop',
+    'Wraps': 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=300&amp;h=200&amp;fit=crop',
+    'Sandwiches': 'https://images.unsplash.com/photo-1553909489-cd47e0ef937f?w=300&amp;h=200&amp;fit=crop'
+  }
+&nbsp;
+  const categoryDescriptions: Record&lt;string, string&gt; = <span class="cstat-no" title="statement not covered" >{</span>
+    'Burgers': 'Juicy burgers with fresh ingredients',
+    'Pizza': 'Wood-fired pizzas with authentic Italian flavors', 
+    'Asian': 'Authentic Asian dishes with traditional recipes',
+    'Healthy': 'Nutritious bowls packed with fresh ingredients',
+    'Desserts': 'Sweet treats and decadent desserts',
+    'Beverages': 'Refreshing drinks and specialty beverages',
+    'Indian': 'Authentic Indian cuisine with aromatic spices',
+    'Mexican': 'Bold Mexican flavors with fresh ingredients',
+    'Italian': 'Classic Italian dishes and pasta',
+    'Wraps': 'Fresh wraps and portable meals',
+    'Sandwiches': 'Gourmet sandwiches and subs'
+  }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  return categoriesWithCounts.map(<span class="fstat-no" title="function not covered" >({</span> category }) =&gt; (<span class="cstat-no" title="statement not covered" >{</span></span>
+    name: category,
+    description: categoryDescriptions[category] || `Delicious ${category.toLowerCase()} dishes`,
+    image: categoryImages[category] || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=300&amp;h=200&amp;fit=crop'
+  }))
+}
+&nbsp;
+const sampleCategories = <span class="cstat-no" title="statement not covered" >generateCategoriesFromFoodItems()</span>
+&nbsp;
+// Convert static food items to database format
+const generateDatabaseFoodItems = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >() =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >  return staticFoodItems.map(<span class="fstat-no" title="function not covered" >item =&gt; (<span class="cstat-no" title="statement not covered" >{</span></span></span>
+    name: item.name,
+    description: item.description,
+    shortDescription: item.description.length &gt; 100 
+      ? item.description.substring(0, 100) + '...' 
+      : item.description,
+    price: item.price.replace('$', ''),
+    originalPrice: item.originalPrice?.replace('$', ''),
+    discount: item.discount,
+    rating: item.rating.toString(),
+    reviewCount: Math.floor(Math.random() * 500) + 50,
+    cookTime: item.cookTime,
+    difficulty: 'Medium',
+    spiceLevel: item.spiceLevel === 'mild' ? 1 : 
+               item.spiceLevel === 'medium' ? 2 :
+               item.spiceLevel === 'hot' ? 4 :
+               item.spiceLevel === 'extra-hot' ? 5 : 1,
+    servingSize: '1 portion',
+    calories: item.calories || 500,
+    image: item.image,
+    images: [item.image],
+    ingredients: generateIngredients(item.category, item.isVegetarian),
+    allergens: generateAllergens(item.category),
+    nutritionInfo: {
+      calories: item.calories || 500,
+      protein: Math.floor((item.calories || 500) * 0.15 / 4),
+      carbs: Math.floor((item.calories || 500) * 0.50 / 4),
+      fat: Math.floor((item.calories || 500) * 0.30 / 9),
+      fiber: Math.floor(Math.random() * 10) + 2,
+      sugar: Math.floor(Math.random() * 15) + 5
+    },
+    tags: generateTags(item),
+    isVegetarian: item.isVegetarian,
+    isVegan: item.isVegan || false,
+    isGlutenFree: Math.random() &gt; 0.7,
+    isSpicy: item.spiceLevel === 'hot' || item.spiceLevel === 'extra-hot',
+    isPopular: item.isHot || Math.random() &gt; 0.8,
+  }))
+}
+&nbsp;
+// Helper functions
+function <span class="fstat-no" title="function not covered" >generateIngredients(c</span>ategory: string, isVegetarian: boolean): string[] {
+  const baseIngredients: Record&lt;string, string[]&gt; = <span class="cstat-no" title="statement not covered" >{</span>
+    'Burgers': isVegetarian 
+      ? ['Black bean patty', 'Lettuce', 'Tomato', 'Onion', 'Vegan mayo']
+      : ['Beef patty', 'Lettuce', 'Tomato', 'Onion', 'Cheese', 'Mayo'],
+    'Pizza': ['Pizza dough', 'Tomato sauce', 'Mozzarella cheese', 'Basil', 'Olive oil'],
+    'Asian': ['Rice', 'Soy sauce', 'Ginger', 'Garlic', 'Vegetables'],
+    'Healthy': ['Quinoa', 'Mixed greens', 'Avocado', 'Cherry tomatoes', 'Olive oil'],
+    'Desserts': ['Flour', 'Sugar', 'Eggs', 'Butter', 'Vanilla'],
+    'Wraps': ['Tortilla', 'Lettuce', 'Tomato', 'Cheese', 'Sauce'],
+    'Sandwiches': ['Bread', 'Lettuce', 'Tomato', 'Mayo'],
+    'Indian': ['Basmati rice', 'Spices', 'Onion', 'Garlic', 'Ginger'],
+    'Mexican': ['Corn tortilla', 'Beans', 'Cheese', 'Salsa', 'Avocado'],
+    'Italian': ['Pasta', 'Tomatoes', 'Garlic', 'Basil', 'Parmesan'],
+    'Beverages': ['Fresh ingredients', 'Natural flavors']
+  }
+  
+<span class="cstat-no" title="statement not covered" >  return baseIngredients[category] || ['Fresh ingredients', 'Premium spices']</span>
+}
+&nbsp;
+function <span class="fstat-no" title="function not covered" >generateAllergens(c</span>ategory: string): string[] {
+  const categoryAllergens: Record&lt;string, string[]&gt; = <span class="cstat-no" title="statement not covered" >{</span>
+    'Pizza': ['Gluten', 'Dairy'],
+    'Burgers': ['Gluten', 'Dairy'],
+    'Desserts': ['Gluten', 'Dairy', 'Eggs'],
+    'Asian': ['Soy', 'Gluten'],
+    'Italian': ['Gluten', 'Dairy'],
+    'Indian': ['Dairy'],
+    'Mexican': ['Dairy']
+  }
+  
+<span class="cstat-no" title="statement not covered" >  return categoryAllergens[category] || []</span>
+}
+&nbsp;
+function <span class="fstat-no" title="function not covered" >generateTags(i</span>tem: any): string[] {
+  const tags = <span class="cstat-no" title="statement not covered" >[]</span>
+  
+<span class="cstat-no" title="statement not covered" >  if (item.isVegetarian) <span class="cstat-no" title="statement not covered" >tags.push('Vegetarian')</span></span>
+<span class="cstat-no" title="statement not covered" >  if (item.isVegan) <span class="cstat-no" title="statement not covered" >tags.push('Vegan')</span></span>
+<span class="cstat-no" title="statement not covered" >  if (item.isHot) <span class="cstat-no" title="statement not covered" >tags.push('Popular')</span></span>
+<span class="cstat-no" title="statement not covered" >  if (item.spiceLevel === 'hot' || item.spiceLevel === 'extra-hot') <span class="cstat-no" title="statement not covered" >tags.push('Spicy')</span></span>
+<span class="cstat-no" title="statement not covered" >  if (item.calories &amp;&amp; item.calories &lt; 400) <span class="cstat-no" title="statement not covered" >tags.push('Light')</span></span>
+<span class="cstat-no" title="statement not covered" >  if (item.discount &amp;&amp; item.discount &gt; 0) <span class="cstat-no" title="statement not covered" >tags.push('On Sale')</span></span>
+  
+<span class="cstat-no" title="statement not covered" >  return tags</span>
+}
+&nbsp;
+const sampleFoodItems = <span class="cstat-no" title="statement not covered" >generateDatabaseFoodItems()</span>
+&nbsp;
+// Sample users - only create if SEED_DEMO_DATA environment variable is set
+const createSampleUsers = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >() =&gt; {</span></span>
+  const shouldSeedDemo = <span class="cstat-no" title="statement not covered" >process.env.SEED_DEMO_DATA === 'true' || process.env.ENABLE_DEMO_DATA === 'true'</span>
+  
+<span class="cstat-no" title="statement not covered" >  if (!shouldSeedDemo) {</span>
+<span class="cstat-no" title="statement not covered" >    console.log('ℹ️  Skipping demo users (set SEED_DEMO_DATA=true to enable)')</span>
+<span class="cstat-no" title="statement not covered" >    return []</span>
+  }
+  
+<span class="cstat-no" title="statement not covered" >  return [</span>
+    {
+      email: 'guptaaayush537@gmail.com',
+      name: 'Aayush Gupta',
+      phone: '+1 (555) 123-4567',
+      // No avatar - will use initials-based avatar generated in AuthContext
+      role: 'admin',
+      isVerified: true,
+      preferences: {
+        notifications: true,
+        newsletter: true,
+        dietaryRestrictions: [],
+      },
+    },
+    {
+      email: 'demo@yumzy.com',
+      name: 'Demo User',
+      phone: '+1 (555) 987-6543',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&amp;h=150&amp;fit=crop&amp;crop=face',
+      role: 'user',
+      isVerified: true,
+      preferences: {
+        notifications: true,
+        newsletter: false,
+        dietaryRestrictions: ['Vegetarian'],
+      },
+    },
+  ]
+}
+&nbsp;
+const sampleUsers = <span class="cstat-no" title="statement not covered" >createSampleUsers()</span>
+&nbsp;
+// Sample notifications - only create if SEED_DEMO_DATA environment variable is set
+const createSampleNotifications = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >() =&gt; {</span></span>
+  const shouldSeedDemo = <span class="cstat-no" title="statement not covered" >process.env.SEED_DEMO_DATA === 'true' || process.env.ENABLE_DEMO_DATA === 'true'</span>
+  
+<span class="cstat-no" title="statement not covered" >  if (!shouldSeedDemo) {</span>
+<span class="cstat-no" title="statement not covered" >    console.log('ℹ️  Skipping demo notifications (set SEED_DEMO_DATA=true to enable)')</span>
+<span class="cstat-no" title="statement not covered" >    return []</span>
+  }
+  
+<span class="cstat-no" title="statement not covered" >  return [</span>
+    {
+      type: 'order_update',
+      title: 'Order Delivered!',
+      message: 'Your order #ORD-001 has been successfully delivered. Enjoy your meal!',
+      data: { orderId: 'ORD-001', status: 'delivered' },
+      isImportant: true,
+    },
+    {
+      type: 'promo',
+      title: 'Special Offer!',
+      message: '20% off on all pizza orders this weekend. Use code PIZZA20',
+      data: { code: 'PIZZA20', discount: 20 },
+      isImportant: false,
+    },
+    {
+      type: 'system',
+      title: 'Welcome to Yumzy!',
+      message: 'Thank you for joining Yumzy. Explore our menu and enjoy delicious food delivery.',
+      data: {},
+      isImportant: false,
+    },
+  ]
+}
+&nbsp;
+const sampleNotifications = <span class="cstat-no" title="statement not covered" >createSampleNotifications()</span>
+&nbsp;
+export async function <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >seedDatabase() {</span></span>
+<span class="cstat-no" title="statement not covered" >  try {</span>
+<span class="cstat-no" title="statement not covered" >    console.log('🌱 Starting database seeding...')</span>
+&nbsp;
+    // Check if data already exists before cleaning
+    const existingCategories = <span class="cstat-no" title="statement not covered" >await db.select().from(categories).limit(1)</span>
+    const existingFoodItems = <span class="cstat-no" title="statement not covered" >await db.select().from(foodItems).limit(1)</span>
+    
+<span class="cstat-no" title="statement not covered" >    if (existingCategories.length &gt; 0 || existingFoodItems.length &gt; 0) {</span>
+<span class="cstat-no" title="statement not covered" >      console.log('ℹ️  Data already exists. Skipping clean up to preserve existing data.')</span>
+<span class="cstat-no" title="statement not covered" >      console.log('ℹ️  To force re-seed, manually truncate tables first.')</span>
+<span class="cstat-no" title="statement not covered" >      return true</span>
+    }
+&nbsp;
+    // Clean existing data only if no important data exists
+<span class="cstat-no" title="statement not covered" >    try {</span>
+<span class="cstat-no" title="statement not covered" >      await db.delete(cart)</span>
+<span class="cstat-no" title="statement not covered" >      await db.delete(notifications) </span>
+<span class="cstat-no" title="statement not covered" >      await db.delete(users)</span>
+<span class="cstat-no" title="statement not covered" >      await db.delete(foodItems)</span>
+<span class="cstat-no" title="statement not covered" >      await db.delete(categories)</span>
+<span class="cstat-no" title="statement not covered" >      console.log('✅ Cleaned existing data')</span>
+    } catch (cleanError) {
+<span class="cstat-no" title="statement not covered" >      console.log('ℹ️  Could not clean existing data, proceeding with insertion...')</span>
+    }
+&nbsp;
+    // Insert categories
+<span class="cstat-no" title="statement not covered" >    console.log('📂 Inserting categories...')</span>
+    const insertedCategories = <span class="cstat-no" title="statement not covered" >await db.insert(categories).values(sampleCategories).returning()</span>
+<span class="cstat-no" title="statement not covered" >    console.log(`✅ Inserted ${insertedCategories.length} categories`)</span>
+&nbsp;
+    // Insert food items with category references
+<span class="cstat-no" title="statement not covered" >    console.log('🍕 Inserting food items...')</span>
+    const foodItemsWithCategoryIds = <span class="cstat-no" title="statement not covered" >await Promise.all(</span>
+      sampleFoodItems.map(<span class="fstat-no" title="function not covered" >async (i</span>tem, index) =&gt; {
+        // Get the original item to access category
+        const originalItem = <span class="cstat-no" title="statement not covered" >staticFoodItems[index]</span>
+        const category = <span class="cstat-no" title="statement not covered" >insertedCategories.find(<span class="fstat-no" title="function not covered" >cat =&gt; <span class="cstat-no" title="statement not covered" >c</span>at.name === originalItem.category)</span></span>
+<span class="cstat-no" title="statement not covered" >        if (!category) {</span>
+<span class="cstat-no" title="statement not covered" >          throw new Error(`Category ${originalItem.category} not found`)</span>
+        }
+        
+<span class="cstat-no" title="statement not covered" >        return {</span>
+          ...item,
+          categoryId: category.id,
+        }
+      })
+    )
+&nbsp;
+    const insertedFoodItems = <span class="cstat-no" title="statement not covered" >await db.insert(foodItems).values(foodItemsWithCategoryIds).returning()</span>
+<span class="cstat-no" title="statement not covered" >    console.log(`✅ Inserted ${insertedFoodItems.length} food items`)</span>
+&nbsp;
+    // Insert users (only if demo data is enabled)
+<span class="cstat-no" title="statement not covered" >    if (sampleUsers.length &gt; 0) {</span>
+      const insertedUsers = <span class="cstat-no" title="statement not covered" >await db.insert(users).values(sampleUsers).returning()</span>
+<span class="cstat-no" title="statement not covered" >      console.log(`✅ Inserted ${insertedUsers.length} users`)</span>
+&nbsp;
+      // Insert notifications for demo user
+      const demoUser = <span class="cstat-no" title="statement not covered" >insertedUsers.find(<span class="fstat-no" title="function not covered" >user =&gt; <span class="cstat-no" title="statement not covered" >u</span>ser.email === 'demo@yumzy.com')</span></span>
+<span class="cstat-no" title="statement not covered" >      if (demoUser &amp;&amp; sampleNotifications.length &gt; 0) {</span>
+<span class="cstat-no" title="statement not covered" >        console.log('🔔 Inserting notifications...')</span>
+        const notificationsWithUserId = <span class="cstat-no" title="statement not covered" >sampleNotifications.map(<span class="fstat-no" title="function not covered" >notification =&gt; (<span class="cstat-no" title="statement not covered" >{</span></span></span>
+          ...notification,
+          userId: demoUser.id,
+        }))
+        
+        const insertedNotifications = <span class="cstat-no" title="statement not covered" >await db.insert(notifications).values(notificationsWithUserId).returning()</span>
+<span class="cstat-no" title="statement not covered" >        console.log(`✅ Inserted ${insertedNotifications.length} notifications`)</span>
+      }
+    }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    console.log('🎉 Database seeding completed successfully!')</span>
+<span class="cstat-no" title="statement not covered" >    return true</span>
+  } catch (error) {
+<span class="cstat-no" title="statement not covered" >    console.error('❌ Error seeding database:', error)</span>
+<span class="cstat-no" title="statement not covered" >    throw error</span>
+  }
+}
+&nbsp;
+// Run seeding if this file is executed directly
+// For ES modules, we check if this is the main module using import.meta
+<span class="cstat-no" title="statement not covered" >if (import.meta.url === `file://${process.argv[1]}`) {</span>
+<span class="cstat-no" title="statement not covered" >  seedDatabase()</span>
+    .then(<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >p</span>rocess.exit(0))</span>
+    .catch(<span class="fstat-no" title="function not covered" >(e</span>rror) =&gt; {
+<span class="cstat-no" title="statement not covered" >      console.error(error)</span>
+<span class="cstat-no" title="statement not covered" >      process.exit(1)</span>
+    })
+}</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2025-07-12T18:55:38.642Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    
