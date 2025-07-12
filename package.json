@@ -4,7 +4,6 @@
   "version": "1.0.0",
   "description": "A modern food delivery application built with Next.js and TypeScript",
   "author": "Your Name",
-  "type": "module",
   "scripts": {
     "dev": "next dev",
     "dev:turbo": "next dev --turbo",
