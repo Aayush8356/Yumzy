@@ -54,6 +54,8 @@ interface RecommendedItem {
   description: string
   cookTime: string
   category: string
+  imageUrl?: string
+  isLoadingImage?: boolean
 }
 
 export function PremiumDashboard() {
@@ -104,6 +106,45 @@ export function PremiumDashboard() {
         variant: "destructive"
       })
     }
+  }
+
+  // Function to fetch dynamic Unsplash images for recommended items
+  const fetchImageForItem = async (item: RecommendedItem) => {
+    try {
+      const response = await fetch(
+        `/api/images/food?name=${encodeURIComponent(item.name)}&category=${encodeURIComponent(item.category || '')}&id=${encodeURIComponent(item.id)}`
+      )
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.imageUrl) {
+          return data.imageUrl
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch image for item:', item.name, error)
+    }
+    
+    // Return fallback image if API fails
+    const fallbackImages = [
+      'https://images.unsplash.com/photo-1563379091339-03246963d638?w=400&h=300&fit=crop&crop=center', // biryani
+      'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop&crop=center', // pizza  
+      'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=300&fit=crop&crop=center', // ramen
+      'https://images.unsplash.com/photo-1571091655789-405eb7a3a3a8?w=400&h=300&fit=crop&crop=center', // burger
+      'https://images.unsplash.com/photo-1590736969955-71cc94901144?w=400&h=300&fit=crop&crop=center', // tacos
+      'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=300&fit=crop&crop=center', // salad
+    ]
+    
+    // Generate consistent fallback based on item ID
+    let hash = 0
+    const str = item.id + item.name
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash
+    }
+    const imageIndex = Math.abs(hash) % fallbackImages.length
+    return fallbackImages[imageIndex]
   }
 
   useEffect(() => {
@@ -170,12 +211,14 @@ export function PremiumDashboard() {
             const formattedItems = menuData.items.map((item: any) => ({
               id: item.id,
               name: item.name,
-              image: item.image || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=300&fit=crop', // fallback image
+              image: item.image || '', // Will be replaced by dynamic image
               price: parseFloat(item.price),
               rating: parseFloat(item.rating || '4.5'),
               description: item.description || 'Delicious dish made with fresh ingredients.',
               cookTime: item.cookTime || '15-20 min',
-              category: item.category?.name || 'Popular'
+              category: item.category?.name || 'Popular',
+              imageUrl: '',
+              isLoadingImage: true
             }))
             setRecommendedItems(formattedItems)
           } else {
@@ -184,22 +227,26 @@ export function PremiumDashboard() {
               {
                 id: 'default_1',
                 name: 'Chef\'s Special Pizza',
-                image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop',
+                image: '',
                 price: 24.99,
                 rating: 4.8,
                 description: 'Wood-fired pizza with fresh mozzarella and basil',
                 cookTime: '15 min',
-                category: 'Pizza'
+                category: 'Pizza',
+                imageUrl: '',
+                isLoadingImage: true
               },
               {
                 id: 'default_2',
                 name: 'Grilled Salmon',
-                image: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400&h=300&fit=crop',
+                image: '',
                 price: 32.99,
                 rating: 4.9,
                 description: 'Fresh Atlantic salmon with seasonal vegetables',
                 cookTime: '20 min',
-                category: 'Seafood'
+                category: 'Seafood',
+                imageUrl: '',
+                isLoadingImage: true
               }
             ])
           }
@@ -214,6 +261,30 @@ export function PremiumDashboard() {
 
     fetchUserData()
   }, [user?.id])
+
+  // Fetch images for recommended items when they are set
+  useEffect(() => {
+    const fetchImagesForItems = async () => {
+      if (recommendedItems.length === 0) return
+
+      const updatedItems = await Promise.all(
+        recommendedItems.map(async (item) => {
+          if (item.imageUrl || !item.isLoadingImage) return item
+          
+          const imageUrl = await fetchImageForItem(item)
+          return {
+            ...item,
+            imageUrl,
+            isLoadingImage: false
+          }
+        })
+      )
+      
+      setRecommendedItems(updatedItems)
+    }
+
+    fetchImagesForItems()
+  }, [recommendedItems.length]) // Only run when items length changes, not on every update
 
   if (loading) {
     return (
@@ -403,11 +474,19 @@ export function PremiumDashboard() {
               >
                 <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 hover:scale-[1.02]">
                   <div className="relative h-24">
-                    <ProfessionalFoodImage
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
+                    {item.isLoadingImage ? (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 animate-pulse flex items-center justify-center">
+                        <Utensils className="w-6 h-6 text-gray-400" />
+                      </div>
+                    ) : (
+                      <ProfessionalFoodImage
+                        src={item.imageUrl || item.image}
+                        alt={item.name}
+                        className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${item.isLoadingImage ? 'opacity-75' : 'opacity-100'}`}
+                        professionalCategories={[item.category]}
+                        priority={false}
+                      />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <div className="absolute top-1 right-1">
                       <Badge className="bg-orange-500/90 text-white border-0 gap-1 text-xs px-1 py-0.5 text-[10px]">

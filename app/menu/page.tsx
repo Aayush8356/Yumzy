@@ -97,8 +97,21 @@ export default function MenuPage() {
     popular: false,
   })
 
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const { toast } = useToast()
+
+  // Redirect non-authenticated users
+  useEffect(() => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to access our premium menu",
+        variant: "destructive"
+      })
+      window.location.href = '/auth/login'
+      return
+    }
+  }, [isAuthenticated, toast])
 
   // Fetch categories
   useEffect(() => {
@@ -229,6 +242,21 @@ export default function MenuPage() {
     setSortBy(sortBy)
     setSortOrder(sortOrder)
     resetPagination()
+  }
+
+  // Don't render menu if user is not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="pt-24 flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-muted-foreground">Redirecting to login...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -402,7 +430,15 @@ export default function MenuPage() {
 
         {/* Menu Items Grid */}
         {!loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className={`grid gap-4 ${
+            pagination.limit <= 6 
+              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6' 
+              : pagination.limit <= 12
+              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+              : pagination.limit <= 24
+              ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'
+              : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8'
+          }`}>
             {items.map((item, index) => (
               <ProfessionalFoodCard 
                 key={item.id}
