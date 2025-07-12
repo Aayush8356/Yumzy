@@ -2,13 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { foodItems, categories } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { 
-  professionalCategories, 
-  professionalFilters, 
-  mapFoodItemToCategories,
-  getPrimaryCategories,
-  getCuisineCategories 
-} from '@/data/professional-categories'
 import { ImageManager, ImageUrls } from '@/lib/image-manager'
 import { getFallbackImageForItem } from '@/data/fallback-images'
 import { CacheManager, CacheKeys, CACHE_TTL } from '@/lib/cache'
@@ -103,13 +96,11 @@ export async function GET(request: NextRequest) {
     // For authenticated users, all items are available.
     let menuItems = allFoodItems
     
-    // Transform database items to match the expected format with professional categories
+    // Transform database items to match the expected format
     let filteredItems = menuItems.map(item => {
-      const professionalCats = mapFoodItemToCategories(item)
-      
       // Professional image handling
-      const primaryImage = item.image || getFallbackImageForItem(professionalCats)
-      const fallbackImage = getFallbackImageForItem(professionalCats)
+      const primaryImage = item.image || getFallbackImageForItem(['general'])
+      const fallbackImage = getFallbackImageForItem(['general'])
       
       // Generate reliable image URLs with fallback
       const optimizedImage = item.image || fallbackImage
@@ -147,7 +138,7 @@ export async function GET(request: NextRequest) {
         isGlutenFree: item.isGlutenFree,
         isSpicy: item.isSpicy,
         isPopular: item.isPopular,
-        professionalCategories: professionalCats, // New professional categorization
+        // Removed professional categorization system
         category: {
           id: item.categoryName?.toLowerCase().replace(/\s+/g, '-') || 'general',
           name: item.categoryName || 'General',
@@ -167,17 +158,25 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    // Apply professional primary category filter (veg/non-veg/vegan/trending)
+    // Apply simple category filters based on item properties
     if (primaryCategory) {
-      filteredItems = filteredItems.filter(item => 
-        item.professionalCategories.includes(primaryCategory)
-      )
+      switch (primaryCategory) {
+        case 'vegetarian':
+          filteredItems = filteredItems.filter(item => item.isVegetarian)
+          break
+        case 'vegan':
+          filteredItems = filteredItems.filter(item => item.isVegan)
+          break
+        case 'popular':
+          filteredItems = filteredItems.filter(item => item.isPopular)
+          break
+      }
     }
     
-    // Apply cuisine category filter
+    // Apply cuisine category filter based on category name
     if (cuisineCategory) {
       filteredItems = filteredItems.filter(item => 
-        item.professionalCategories.includes(cuisineCategory)
+        item.category.name.toLowerCase().includes(cuisineCategory.toLowerCase())
       )
     }
     
@@ -272,13 +271,11 @@ export async function GET(request: NextRequest) {
       },
       isAuthenticated,
       totalAvailable: allFoodItems.length,
-      // Professional categorization system
-      professionalCategories: {
-        primary: getPrimaryCategories(),
-        cuisine: getCuisineCategories(),
-        all: professionalCategories
-      },
-      professionalFilters
+      // Basic categorization system
+      categories: {
+        primary: ['vegetarian', 'vegan', 'popular'],
+        cuisine: ['indian', 'italian', 'asian', 'mexican', 'american']
+      }
     }
 
     // Cache the result for future requests
