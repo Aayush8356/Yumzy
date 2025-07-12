@@ -6,7 +6,7 @@ npm-debug.log*
 .next
 out
 
-# Environment variables
+# Environment variables (keep .env.example)
 .env.local
 .env.development
 .env.test
@@ -15,6 +15,7 @@ out
 # Testing
 coverage
 .nyc_output
+jest.setup.js
 
 # IDE
 .vscode
@@ -31,7 +32,12 @@ Thumbs.db
 # CI/CD
 .github
 
-# Other
-README.md
+# Scripts and docs
+scripts/
 *.md
+!README.md
+
+# Tests
 __tests__
+*.test.*
+*.spec.*
