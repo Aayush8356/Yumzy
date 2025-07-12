@@ -1,21 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { orders, orderItems, foodItems } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { orders, orderItems, foodItems, users } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
+import jwt from 'jsonwebtoken';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
 
-    // Get the main order
-    const [order] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, id))
+    // Authenticate user
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.substring(7);
+    let userId: string;
+    
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      userId = decoded.userId;
+    } catch (error) {
+      return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
+    }
+
+    // Get user role
+    const [user] = await db
+      .select({ role: users.role })
+      .from(users)
+      .where(eq(users.id, userId))
       .limit(1);
 
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 401 });
+    }
+
+    // Get the main order with ownership check
+    let orderQuery;
+    if (user.role === 'admin') {
+      // Admins can access any order
+      orderQuery = db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, id))
+        .limit(1);
+    } else {
+      // Regular users can only access their own orders
+      orderQuery = db
+        .select()
+        .from(orders)
+        .where(and(eq(orders.id, id), eq(orders.userId, userId)))
+        .limit(1);
+    }
+
+    const [order] = await orderQuery;
+
     if (!order) {
-      return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
+      return NextResponse.json({ 
+        success: false, 
+        error: user.role === 'admin' ? 'Order not found' : 'Order not found or access denied' 
+      }, { status: 404 });
     }
 
     // Get order items with food details
@@ -52,6 +96,38 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const { id } = params;
     const body = await request.json();
     const { status } = body;
+
+    // Authenticate user
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.substring(7);
+    let userId: string;
+    
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      userId = decoded.userId;
+    } catch (error) {
+      return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
+    }
+
+    // Get user role
+    const [user] = await db
+      .select({ role: users.role })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 401 });
+    }
+
+    // Only admins can update order status
+    if (user.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Insufficient permissions' }, { status: 403 });
+    }
 
     // Update order status
     const [updatedOrder] = await db

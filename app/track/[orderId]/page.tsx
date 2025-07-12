@@ -127,11 +127,37 @@ export default function OrderTrackingPage() {
 
     const fetchOrderDetails = async () => {
       try {
+        // Get fresh JWT token 
+        const token = localStorage.getItem('authToken')
+        if (!token) {
+          throw new Error('No authentication token')
+        }
+
         const response = await fetch(`/api/orders/${orderId}`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
         })
+
+        if (response.status === 401) {
+          toast({
+            title: "Authentication failed",
+            description: "Please sign in again.",
+            variant: "destructive"
+          })
+          return
+        }
+
+        if (response.status === 403 || response.status === 404) {
+          toast({
+            title: "Access denied",
+            description: "You don't have permission to view this order.",
+            variant: "destructive"
+          })
+          setOrderDetails(null)
+          return
+        }
 
         if (response.ok) {
           const data = await response.json()

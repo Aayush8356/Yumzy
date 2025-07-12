@@ -86,14 +86,14 @@ export function TodaysSpecialSection() {
           </div>
           
           <h2 className="text-4xl sm:text-5xl font-bold mb-4">
-            <span className="bg-gradient-to-r from-foreground via-primary to-orange-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-gray-900 via-primary to-orange-600 bg-clip-text text-transparent">
               Chef's Curated
             </span>
             <br />
-            <span className="text-3xl sm:text-4xl">Premium Collection</span>
+            <span className="text-3xl sm:text-4xl text-gray-900 dark:text-gray-100">Premium Collection</span>
           </h2>
           
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          <p className="text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
             Handpicked by our master chefs using the finest ingredients. Available for limited time only.
           </p>
         </motion.div>
@@ -165,7 +165,7 @@ export function TodaysSpecialSection() {
                     {special.name}
                   </h3>
                   
-                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">
                     {special.description}
                   </p>
 
@@ -175,7 +175,7 @@ export function TodaysSpecialSection() {
                       <span className="text-2xl font-bold text-primary">
                         ${special.price}
                       </span>
-                      <span className="text-lg text-muted-foreground line-through">
+                      <span className="text-lg text-gray-500 dark:text-gray-400 line-through">
                         ${special.originalPrice}
                       </span>
                     </div>
@@ -226,7 +226,7 @@ export function TodaysSpecialSection() {
             <h3 className="text-2xl font-bold mb-4">
               Ready for a Premium Dining Experience?
             </h3>
-            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+            <p className="text-gray-700 dark:text-gray-300 mb-6 max-w-2xl mx-auto">
               Join thousands of food lovers who trust Yumzy for restaurant-quality meals delivered to their door.
             </p>
             
