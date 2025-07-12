@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Progress } from '@/components/ui/progress'
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
@@ -23,30 +25,19 @@ import {
   User,
   Phone,
   Mail,
-  Home
+  Home,
+  Smartphone,
+  Building,
+  Wallet,
+  Loader2
 } from 'lucide-react'
 import Link from 'next/link'
-
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
-
-// Initialize Razorpay
-const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-if (!razorpayKeyId) {
-  console.warn('NEXT_PUBLIC_RAZORPAY_KEY_ID is not configured - using development mode');
-}
 
 export default function CheckoutPage() {
   const { cart } = useCart()
   const { user, isAuthenticated } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
-  
-  // Check if current user is demo user
-  const isDemoUser = user?.email === 'demo@yumzy.com' || user?.email?.includes('demo')
   
   const [deliveryAddress, setDeliveryAddress] = useState({
     street: '',
@@ -56,602 +47,397 @@ export default function CheckoutPage() {
     instructions: ''
   })
   
-  const [paymentMethod, setPaymentMethod] = useState('credit_card')
+  const [paymentMethod, setPaymentMethod] = useState('card')
   const [isLoading, setIsLoading] = useState(false)
-
-  const handlePaymentSuccess = async (paymentResponse: any) => {
-    try {
-      // Clear the cart after successful payment
-      await fetch('/api/cart', { 
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${user?.id}`
-        }
-      });
-      
-      toast({
-        title: "Payment Successful!",
-        description: "Your order has been placed successfully",
-      });
-      
-      // Redirect to success page
-      router.push(`/checkout/success?payment_id=${paymentResponse.razorpay_payment_id}`);
-    } catch (error) {
-      console.error('Error handling payment success:', error);
-      toast({
-        title: "Payment processed but error occurred",
-        description: "Please contact support if needed",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  const [paymentProgress, setPaymentProgress] = useState(0)
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/auth/login')
+      return
     }
     
     if (!cart || cart.items.length === 0) {
       router.push('/menu')
+      return
+    }
+
+    // Listen for payment progress updates
+    const handlePaymentProgress = (event: CustomEvent) => {
+      setPaymentProgress(event.detail.progress)
+    }
+
+    window.addEventListener('payment-progress', handlePaymentProgress as EventListener)
+    
+    return () => {
+      window.removeEventListener('payment-progress', handlePaymentProgress as EventListener)
     }
   }, [isAuthenticated, cart, router])
 
   const handleProceedToPayment = async () => {
-    console.log("handleProceedToPayment called");
-    console.log("Delivery Address:", deliveryAddress);
-
     if (!deliveryAddress.street || !deliveryAddress.city || !deliveryAddress.state || !deliveryAddress.zipCode) {
-      console.log("Validation failed: Missing address information.");
       toast({
         title: "Missing Information",
-        description: "Please fill in all delivery address fields (street, city, state, zip code)",
+        description: "Please fill in all delivery address fields",
         variant: "destructive"
       })
       return
     }
 
-    setIsLoading(true);
-
-    // Development mode - bypass Razorpay if not configured
-    if (!razorpayKeyId) {
-      console.log("Razorpay not configured, using development mode");
-      try {
-        const authToken = localStorage.getItem('authToken');
-        if (!authToken || !user) {
-          toast({
-            title: "Authentication required",
-            description: "Please log in again.",
-            variant: "destructive"
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        if (!cart) {
-          toast({
-            title: "Cart Error",
-            description: "Cart is empty. Please add items to your cart.",
-            variant: "destructive"
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        console.log("Creating development order with data:", {
-          items: cart.items,
-          deliveryAddress: deliveryAddress,
-          paymentMethod: 'dev_mock',
-          total: cart.summary.total,
-          subtotal: cart.summary.subtotal,
-          tax: cart.summary.tax,
-          deliveryFee: cart.summary.deliveryFee,
-        });
-
-        // Create a mock order for development
-        const response = await fetch('/api/orders', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${user.id}`,
-          },
-          body: JSON.stringify({
-            items: cart.items,
-            deliveryAddress: deliveryAddress,
-            paymentMethod: 'dev_mock',
-            total: cart.summary.total,
-            subtotal: cart.summary.subtotal,
-            tax: cart.summary.tax,
-            deliveryFee: cart.summary.deliveryFee,
-            specialInstructions: deliveryAddress.instructions || ''
-          })
-        });
-
-        console.log("Development order API response:", response.status, response.statusText);
-
-        const data = await response.json();
-        console.log("Development order API data:", data);
-
-        if (response.ok && data.success) {
-          toast({
-            title: "Order Created Successfully!",
-            description: "Your order has been placed successfully",
-          });
-          
-          // Clear the cart after successful order
-          try {
-            await fetch('/api/cart', { 
-              method: 'DELETE',
-              headers: {
-                'Authorization': `Bearer ${user.id}`
-              }
-            });
-          } catch (clearError) {
-            console.error('Failed to clear cart:', clearError);
-          }
-          
-          router.push(`/orders/${data.orderId}`);
-        } else {
-          throw new Error(data.error || 'Failed to create order');
-        }
-      } catch (error) {
-        console.error('Development order creation error:', error);
-        toast({
-          title: "Order Error",
-          description: error instanceof Error ? error.message : "Failed to create order",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-      return;
-    }
+    setIsLoading(true)
+    setPaymentProgress(0)
 
     try {
-      const authToken = localStorage.getItem('authToken');
-      if (!authToken) {
+      const authToken = localStorage.getItem('authToken')
+      if (!authToken || !user) {
         toast({
           title: "Authentication required",
           description: "Please log in again.",
           variant: "destructive"
-        });
-        return;
+        })
+        setIsLoading(false)
+        return
       }
 
-      if (!cart) {
+      if (!cart || cart.items.length === 0) {
         toast({
           title: "Cart Error",
           description: "Cart is empty. Please add items to your cart.",
           variant: "destructive"
-        });
-        setIsLoading(false);
-        return;
+        })
+        setIsLoading(false)
+        return
       }
 
-      const response = await fetch('/api/checkout/sessions', {
+      // Generate unique order ID
+      const orderId = 'ORD-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8).toUpperCase()
+
+      // Prepare complete address
+      const fullAddress = `${deliveryAddress.street}, ${deliveryAddress.city}, ${deliveryAddress.state} ${deliveryAddress.zipCode}`
+
+      // Process payment using dummy payment system
+      const response = await fetch('/api/checkout/process', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
+          'Authorization': `Bearer ${user.id}`,
         },
         body: JSON.stringify({
-            items: cart.items,
-            deliveryFee: cart.summary.deliveryFee,
-            tax: cart.summary.tax,
-            deliveryAddress: deliveryAddress,
+          orderId: orderId,
+          paymentMethod: paymentMethod,
+          amount: cart.summary.total,
+          customerDetails: {
+            name: user.name || 'Customer',
+            email: user.email || '',
+            phone: user.phone || '',
+            address: fullAddress
+          },
+          cartItems: cart.items.map(item => ({
+            foodItemId: item.foodItem.id,
+            quantity: item.quantity,
+            specialInstructions: item.specialInstructions
+          }))
         })
-      });
-      console.log("API response received:", response);
+      })
 
-      const data = await response.json();
-      console.log("API data parsed:", data);
+      const data = await response.json()
 
       if (response.ok && data.success) {
-        // Load Razorpay script dynamically
-        const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.onload = () => {
-          const options = {
-            key: data.keyId,
-            amount: data.amount,
-            currency: data.currency,
-            name: 'Yumzy',
-            description: 'Food Order Payment',
-            order_id: data.orderId,
-            handler: function (response: any) {
-              console.log('Payment successful:', response);
-              // Handle successful payment
-              handlePaymentSuccess(response);
-            },
-            prefill: {
-              name: user?.name || '',
-              email: user?.email || '',
-              contact: user?.phone || ''
-            },
-            theme: {
-              color: '#3399cc'
-            },
-            modal: {
-              ondismiss: function() {
-                console.log('Payment cancelled');
-                setIsLoading(false);
-              }
-            }
-          };
-          
-          const rzp = new window.Razorpay(options);
-          rzp.open();
-        };
-        document.head.appendChild(script);
+        toast({
+          title: "Payment Successful! 🎉",
+          description: "Your order has been placed successfully",
+        })
+        
+        // Redirect to order tracking page
+        router.push(`/track/${data.order.id}`)
       } else {
-        throw new Error(data.error || 'Failed to create checkout session')
+        throw new Error(data.error || 'Payment failed')
       }
     } catch (error) {
-      console.error('Payment processing error:', error);
+      console.error('Payment processing error:', error)
       toast({
-        title: "Payment Error",
-        description: error instanceof Error ? error.message : "Failed to proceed to payment. Please try again.",
+        title: "Payment Failed",
+        description: error instanceof Error ? error.message : "Payment processing failed",
         variant: "destructive"
       })
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
+      setPaymentProgress(0)
     }
   }
 
-  if (!cart || cart.items.length === 0) {
+  if (!isAuthenticated || !cart) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center p-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-xl"
-        >
-          <h1 className="text-2xl font-bold mb-4 dark:text-white">Your cart is empty</h1>
-          <Link href="/menu">
-            <Button className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
-              Browse Menu
-            </Button>
-          </Link>
-        </motion.div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      {/* Header */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-orange-100 dark:border-gray-700 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-4"
-          >
-            <Link href="/cart" className="inline-flex items-center gap-2 text-orange-600 hover:text-orange-700 transition-colors">
-              <ArrowLeft className="w-4 h-4" />
-              <span className="font-medium">Back to Cart</span>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 py-8">
+      <div className="container mx-auto px-4 max-w-6xl">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/cart">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Cart
             </Link>
-            <div className="h-4 w-px bg-orange-200" />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-              Secure Checkout
-            </h1>
-            <div className="ml-auto flex items-center gap-2 text-green-600">
-              <Shield className="w-4 h-4" />
-              <span className="text-sm font-medium">SSL Secured</span>
-            </div>
-          </motion.div>
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold">Checkout</h1>
+            <p className="text-muted-foreground">Complete your order</p>
+          </div>
         </div>
-      </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Payment Progress (shown during processing) */}
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-center mb-4">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+                  <h3 className="font-semibold">Processing Payment...</h3>
+                  <p className="text-sm text-muted-foreground">Please wait while we process your payment</p>
+                </div>
+                <Progress value={paymentProgress} className="w-full" />
+                <p className="text-center text-sm text-muted-foreground mt-2">
+                  {paymentProgress}% complete
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Forms */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6">
             {/* Delivery Address */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card className="border-0 shadow-xl bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
-                <CardHeader className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-t-lg">
-                  <CardTitle className="flex items-center gap-3">
-                    <div className="p-2 bg-white/20 rounded-lg">
-                      <MapPin className="w-5 h-5" />
-                    </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Delivery Address
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <Label htmlFor="street">Street Address</Label>
+                    <Input
+                      id="street"
+                      placeholder="Enter your street address"
+                      value={deliveryAddress.street}
+                      onChange={(e) => setDeliveryAddress(prev => ({ ...prev, street: e.target.value }))}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <h3 className="text-lg font-semibold">Delivery Address</h3>
-                      <p className="text-orange-100 text-sm">Where should we deliver your order?</p>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6 space-y-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="street" className="flex items-center gap-2 text-gray-700 font-medium mb-2">
-                        <Home className="w-4 h-4" />
-                        Street Address
-                      </Label>
+                      <Label htmlFor="city">City</Label>
                       <Input
-                        id="street"
-                        value={deliveryAddress.street}
-                        onChange={(e) => setDeliveryAddress(prev => ({ ...prev, street: e.target.value }))}
-                        placeholder="123 Main Street, Building Name"
-                        className="h-12 border-2 border-orange-100 focus:border-orange-300 rounded-xl bg-white/80"
-                        required
+                        id="city"
+                        placeholder="City"
+                        value={deliveryAddress.city}
+                        onChange={(e) => setDeliveryAddress(prev => ({ ...prev, city: e.target.value }))}
+                        disabled={isLoading}
                       />
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="city" className="flex items-center gap-2 text-gray-700 font-medium mb-2">
-                          City
-                        </Label>
-                        <Input
-                          id="city"
-                          value={deliveryAddress.city}
-                          onChange={(e) => setDeliveryAddress(prev => ({ ...prev, city: e.target.value }))}
-                          placeholder="Mumbai"
-                          className="h-12 border-2 border-orange-100 focus:border-orange-300 rounded-xl bg-white/80"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="state" className="flex items-center gap-2 text-gray-700 font-medium mb-2">
-                          State
-                        </Label>
-                        <Input
-                          id="state"
-                          value={deliveryAddress.state}
-                          onChange={(e) => setDeliveryAddress(prev => ({ ...prev, state: e.target.value }))}
-                          placeholder="Maharashtra"
-                          className="h-12 border-2 border-orange-100 focus:border-orange-300 rounded-xl bg-white/80"
-                          required
-                        />
-                      </div>
-                    </div>
-                    
                     <div>
-                      <Label htmlFor="zipCode" className="flex items-center gap-2 text-gray-700 font-medium mb-2">
-                        ZIP / Postal Code
-                      </Label>
+                      <Label htmlFor="state">State</Label>
                       <Input
-                        id="zipCode"
-                        value={deliveryAddress.zipCode}
-                        onChange={(e) => setDeliveryAddress(prev => ({ ...prev, zipCode: e.target.value }))}
-                        placeholder="400001"
-                        className="h-12 border-2 border-orange-100 focus:border-orange-300 rounded-xl bg-white/80"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="instructions" className="flex items-center gap-2 text-gray-700 font-medium mb-2">
-                        Delivery Instructions (Optional)
-                      </Label>
-                      <Textarea
-                        id="instructions"
-                        value={deliveryAddress.instructions}
-                        onChange={(e) => setDeliveryAddress(prev => ({ ...prev, instructions: e.target.value }))}
-                        placeholder="Leave at door, Ring doorbell, Apartment number, etc."
-                        rows={3}
-                        className="border-2 border-orange-100 focus:border-orange-300 rounded-xl bg-white/80 resize-none"
+                        id="state"
+                        placeholder="State"
+                        value={deliveryAddress.state}
+                        onChange={(e) => setDeliveryAddress(prev => ({ ...prev, state: e.target.value }))}
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                  
+                  <div>
+                    <Label htmlFor="zipCode">ZIP Code</Label>
+                    <Input
+                      id="zipCode"
+                      placeholder="ZIP Code"
+                      value={deliveryAddress.zipCode}
+                      onChange={(e) => setDeliveryAddress(prev => ({ ...prev, zipCode: e.target.value }))}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="instructions">Delivery Instructions (Optional)</Label>
+                    <Textarea
+                      id="instructions"
+                      placeholder="Add any special delivery instructions..."
+                      value={deliveryAddress.instructions}
+                      onChange={(e) => setDeliveryAddress(prev => ({ ...prev, instructions: e.target.value }))}
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Payment Method */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="border-0 shadow-xl bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
-                <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-t-lg">
-                  <CardTitle className="flex items-center gap-3">
-                    <div className="p-2 bg-white/20 rounded-lg">
-                      <CreditCard className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">Payment Method</h3>
-                      <p className="text-blue-100 text-sm">Secure payment powered by Razorpay</p>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-500 rounded-lg">
-                        <Shield className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-800">Razorpay Secure Payment</p>
-                        <p className="text-sm text-gray-600">Credit Card, Debit Card, UPI, Net Banking & Wallets</p>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Payment Method
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} disabled={isLoading}>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-3 p-4 border rounded-lg">
+                      <RadioGroupItem value="card" id="card" />
+                      <CreditCard className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <Label htmlFor="card" className="font-medium">Credit/Debit Card</Label>
+                        <p className="text-sm text-muted-foreground">Pay securely with your card</p>
                       </div>
                     </div>
-                    <CheckCircle className="w-6 h-6 text-green-500" />
-                  </div>
-                  <p className="text-sm text-gray-600 mt-4 text-center">
-                    🔒 Your payment information is encrypted and secure. We don't store your card details.
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Delivery Time */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Card className="border-0 shadow-xl bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
-                <CardHeader className="bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-t-lg">
-                  <CardTitle className="flex items-center gap-3">
-                    <div className="p-2 bg-white/20 rounded-lg">
-                      <Clock className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">Estimated Delivery Time</h3>
-                      <p className="text-green-100 text-sm">Fast & reliable delivery</p>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-green-50 to-teal-50 rounded-xl border border-green-100">
-                    <div className="p-3 bg-green-500 rounded-full">
-                      <Truck className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-2xl font-bold text-green-700">25-35 min</p>
-                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                          Express
-                        </span>
+                    
+                    <div className="flex items-center space-x-3 p-4 border rounded-lg">
+                      <RadioGroupItem value="upi" id="upi" />
+                      <Smartphone className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <Label htmlFor="upi" className="font-medium">UPI</Label>
+                        <p className="text-sm text-muted-foreground">Pay using UPI (No extra charges)</p>
                       </div>
-                      <p className="text-sm text-green-600 mt-1">Standard delivery to your location</p>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3 p-4 border rounded-lg">
+                      <RadioGroupItem value="netbanking" id="netbanking" />
+                      <Building className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <Label htmlFor="netbanking" className="font-medium">Net Banking</Label>
+                        <p className="text-sm text-muted-foreground">Pay directly from your bank</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3 p-4 border rounded-lg">
+                      <RadioGroupItem value="wallet" id="wallet" />
+                      <Wallet className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <Label htmlFor="wallet" className="font-medium">Digital Wallet</Label>
+                        <p className="text-sm text-muted-foreground">Pay using digital wallets</p>
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                </RadioGroup>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Right Column - Order Summary */}
-          <div className="lg:col-span-1">
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-              className="sticky top-24"
+          <div className="space-y-6">
+            {/* Order Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  {cart.items.map((item) => (
+                    <div key={item.id} className="flex items-center gap-3">
+                      <img
+                        src={item.foodItem.image}
+                        alt={item.foodItem.name}
+                        className="w-12 h-12 rounded-lg object-cover"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{item.foodItem.name}</p>
+                        <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                        {item.specialInstructions && (
+                          <p className="text-xs text-muted-foreground">Note: {item.specialInstructions}</p>
+                        )}
+                      </div>
+                      <p className="font-medium">₹{(parseFloat(item.foodItem.price) * item.quantity).toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal</span>
+                    <span>₹{cart.summary.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Delivery Fee</span>
+                    <span>₹{cart.summary.deliveryFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Tax</span>
+                    <span>₹{cart.summary.tax.toFixed(2)}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between font-semibold">
+                    <span>Total</span>
+                    <span>₹{cart.summary.total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Estimated Delivery */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Clock className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium">Estimated Delivery</p>
+                    <p className="text-sm text-muted-foreground">35-50 minutes</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Security Note */}
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Shield className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium text-primary">Secure Payment</p>
+                    <p className="text-sm text-muted-foreground">Your payment information is encrypted and secure</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Place Order Button */}
+            <Button
+              onClick={handleProceedToPayment}
+              disabled={isLoading}
+              className="w-full h-12 text-lg"
+              size="lg"
             >
-              <Card className="border-0 shadow-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 text-white">
-                  <CardTitle className="text-xl font-bold">Order Summary</CardTitle>
-                  <p className="text-orange-100 text-sm">Review your delicious order</p>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {/* Cart Items */}
-                  <div className="p-6 space-y-4">
-                    {cart.items.map((item, index) => (
-                      <motion.div
-                        key={item.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5 + index * 0.1 }}
-                        className="flex items-center gap-3 p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-100"
-                      >
-                        <img 
-                          src={item.foodItem.image} 
-                          alt={item.foodItem.name}
-                          className="w-12 h-12 rounded-lg object-cover"
-                        />
-                        <div className="flex-1">
-                          <p className="font-semibold text-gray-800">{item.foodItem.name}</p>
-                          <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
-                          {item.specialInstructions && (
-                            <p className="text-xs text-orange-600 mt-1">Note: {item.specialInstructions}</p>
-                          )}
-                        </div>
-                        <p className="font-bold text-orange-600">₹{(parseFloat(item.foodItem.price) * item.quantity).toFixed(2)}</p>
-                      </motion.div>
-                    ))}
-                  </div>
-
-                  <Separator className="bg-gradient-to-r from-orange-200 to-red-200" />
-
-                  {/* Pricing Breakdown */}
-                  <div className="p-6 space-y-3 bg-gradient-to-b from-gray-50 to-white">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Subtotal</span>
-                      <span className="font-semibold">₹{cart.summary.subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Delivery Fee</span>
-                      <span className="font-semibold">₹{cart.summary.deliveryFee.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Tax</span>
-                      <span className="font-semibold">₹{cart.summary.tax.toFixed(2)}</span>
-                    </div>
-                    <Separator className="bg-gradient-to-r from-orange-200 to-red-200" />
-                    <div className="flex justify-between items-center pt-2">
-                      <span className="text-xl font-bold text-gray-800">Total</span>
-                      <span className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                        ₹{cart.summary.total.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {!razorpayKeyId && !isDemoUser && (
-                    <div className="mx-6 mb-6 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-xl">
-                      <div className="flex items-center gap-2 text-orange-700">
-                        <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm font-medium">Development Mode</span>
-                      </div>
-                      <p className="text-xs text-orange-600 mt-1">
-                        Razorpay is not configured. Orders will be created with mock payment.
-                      </p>
-                    </div>
-                  )}
-
-                  {isDemoUser && (
-                    <div className="mx-6 mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl">
-                      <div className="flex items-center gap-2 text-blue-700">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm font-medium">Demo Mode</span>
-                      </div>
-                      <p className="text-xs text-blue-600 mt-1">
-                        You're using a demo account. Checkout is read-only for demonstration purposes.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="p-6">
-                    <Button 
-                      onClick={isDemoUser ? () => {
-                        toast({
-                          title: "Demo Mode",
-                          description: "This is a demo account. Real checkout is disabled for demonstration purposes.",
-                          variant: "default"
-                        })
-                      } : handleProceedToPayment}
-                      disabled={isLoading}
-                      className={`w-full h-14 text-lg font-semibold rounded-xl shadow-lg transition-all duration-300 ${
-                        isDemoUser 
-                          ? 'bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 hover:shadow-xl transform hover:scale-[1.02]'
-                      } text-white`}
-                    >
-                      {isLoading ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Processing...
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Shield className="w-5 h-5" />
-                          {isDemoUser ? 
-                            `Demo Mode - ₹${cart.summary.total.toFixed(2)}` :
-                            !razorpayKeyId ? 
-                              `Create Order (Dev) - ₹${cart.summary.total.toFixed(2)}` : 
-                              `Secure Payment - ₹${cart.summary.total.toFixed(2)}`
-                          }
-                        </div>
-                      )}
-                    </Button>
-                    
-                    <p className="text-xs text-gray-500 text-center mt-4 leading-relaxed">
-                      🔒 By placing this order, you agree to our terms of service and privacy policy. 
-                      Your payment is processed securely through Razorpay.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  Processing Payment...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-5 w-5 mr-2" />
+                  Pay ₹{cart.summary.total.toFixed(2)}
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </div>
