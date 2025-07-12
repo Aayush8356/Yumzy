@@ -41,11 +41,10 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || (isAuthenticated ? '12' : '6'))
     const isPublicOnly = searchParams.get('public') === 'true'
     
-    // Simulate a small delay for realistic API behavior
-    await new Promise(resolve => setTimeout(resolve, 150))
+    // Remove artificial delay for better performance
     
-    // Get food items from database with category information
-    const allFoodItems = await db.select({
+    // Build database query with filters for better performance
+    let query = db.select({
       id: foodItems.id,
       name: foodItems.name,
       description: foodItems.description,
@@ -78,6 +77,10 @@ export async function GET(request: NextRequest) {
       categoryName: categories.name
     }).from(foodItems)
     .leftJoin(categories, eq(foodItems.categoryId, categories.id))
+    .where(eq(foodItems.isAvailable, true)) // Only available items
+    
+    // Get food items from database
+    const allFoodItems = await query
     
     // If not authenticated, the limit is already set to 6.
     // For authenticated users, all items are available.

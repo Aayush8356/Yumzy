@@ -448,17 +448,22 @@ export function PremiumDashboard() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mb-6"
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-bold mb-1 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-orange-500" />
-                Recommended for You
-              </h2>
-              <p className="text-sm text-muted-foreground">Based on your taste preferences and order history</p>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Recommended for You</h2>
+                  <p className="text-sm text-muted-foreground">Based on your taste preferences and order history</p>
+                </div>
+              </div>
             </div>
             <Link href="/menu">
-              <Button variant="outline" size="sm" className="gap-2">
-                View All
+              <Button className="gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
+                <Utensils className="w-4 h-4" />
+                Explore Menu
                 <ArrowRight className="w-3 h-3" />
               </Button>
             </Link>
@@ -472,7 +477,7 @@ export function PremiumDashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 + index * 0.1 }}
               >
-                <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 hover:scale-[1.02]">
+                <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group border border-gray-100 dark:border-gray-700 bg-gradient-to-br from-white via-white to-gray-50/50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 hover:scale-[1.05] hover:border-orange-200 dark:hover:border-orange-800">
                   <div className="relative h-24">
                     {item.isLoadingImage ? (
                       <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 animate-pulse flex items-center justify-center">

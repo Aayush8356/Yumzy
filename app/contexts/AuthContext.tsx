@@ -56,6 +56,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const savedUser = localStorage.getItem('user')
         const authToken = localStorage.getItem('authToken')
+        const authExpiry = localStorage.getItem('authExpiry')
+        
+        // Check if session has expired
+        if (authExpiry && Date.now() > parseInt(authExpiry)) {
+          console.log('🔒 Session expired, logging out')
+          logout()
+          dispatch({ type: 'SET_LOADING', payload: false })
+          return
+        }
         
         if (savedUser && authToken) {
           const user = JSON.parse(savedUser)
@@ -229,8 +238,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
         
+        // Store user data and token with expiry (24 hours)
+        const expiryTime = Date.now() + (24 * 60 * 60 * 1000) // 24 hours from now
         localStorage.setItem('user', JSON.stringify(user))
         localStorage.setItem('authToken', data.token || 'authenticated')
+        localStorage.setItem('authExpiry', expiryTime.toString())
         dispatch({ type: 'SET_USER', payload: user })
         
         // Use a global toast function if available, or log for now
@@ -294,6 +306,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear all authentication and app data
     localStorage.removeItem('user')
     localStorage.removeItem('authToken')
+    localStorage.removeItem('authExpiry')
     localStorage.removeItem('cart')
     
     // Clear any other app-specific data
