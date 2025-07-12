@@ -45,25 +45,59 @@ jobs:
     - name: Clear npm cache
       run: npm cache clean --force
 
+    - name: Wait for PostgreSQL
+      run: |
+        for i in {1..30}; do
+          if pg_isready -h localhost -p 5432 -U postgres; then
+            echo "PostgreSQL is ready"
+            break
+          fi
+          echo "Waiting for PostgreSQL..."
+          sleep 1
+        done
+
+    - name: Create test database
+      run: |
+        PGPASSWORD=postgres createdb -h localhost -U postgres yumzy_test || echo "Database already exists"
+      env:
+        PGPASSWORD: postgres
+
     - name: Type check
       run: npm run type-check
 
     - name: Lint code
       run: npm run lint
 
+    - name: Copy test environment file
+      run: cp .env.test .env.local
+
     - name: Run tests
       run: npm run test:ci
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/yumzy_test
+        POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/yumzy_test
         JWT_SECRET: test-jwt-secret-for-ci
+        BCRYPT_ROUNDS: 4
         NODE_ENV: test
         CI: true
+        NEXT_PUBLIC_APP_URL: http://localhost:3000
+        UNSPLASH_ACCESS_KEY: test-unsplash-key
+        UNSPLASH_SECRET_KEY: test-unsplash-secret
+        NEXT_PUBLIC_RAZORPAY_KEY_ID: test-razorpay-key
+        RAZORPAY_KEY_SECRET: test-razorpay-secret
+        ENABLE_DEMO_DATA: false
+        SEED_DEMO_DATA: false
 
     - name: Build application
       run: npm run build
       env:
         NEXT_PUBLIC_APP_URL: http://localhost:3000
         JWT_SECRET: test-jwt-secret-for-ci
+        UNSPLASH_ACCESS_KEY: test-unsplash-key
+        UNSPLASH_SECRET_KEY: test-unsplash-secret
+        NEXT_PUBLIC_RAZORPAY_KEY_ID: test-razorpay-key
+        RAZORPAY_KEY_SECRET: test-razorpay-secret
+        NODE_ENV: test
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
