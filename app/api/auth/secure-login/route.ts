@@ -71,17 +71,8 @@ export async function POST(request: NextRequest) {
       isValidPassword = await PasswordManager.verify(password, user.passwordHash)
       console.log('🔐 Password verification result:', isValidPassword)
     } else {
-      console.log('⚠️ No password hash found for user')
-      // Demo users - allow simple password validation even in production
-      if (user.email.includes('demo') || user.email.includes('test')) {
-        // For demo users, use simple password validation
-        isValidPassword = password === 'demo123' || password === 'test123'
-        console.warn('⚠️ Using demo mode password validation for demo user')
-      } else {
-        // For real users without password hash, deny login
-        isValidPassword = false
-        console.error('❌ Real user without password hash - this should not happen')
-      }
+      console.log('❌ No password hash found for user - this should not happen after migration')
+      isValidPassword = false
     }
 
     if (!isValidPassword) {
