@@ -72,7 +72,7 @@ jobs:
       run: cp .env.test .env.local
 
     - name: Run tests
-      run: npm run test:ci
+      run: npm test -- --ci --watchAll=false --coverage=false
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/yumzy_test
         POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/yumzy_test
@@ -99,12 +99,7 @@ jobs:
         RAZORPAY_KEY_SECRET: test-razorpay-secret
         NODE_ENV: test
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage/lcov.info
-        fail_ci_if_error: false
+    # Coverage upload disabled - tests run without coverage for CI speed
 
   security:
     runs-on: ubuntu-latest
