@@ -97,7 +97,10 @@ jobs:
         UNSPLASH_SECRET_KEY: test-unsplash-secret
         NEXT_PUBLIC_RAZORPAY_KEY_ID: test-razorpay-key
         RAZORPAY_KEY_SECRET: test-razorpay-secret
-        NODE_ENV: test
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/yumzy_test
+        POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/yumzy_test
+        BCRYPT_ROUNDS: 4
+        NODE_ENV: production
 
     # Coverage upload disabled - tests run without coverage for CI speed
 
