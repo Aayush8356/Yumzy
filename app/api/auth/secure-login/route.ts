@@ -72,15 +72,15 @@ export async function POST(request: NextRequest) {
       console.log('🔐 Password verification result:', isValidPassword)
     } else {
       console.log('⚠️ No password hash found for user')
-      // Demo mode fallback (only for development)
-      const isDemoMode = process.env.NODE_ENV !== 'production' && 
-                        (process.env.ENABLE_DEMO_DATA === 'true' || user.email.includes('demo'))
-      
-      if (isDemoMode) {
-        isValidPassword = password.length >= 3 // Minimal demo validation
-        console.warn('⚠️ Using demo mode password validation - NOT FOR PRODUCTION')
+      // Demo users - allow simple password validation even in production
+      if (user.email.includes('demo') || user.email.includes('test')) {
+        // For demo users, use simple password validation
+        isValidPassword = password === 'demo123' || password === 'test123'
+        console.warn('⚠️ Using demo mode password validation for demo user')
       } else {
+        // For real users without password hash, deny login
         isValidPassword = false
+        console.error('❌ Real user without password hash - this should not happen')
       }
     }
 
