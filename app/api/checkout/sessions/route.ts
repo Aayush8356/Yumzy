@@ -5,14 +5,13 @@ import { db } from '@/lib/db'
 import { usersTable } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
-if (!process.env.RAZORPAY_KEY_SECRET) {
-  throw new Error('RAZORPAY_KEY_SECRET is not configured');
-}
+// For demo/simulation purposes - graceful fallback for missing Razorpay keys
+const isRazorpayConfigured = !!(process.env.RAZORPAY_KEY_SECRET && process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
 
-const razorpay = new Razorpay({
+const razorpay = isRazorpayConfigured ? new Razorpay({
   key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
-})
+}) : null;
 
 const checkoutSessionSchema = z.object({
   items: z.array(
@@ -92,34 +91,57 @@ export async function POST(req: NextRequest) {
     
     const totalAmount = Math.round((subtotal + deliveryFee + tax) * 100)
 
-    // Create Razorpay order
-    const razorpayOrder = await razorpay.orders.create({
-      amount: totalAmount,
-      currency: 'INR',
-      receipt: `order_${Date.now()}`,
-      notes: {
-        userId,
-        deliveryAddress: JSON.stringify(deliveryAddress),
-        specialInstructions: JSON.stringify(specialInstructions),
-        items: JSON.stringify(items.map(item => ({
-          id: item.foodItem.id,
-          name: item.foodItem.name,
-          price: item.foodItem.price,
-          quantity: item.quantity,
-          specialInstructions: item.specialInstructions
-        }))),
-        deliveryFee: deliveryFee.toString(),
-        tax: tax.toString(),
-      },
-    })
+    // Create Razorpay order or simulate for demo
+    if (isRazorpayConfigured && razorpay) {
+      // Real Razorpay integration
+      const razorpayOrder = await razorpay.orders.create({
+        amount: totalAmount,
+        currency: 'INR',
+        receipt: `order_${Date.now()}`,
+        notes: {
+          userId,
+          deliveryAddress: JSON.stringify(deliveryAddress),
+          specialInstructions: JSON.stringify(specialInstructions),
+          items: JSON.stringify(items.map(item => ({
+            id: item.foodItem.id,
+            name: item.foodItem.name,
+            price: item.foodItem.price,
+            quantity: item.quantity,
+            specialInstructions: item.specialInstructions
+          }))),
+          deliveryFee: deliveryFee.toString(),
+          tax: tax.toString(),
+        },
+      })
 
-    return NextResponse.json({ 
-      success: true, 
-      orderId: razorpayOrder.id,
-      amount: totalAmount,
-      currency: 'INR',
-      keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
-    })
+      return NextResponse.json({ 
+        success: true, 
+        orderId: razorpayOrder.id,
+        amount: totalAmount,
+        currency: 'INR',
+        keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+      })
+    } else {
+      // Demo/simulation mode - generate mock order
+      const mockOrderId = `demo_order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      console.log('🎭 DEMO MODE: Simulated payment order created:', {
+        orderId: mockOrderId,
+        amount: totalAmount,
+        items: items.length,
+        userId
+      });
+
+      return NextResponse.json({ 
+        success: true, 
+        orderId: mockOrderId,
+        amount: totalAmount,
+        currency: 'INR',
+        keyId: 'demo_razorpay_key',
+        demoMode: true,
+        message: 'Demo order created - no real payment processed'
+      })
+    }
   } catch (error) {
     console.error('Error creating checkout session:', error)
     const errorMessage = error instanceof Error ? error.message : 'Internal server error'

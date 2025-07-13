@@ -5,10 +5,13 @@ import { db } from '@/lib/db'
 import { orders, orderItems } from '@/lib/db/schema'
 import crypto from 'crypto'
 
-const razorpay = new Razorpay({
+// For demo/simulation purposes - graceful fallback for missing Razorpay keys
+const isRazorpayConfigured = !!(process.env.RAZORPAY_KEY_SECRET && process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
+
+const razorpay = isRazorpayConfigured ? new Razorpay({
   key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
-})
+}) : null;
 
 const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
 
@@ -41,6 +44,12 @@ export async function POST(req: NextRequest) {
     const payment = event.payload.payment.entity
 
     try {
+      if (!isRazorpayConfigured || !razorpay) {
+        // Demo mode - just acknowledge the webhook
+        console.log('🎭 DEMO MODE: Webhook received but Razorpay not configured, skipping order processing');
+        return NextResponse.json({ received: true, demoMode: true })
+      }
+
       // Get order details from Razorpay
       const razorpayOrder = await razorpay.orders.fetch(payment.order_id)
       
