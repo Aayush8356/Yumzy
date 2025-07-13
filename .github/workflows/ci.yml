@@ -157,6 +157,8 @@ jobs:
       env:
         NEXT_PUBLIC_APP_URL: https://yumzy.meetaayush.com
         JWT_SECRET: your-super-secret-jwt-key-for-yumzy-app-2024
+        BCRYPT_ROUNDS: 12
+        JWT_EXPIRES_IN: 24h
         # Real credentials for production
         UNSPLASH_ACCESS_KEY: kWDk-NvD5EmOwEX1ff54RVExiWbGEW9qpuIs0wSvZGY
         UNSPLASH_SECRET_KEY: _qo9Pp_VvReY2a_tKJSu37uzM_RwLCqYefhChBdI5Qs
@@ -164,6 +166,7 @@ jobs:
         NEXT_PUBLIC_RAZORPAY_KEY_ID: rzp_live_Id6ureskMPEgy9
         RAZORPAY_KEY_SECRET: 5DswpMfZj6Xcqg2fJMFfxK3W
         DATABASE_URL: postgresql://postgres:Aayush%401076@db.bnigaokzunwsfaijkzva.supabase.co:5432/postgres
+        POSTGRES_URL: postgresql://postgres:Aayush%401076@db.bnigaokzunwsfaijkzva.supabase.co:5432/postgres
         NODE_ENV: production
 
     - name: Deploy to Vercel (Production)
