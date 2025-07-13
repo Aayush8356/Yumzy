@@ -45,16 +45,15 @@ describe('Validation System', () => {
         expect(Object.keys(result.errors!)).toContain('phone')
       })
 
-      it('should enforce password complexity', () => {
-        const weakPasswords = [
-          'password',      // No uppercase, no numbers, no special chars
-          'PASSWORD',      // No lowercase, no numbers, no special chars
-          'Password',      // No numbers, no special chars
-          'Password123',   // No special chars
-          'Pass12!',       // Too short
+      it('should enforce password length requirements', () => {
+        const invalidPasswords = [
+          '',           // Empty password
+          'abc',        // Too short (less than 6 chars)
+          '12345',      // Too short (5 chars)
+          'a'.repeat(129), // Too long (over 128 chars)
         ]
 
-        weakPasswords.forEach(password => {
+        invalidPasswords.forEach(password => {
           const result = validateWithSchema(userValidation.register, {
             name: 'Test User',
             email: 'test@example.com',
@@ -62,6 +61,24 @@ describe('Validation System', () => {
           })
           
           expect(result.success).toBe(false)
+        })
+
+        // Valid passwords should pass
+        const validPasswords = [
+          'simple123',     // 6+ characters
+          'password',      // Simple password is now valid
+          'PASSWORD',      // Simple password is now valid
+          'Password123',   // Complex password still valid
+        ]
+
+        validPasswords.forEach(password => {
+          const result = validateWithSchema(userValidation.register, {
+            name: 'Test User',
+            email: 'test@example.com',
+            password
+          })
+          
+          expect(result.success).toBe(true)
         })
       })
     })
