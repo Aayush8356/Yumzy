@@ -64,10 +64,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user is verified (skip for admin users or demo mode)
-    if (!user.isVerified && user.role !== 'admin' && process.env.NODE_ENV === 'production' && process.env.SKIP_EMAIL_VERIFICATION !== 'true') {
+    // Check if user is verified (allow unverified users for first 7 days or admin users)
+    const accountAge = user.createdAt ? Date.now() - new Date(user.createdAt).getTime() : 0
+    const gracePeriod = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
+    
+    if (!user.isVerified && user.role !== 'admin' && accountAge > gracePeriod && process.env.NODE_ENV === 'production') {
       return NextResponse.json(
-        { success: false, error: 'Please verify your email before logging in', code: 'EMAIL_NOT_VERIFIED' },
+        { 
+          success: false, 
+          error: 'Please verify your email address. Check your inbox for the verification link.',
+          code: 'EMAIL_NOT_VERIFIED',
+          gracePeriodExpired: true
+        },
         { status: 401 }
       )
     }
@@ -91,6 +99,12 @@ export async function POST(request: NextRequest) {
       maxAge: 24 * 60 * 60, // 24 hours
       path: '/'
     })
+
+    // Add verification reminder if user is unverified but within grace period
+    if (!user.isVerified && user.role !== 'admin' && process.env.NODE_ENV === 'production') {
+      const daysLeft = Math.ceil((gracePeriod - accountAge) / (24 * 60 * 60 * 1000))
+      response.headers.set('X-Verification-Reminder', `Please verify your email. ${daysLeft} days remaining.`)
+    }
 
     return response
 

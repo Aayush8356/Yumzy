@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
         phone: phone || null,
         passwordHash: hashedPassword,
         role: 'user',
-        isVerified: process.env.NODE_ENV !== 'production' || process.env.SKIP_EMAIL_VERIFICATION === 'true',
+        isVerified: process.env.NODE_ENV !== 'production', // Auto-verify in development only
         emailVerificationToken: verificationToken,
         emailVerificationExpires: verificationExpires,
         preferences: {
