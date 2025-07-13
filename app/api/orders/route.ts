@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { orders, orderItems, usersTable } from '@/lib/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { orders, orderItems, usersTable, foodItemsTable } from '@/lib/db/schema';
+import { eq, desc, inArray } from 'drizzle-orm';
+import { OrderStatusManager } from '@/lib/order-status-manager';
 
 async function verifyUser(request: NextRequest) {
   try {
@@ -67,24 +68,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Order must contain at least one item' }, { status: 400 });
     }
 
+    // Get food item details for preparation time calculation
+    const foodItemIds = items.map((item: any) => item.foodItem.id);
+    const foodItemDetails = await db
+      .select()
+      .from(foodItemsTable)
+      .where(inArray(foodItemsTable.id, foodItemIds));
+
+    // Enrich items with food details for status calculation
+    const enrichedItems = items.map((item: any) => ({
+      ...item,
+      foodItem: {
+        ...item.foodItem,
+        cookTime: foodItemDetails.find(fi => fi.id === item.foodItem.id)?.cookTime || '15 mins'
+      }
+    }));
+
+    // Calculate estimated delivery time
+    const estimatedDeliveryTime = OrderStatusManager.getEstimatedDeliveryTime(enrichedItems);
+    const estimatedTimeString = OrderStatusManager.formatTimeRemaining(estimatedDeliveryTime);
+
     // Create the order
     const [newOrder] = await db
       .insert(orders)
       .values({
         userId,
-        status: 'pending',
+        status: 'confirmed',
         subtotal: subtotal.toString(),
         tax: tax.toString(),
         deliveryFee: deliveryFee.toString(),
         total: total.toString(),
         deliveryAddress,
         paymentMethod,
-        paymentStatus: 'pending',
-        estimatedDeliveryTime: '25-35 minutes',
+        paymentStatus: 'completed', // Assuming payment is successful at this point
+        estimatedDeliveryTime: estimatedTimeString,
         trackingInfo: {
-          status: 'order_placed',
-          estimatedArrival: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from now
-          lastUpdate: new Date()
+          status: 'confirmed',
+          estimatedArrival: estimatedDeliveryTime,
+          lastUpdate: new Date(),
+          timeline: OrderStatusManager.createOrderTimeline(enrichedItems)
         }
       })
       .returning();
@@ -103,6 +125,11 @@ export async function POST(request: NextRequest) {
     await db.insert(orderItems).values(orderItemsToInsert);
 
     console.log('Order items created:', orderItemsToInsert);
+
+    // Schedule automatic status updates
+    setTimeout(() => {
+      OrderStatusManager.scheduleOrderStatusUpdates(newOrder.id, enrichedItems);
+    }, 1000); // Small delay to ensure order is fully created
 
     return NextResponse.json({ 
       success: true, 

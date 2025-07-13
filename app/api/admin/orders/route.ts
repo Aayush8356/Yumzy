@@ -1,36 +1,122 @@
-// yumzy/app/api/admin/orders/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { ordersTable, usersTable } from '@/lib/db/schema';
-import { desc, eq } from 'drizzle-orm';
-import { getAuth } from '@clerk/nextjs/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { ordersTable, orderItemsTable, foodItemsTable, usersTable } from '@/lib/db/schema'
+import { eq, desc, and, gte, lte, ilike, or } from 'drizzle-orm'
+import { AuthMiddleware } from '@/lib/auth'
+import { OrderStatusManager } from '@/lib/order-status-manager'
 
-export const dynamic = 'force-dynamic';
-
-async function verifyAdmin(request: NextRequest) {
-  // Temporarily bypass auth check for development
-  return true;
-}
-
+// GET - Admin: Get all orders with filters
 export async function GET(request: NextRequest) {
-  const isAdmin = await verifyAdmin(request);
-  if (!isAdmin) {
-    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
-  }
-
   try {
-    const { searchParams } = new URL(request.url);
-    const countOnly = searchParams.get('countOnly') === 'true';
-
-    if (countOnly) {
-      const orders = await db.select().from(ordersTable);
-      return NextResponse.json({ success: true, count: orders.length });
+    const authResult = await AuthMiddleware.requireAdmin(request);
+    if ('error' in authResult) {
+      return NextResponse.json(
+        { success: false, error: authResult.error },
+        { status: authResult.status }
+      );
     }
 
-    const orders = await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
-    return NextResponse.json({ success: true, orders });
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const status = searchParams.get('status');
+
+    const offset = (page - 1) * limit;
+
+    // Build query conditions
+    const conditions = [];
+    
+    if (status && status !== 'all') {
+      conditions.push(eq(ordersTable.status, status));
+    }
+
+    // Get orders with user details
+    let ordersQuery = db
+      .select({
+        id: ordersTable.id,
+        userId: ordersTable.userId,
+        status: ordersTable.status,
+        subtotal: ordersTable.subtotal,
+        tax: ordersTable.tax,
+        deliveryFee: ordersTable.deliveryFee,
+        total: ordersTable.total,
+        deliveryAddress: ordersTable.deliveryAddress,
+        paymentMethod: ordersTable.paymentMethod,
+        paymentStatus: ordersTable.paymentStatus,
+        estimatedDeliveryTime: ordersTable.estimatedDeliveryTime,
+        actualDeliveryTime: ordersTable.actualDeliveryTime,
+        trackingInfo: ordersTable.trackingInfo,
+        notes: ordersTable.notes,
+        createdAt: ordersTable.createdAt,
+        updatedAt: ordersTable.updatedAt,
+        userName: usersTable.name,
+        userEmail: usersTable.email,
+        userPhone: usersTable.phone
+      })
+      .from(ordersTable)
+      .leftJoin(usersTable, eq(ordersTable.userId, usersTable.id))
+      .orderBy(desc(ordersTable.createdAt));
+
+    // Apply conditions
+    if (conditions.length > 0) {
+      ordersQuery = ordersQuery.where(and(...conditions));
+    }
+
+    // Get paginated results
+    const orders = await ordersQuery.limit(limit).offset(offset);
+
+    // Get order items for each order
+    const ordersWithItems = await Promise.all(
+      orders.map(async (order) => {
+        const items = await db
+          .select({
+            id: orderItemsTable.id,
+            foodItemId: orderItemsTable.foodItemId,
+            quantity: orderItemsTable.quantity,
+            price: orderItemsTable.price,
+            specialInstructions: orderItemsTable.specialInstructions,
+            foodItemName: foodItemsTable.name,
+            foodItemImage: foodItemsTable.image
+          })
+          .from(orderItemsTable)
+          .leftJoin(foodItemsTable, eq(orderItemsTable.foodItemId, foodItemsTable.id))
+          .where(eq(orderItemsTable.orderId, order.id));
+
+        const progress = OrderStatusManager.getOrderProgress(order.status);
+        
+        // Calculate time remaining if not delivered
+        let timeRemaining = null;
+        if (order.status !== 'delivered' && order.trackingInfo?.estimatedArrival) {
+          const estimatedTime = new Date(order.trackingInfo.estimatedArrival);
+          timeRemaining = OrderStatusManager.formatTimeRemaining(estimatedTime);
+        }
+
+        return {
+          ...order,
+          items,
+          progress,
+          timeRemaining
+        };
+      })
+    );
+
+    return NextResponse.json({
+      success: true,
+      orders: ordersWithItems,
+      pagination: {
+        page,
+        limit,
+        totalCount: orders.length,
+        hasNext: orders.length === limit,
+        hasPrev: page > 1
+      }
+    });
+
   } catch (error) {
-    console.error('Failed to fetch orders:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch orders' }, { status: 500 });
+    console.error('Error fetching admin orders:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch orders' },
+      { status: 500 }
+    );
   }
 }
