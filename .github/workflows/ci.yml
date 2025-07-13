@@ -137,7 +137,7 @@ jobs:
     
     environment:
       name: production
-      url: https://yumzy-aayush8356s-projects.vercel.app
+      url: https://yumzy.meetaayush.com
     
     steps:
     - name: Checkout code
@@ -155,7 +155,7 @@ jobs:
     - name: Build application
       run: npm run build
       env:
-        NEXT_PUBLIC_APP_URL: https://yumzy-aayush8356s-projects.vercel.app
+        NEXT_PUBLIC_APP_URL: https://yumzy.meetaayush.com
         JWT_SECRET: your-super-secret-jwt-key-for-yumzy-app-2024
         # Real credentials for production
         UNSPLASH_ACCESS_KEY: kWDk-NvD5EmOwEX1ff54RVExiWbGEW9qpuIs0wSvZGY

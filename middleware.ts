@@ -29,7 +29,19 @@ export function middleware(request: NextRequest) {
 
   // CORS headers for API routes
   if (request.nextUrl.pathname.startsWith('/api/')) {
-    response.headers.set('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+    // Allow multiple origins for production deployment
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'https://yumzy.meetaayush.com',
+      'https://yumzy-aayush8356s-projects.vercel.app',
+      'https://yumzy-2gsmhtdtr-aayush8356s-projects.vercel.app',
+      process.env.NEXT_PUBLIC_APP_URL
+    ].filter(Boolean)
+    
+    const origin = request.headers.get('origin')
+    const allowedOrigin = allowedOrigins.includes(origin || '') ? origin : allowedOrigins[0]
+    
+    response.headers.set('Access-Control-Allow-Origin', allowedOrigin || '*')
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
     response.headers.set('Access-Control-Allow-Credentials', 'true')
