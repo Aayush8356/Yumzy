@@ -7,9 +7,9 @@ import { userValidation, validateWithSchema, DataSanitizer } from '@/lib/validat
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
+    // Rate limiting - more lenient for production
     const clientId = RateLimiter.getClientIdentifier(request)
-    if (!RateLimiter.check(clientId, 5, 15 * 60 * 1000)) { // 5 requests per 15 minutes
+    if (!RateLimiter.check(clientId, 20, 5 * 60 * 1000)) { // 20 requests per 5 minutes
       return NextResponse.json(
         { success: false, error: 'Too many login attempts. Please try again later.' },
         { status: 429 }

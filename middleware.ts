@@ -35,6 +35,7 @@ export function middleware(request: NextRequest) {
       'https://yumzy.meetaayush.com',
       'https://yumzy-aayush8356s-projects.vercel.app',
       'https://yumzy-2gsmhtdtr-aayush8356s-projects.vercel.app',
+      'https://yumzy-five.vercel.app',
       process.env.NEXT_PUBLIC_APP_URL
     ].filter(Boolean)
     
