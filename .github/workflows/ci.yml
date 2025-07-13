@@ -77,7 +77,7 @@ jobs:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/yumzy_test
         POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/yumzy_test
         JWT_SECRET: test-jwt-secret-for-ci
-        BCRYPT_ROUNDS: 4
+        BCRYPT_ROUNDS: 12
         NODE_ENV: test
         CI: true
         NEXT_PUBLIC_APP_URL: http://localhost:3000
@@ -99,7 +99,7 @@ jobs:
         RAZORPAY_KEY_SECRET: 5DswpMfZj6Xcqg2fJMFfxK3W
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/yumzy_test
         POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/yumzy_test
-        BCRYPT_ROUNDS: 4
+        BCRYPT_ROUNDS: 12
         NODE_ENV: production
 
     # Coverage upload disabled - tests run without coverage for CI speed
