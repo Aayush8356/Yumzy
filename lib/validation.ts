@@ -19,9 +19,11 @@ export const userValidation = {
       .min(6, 'Password must be at least 6 characters')
       .max(128, 'Password must be less than 128 characters'),
     
-    phone: z.string()
-      .regex(/^\+?[\d\s\-\(\)]+$/, 'Invalid phone number format')
-      .optional(),
+    phone: z.union([
+      z.string().regex(/^\+?[\d\s\-\(\)]+$/, 'Invalid phone number format'),
+      z.literal(''),
+      z.undefined()
+    ]).optional(),
     
     preferences: z.object({
       notifications: z.boolean().default(true),

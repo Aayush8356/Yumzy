@@ -64,10 +64,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user is verified (for production)
-    if (!user.isVerified && process.env.NODE_ENV === 'production') {
+    // Check if user is verified (skip for admin users or demo mode)
+    if (!user.isVerified && user.role !== 'admin' && process.env.NODE_ENV === 'production' && process.env.SKIP_EMAIL_VERIFICATION !== 'true') {
       return NextResponse.json(
-        { success: false, error: 'Please verify your email before logging in' },
+        { success: false, error: 'Please verify your email before logging in', code: 'EMAIL_NOT_VERIFIED' },
         { status: 401 }
       )
     }
