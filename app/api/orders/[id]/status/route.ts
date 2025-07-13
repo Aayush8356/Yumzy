@@ -8,10 +8,10 @@ import { AuthMiddleware } from '@/lib/auth'
 // GET - Get order status and tracking info
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { orderId } = params;
+    const { id } = params;
 
     // Get order with items
     const order = await db
@@ -27,7 +27,7 @@ export async function GET(
         updatedAt: ordersTable.updatedAt
       })
       .from(ordersTable)
-      .where(eq(ordersTable.id, orderId))
+      .where(eq(ordersTable.id, id))
       .limit(1);
 
     if (order.length === 0) {
@@ -42,8 +42,8 @@ export async function GET(
     
     // Calculate time remaining if order is not delivered
     let timeRemaining = null;
-    if (orderData.status !== 'delivered' && orderData.trackingInfo?.estimatedArrival) {
-      const estimatedTime = new Date(orderData.trackingInfo.estimatedArrival);
+    if (orderData.status !== 'delivered' && (orderData.trackingInfo as any)?.estimatedArrival) {
+      const estimatedTime = new Date((orderData.trackingInfo as any).estimatedArrival);
       timeRemaining = OrderStatusManager.formatTimeRemaining(estimatedTime);
     }
 
@@ -53,7 +53,7 @@ export async function GET(
         ...orderData,
         progress,
         timeRemaining,
-        statusHistory: orderData.trackingInfo?.timeline || []
+        statusHistory: (orderData.trackingInfo as any)?.timeline || []
       }
     });
 
@@ -69,7 +69,7 @@ export async function GET(
 // PATCH - Update order status (Admin only)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const authResult = await AuthMiddleware.requireAuth(request);
@@ -89,7 +89,7 @@ export async function PATCH(
       );
     }
 
-    const { orderId } = params;
+    const { id } = params;
     const body = await request.json();
     const { status, notes } = body;
 
@@ -117,7 +117,7 @@ export async function PATCH(
       notes: notes || null
     };
 
-    const success = await OrderStatusManager.updateOrderStatus(orderId, status, trackingInfo);
+    const success = await OrderStatusManager.updateOrderStatus(id, status, trackingInfo);
 
     if (!success) {
       return NextResponse.json(

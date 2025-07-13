@@ -62,7 +62,7 @@ const statusSteps = [
 
 export default function OrderTrackingPage() {
   const params = useParams()
-  const orderId = params?.orderId as string
+  const orderId = params?.id as string
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null)
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdate[]>([])
   const [loading, setLoading] = useState(true)

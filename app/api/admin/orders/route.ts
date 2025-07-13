@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get orders with user details
-    let ordersQuery = db
+    const baseQuery = db
       .select({
         id: ordersTable.id,
         userId: ordersTable.userId,
@@ -57,13 +57,10 @@ export async function GET(request: NextRequest) {
       .leftJoin(usersTable, eq(ordersTable.userId, usersTable.id))
       .orderBy(desc(ordersTable.createdAt));
 
-    // Apply conditions
-    if (conditions.length > 0) {
-      ordersQuery = ordersQuery.where(and(...conditions));
-    }
-
-    // Get paginated results
-    const orders = await ordersQuery.limit(limit).offset(offset);
+    // Apply conditions and get results
+    const orders = conditions.length > 0 
+      ? await baseQuery.where(and(...conditions)).limit(limit).offset(offset)
+      : await baseQuery.limit(limit).offset(offset);
 
     // Get order items for each order
     const ordersWithItems = await Promise.all(
@@ -86,8 +83,8 @@ export async function GET(request: NextRequest) {
         
         // Calculate time remaining if not delivered
         let timeRemaining = null;
-        if (order.status !== 'delivered' && order.trackingInfo?.estimatedArrival) {
-          const estimatedTime = new Date(order.trackingInfo.estimatedArrival);
+        if (order.status !== 'delivered' && (order.trackingInfo as any)?.estimatedArrival) {
+          const estimatedTime = new Date((order.trackingInfo as any).estimatedArrival);
           timeRemaining = OrderStatusManager.formatTimeRemaining(estimatedTime);
         }
 

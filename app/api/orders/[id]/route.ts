@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { orders, orderItems, foodItems, users } from '@/lib/db/schema';
+import { ordersTable, orderItemsTable, foodItemsTable, usersTable } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import jwt from 'jsonwebtoken';
 
@@ -26,9 +26,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     // Get user role
     const [user] = await db
-      .select({ role: users.role })
-      .from(users)
-      .where(eq(users.id, userId))
+      .select({ role: usersTable.role })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
       .limit(1);
 
     if (!user) {
@@ -41,15 +41,15 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       // Admins can access any order
       orderQuery = db
         .select()
-        .from(orders)
-        .where(eq(orders.id, id))
+        .from(ordersTable)
+        .where(eq(ordersTable.id, id))
         .limit(1);
     } else {
       // Regular users can only access their own orders
       orderQuery = db
         .select()
-        .from(orders)
-        .where(and(eq(orders.id, id), eq(orders.userId, userId)))
+        .from(ordersTable)
+        .where(and(eq(ordersTable.id, id), eq(ordersTable.userId, userId)))
         .limit(1);
     }
 
@@ -65,18 +65,18 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // Get order items with food details
     const orderItemsWithFood = await db
       .select({
-        id: orderItems.id,
-        quantity: orderItems.quantity,
-        price: orderItems.price,
-        specialInstructions: orderItems.specialInstructions,
+        id: orderItemsTable.id,
+        quantity: orderItemsTable.quantity,
+        price: orderItemsTable.price,
+        specialInstructions: orderItemsTable.specialInstructions,
         foodItem: {
-          name: foodItems.name,
-          image: foodItems.image,
+          name: foodItemsTable.name,
+          image: foodItemsTable.image,
         },
       })
-      .from(orderItems)
-      .innerJoin(foodItems, eq(orderItems.foodItemId, foodItems.id))
-      .where(eq(orderItems.orderId, id));
+      .from(orderItemsTable)
+      .innerJoin(foodItemsTable, eq(orderItemsTable.foodItemId, foodItemsTable.id))
+      .where(eq(orderItemsTable.orderId, id));
 
     // Combine order with items
     const fullOrder = {
@@ -115,9 +115,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     // Get user role
     const [user] = await db
-      .select({ role: users.role })
-      .from(users)
-      .where(eq(users.id, userId))
+      .select({ role: usersTable.role })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
       .limit(1);
 
     if (!user) {
@@ -131,7 +131,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     // Update order status
     const [updatedOrder] = await db
-      .update(orders)
+      .update(ordersTable)
       .set({ 
         status,
         trackingInfo: {
@@ -140,7 +140,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
           lastUpdate: new Date()
         }
       })
-      .where(eq(orders.id, id))
+      .where(eq(ordersTable.id, id))
       .returning();
 
     if (!updatedOrder) {

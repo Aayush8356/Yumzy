@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { orders, orderItems, usersTable, foodItemsTable } from '@/lib/db/schema';
+import { ordersTable, orderItemsTable, usersTable, foodItemsTable } from '@/lib/db/schema';
 import { eq, desc, inArray } from 'drizzle-orm';
 import { OrderStatusManager } from '@/lib/order-status-manager';
 
@@ -37,9 +37,9 @@ export async function GET(request: NextRequest) {
 
     const userOrders = await db
       .select()
-      .from(orders)
-      .where(eq(orders.userId, userId))
-      .orderBy(desc(orders.createdAt));
+      .from(ordersTable)
+      .where(eq(ordersTable.userId, userId))
+      .orderBy(desc(ordersTable.createdAt));
 
     return NextResponse.json({ success: true, orders: userOrders });
   } catch (error) {
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     // Create the order
     const [newOrder] = await db
-      .insert(orders)
+      .insert(ordersTable)
       .values({
         userId,
         status: 'confirmed',
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
           estimatedArrival: estimatedDeliveryTime,
           lastUpdate: new Date(),
           timeline: OrderStatusManager.createOrderTimeline(enrichedItems)
-        }
+        } as any
       })
       .returning();
 
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
       specialInstructions: item.specialInstructions || null
     }));
 
-    await db.insert(orderItems).values(orderItemsToInsert);
+    await db.insert(orderItemsTable).values(orderItemsToInsert);
 
     console.log('Order items created:', orderItemsToInsert);
 

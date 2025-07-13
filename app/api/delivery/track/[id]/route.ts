@@ -6,10 +6,10 @@ import { eq, and } from 'drizzle-orm'
 // GET /api/delivery/track/[orderId] - Get delivery tracking info
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const orderId = params.orderId
+    const orderId = params.id
     const { searchParams } = new URL(request.url || '')
     const userId = searchParams.get('userId')
 
@@ -58,10 +58,10 @@ export async function GET(
 // POST /api/delivery/track/[orderId] - Update delivery tracking (for delivery drivers)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const orderId = params.orderId
+    const orderId = params.id
     const body = await request.json()
     const { driverId, location, status, estimatedArrival } = body
 
