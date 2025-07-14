@@ -69,7 +69,7 @@ export function PublicRoute({
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       // Determine redirect based on user role if not explicitly specified
-      const destination = redirectTo || (user?.role === 'admin' ? '/admin' : '/dashboard')
+      const destination = redirectTo || (user?.role === 'admin' ? '/admin' : '/')
       router.push(destination)
     }
   }, [isLoading, isAuthenticated, user, router, redirectTo])

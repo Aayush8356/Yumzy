@@ -160,10 +160,42 @@ export function PremiumDashboard() {
         if (ordersResponse.ok) {
           const ordersData = await ordersResponse.json()
           
+          // Check for old orders that might need status update
+          const allOrders = ordersData.orders || []
+          const oldPreparingOrders = allOrders.filter((order: any) => {
+            const orderDate = new Date(order.createdAt)
+            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+            return order.status === 'preparing' && orderDate < oneHourAgo
+          })
+          
+          // If there are old orders, automatically update them
+          if (oldPreparingOrders.length > 0) {
+            try {
+              const token = localStorage.getItem('authToken')
+              if (token) {
+                const updateResponse = await fetch('/api/orders/check-status', {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${token}` }
+                })
+                if (updateResponse.ok) {
+                  const updateData = await updateResponse.json()
+                  if (updateData.migratedCount > 0) {
+                    // Refresh page to show updated order status
+                    setTimeout(() => {
+                      window.location.reload()
+                    }, 1500)
+                  }
+                }
+              }
+            } catch (error) {
+              console.log('Could not update old orders:', error)
+            }
+          }
+          
           // Find active order (preparing, on-the-way)
-          const activeOrders = ordersData.orders?.filter((order: any) => 
+          const activeOrders = allOrders.filter((order: any) => 
             order.status === 'preparing' || order.status === 'on-the-way'
-          ) || []
+          )
           
           if (activeOrders.length > 0) {
             const latestActiveOrder = activeOrders[0]
@@ -469,7 +501,7 @@ export function PremiumDashboard() {
             </Link>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {recommendedItems.map((item, index) => (
               <motion.div
                 key={item.id}
@@ -477,11 +509,11 @@ export function PremiumDashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 + index * 0.1 }}
               >
-                <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group border border-gray-100 dark:border-gray-700 bg-gradient-to-br from-white via-white to-gray-50/50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 hover:scale-[1.05] hover:border-orange-200 dark:hover:border-orange-800">
-                  <div className="relative h-24">
+                <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group border border-gray-100 dark:border-gray-700 bg-gradient-to-br from-white via-white to-gray-50/50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 hover:scale-[1.02] hover:border-orange-200 dark:hover:border-orange-800">
+                  <div className="relative h-48">
                     {item.isLoadingImage ? (
                       <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 animate-pulse flex items-center justify-center">
-                        <Utensils className="w-6 h-6 text-gray-400" />
+                        <Utensils className="w-12 h-12 text-gray-400" />
                       </div>
                     ) : (
                       <ProfessionalFoodImage
@@ -493,38 +525,38 @@ export function PremiumDashboard() {
                       />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="absolute top-1 right-1">
-                      <Badge className="bg-orange-500/90 text-white border-0 gap-1 text-xs px-1 py-0.5 text-[10px]">
-                        <Star className="w-2 h-2 fill-white text-white" />
+                    <div className="absolute top-2 right-2">
+                      <Badge className="bg-orange-500/90 text-white border-0 gap-1 text-sm px-2 py-1">
+                        <Star className="w-3 h-3 fill-white text-white" />
                         {item.rating}
                       </Badge>
                     </div>
                   </div>
-                  <CardContent className="p-3">
-                    <div className="mb-2">
-                      <h3 className="font-bold text-sm leading-tight mb-1 group-hover:text-orange-600 transition-colors line-clamp-1">
+                  <CardContent className="p-4">
+                    <div className="mb-3">
+                      <h3 className="font-bold text-base leading-tight mb-2 group-hover:text-orange-600 transition-colors line-clamp-2">
                         {item.name}
                       </h3>
-                      <p className="text-xs text-muted-foreground line-clamp-1 leading-relaxed mb-2">
+                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-3">
                         {item.description}
                       </p>
                     </div>
                     
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="w-2 h-2" />
-                        <span className="text-[10px]">{item.cookTime}</span>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>{item.cookTime}</span>
                       </div>
-                      <p className="text-sm font-bold text-orange-600">₹{item.price}</p>
+                      <p className="text-lg font-bold text-orange-600">₹{item.price}</p>
                     </div>
                     
                     <Button 
                       size="sm" 
-                      className="w-full gap-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 border-0 font-medium text-xs h-7"
+                      className="w-full gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 border-0 font-medium text-sm h-9"
                       onClick={() => handleAddToCart(item)}
                     >
-                      <Plus className="w-2 h-2" />
-                      Add
+                      <Plus className="w-4 h-4" />
+                      Add to Cart
                     </Button>
                   </CardContent>
                 </Card>

@@ -357,6 +357,87 @@ function AdminPage() {
           </div>
         </div>
 
+        {/* System Maintenance */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">System Maintenance</h2>
+          <Card className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800">
+            <CardHeader>
+              <CardTitle className="text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Order Status Migration
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-4">
+                Fix old orders that are stuck in "preparing" status. This will update them to "delivered" status with appropriate timestamps.
+              </p>
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const token = localStorage.getItem('authToken');
+                      const response = await fetch('/api/admin/migrate-orders', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                      });
+                      const data = await response.json();
+                      toast({
+                        title: "Migration Check",
+                        description: `Found ${data.count} old orders that need migration.`,
+                      });
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to check old orders.",
+                        variant: "destructive"
+                      });
+                    }
+                  }}
+                  className="gap-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Check Old Orders
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const token = localStorage.getItem('authToken');
+                      const response = await fetch('/api/admin/migrate-orders', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                      });
+                      const data = await response.json();
+                      if (data.success) {
+                        toast({
+                          title: "Migration Complete",
+                          description: `Successfully migrated ${data.migratedCount} old orders.`,
+                        });
+                        // Refresh activity and counts
+                        fetchRecentActivity(activityPage);
+                        fetchQuickActionCounts();
+                      } else {
+                        throw new Error(data.error);
+                      }
+                    } catch (error) {
+                      toast({
+                        title: "Migration Failed",
+                        description: "Failed to migrate old orders. Please try again.",
+                        variant: "destructive"
+                      });
+                    }
+                  }}
+                  className="gap-2 bg-yellow-600 hover:bg-yellow-700"
+                >
+                  <Settings className="w-4 h-4" />
+                  Migrate Old Orders
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Recent Activity */}
         <div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">

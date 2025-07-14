@@ -60,7 +60,7 @@ export default function LoginPage() {
         }
       }
       
-      // Non-admin users go to main page
+      // Non-admin users go to homepage  
       router.push('/')
     } else {
       toast({
@@ -106,7 +106,7 @@ export default function LoginPage() {
         }
       }
       
-      // Non-admin users go to main page
+      // Non-admin users go to homepage  
       router.push('/')
     }
     
