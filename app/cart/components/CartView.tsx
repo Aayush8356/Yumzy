@@ -5,20 +5,48 @@ import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { QuantityStepper } from '@/app/components/QuantityStepper';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 
 export function CartView() {
   const { cart, isLoading, removeFromCart, updateCartItem } = useCart();
   const router = useRouter();
 
   if (isLoading) {
-    return <div>Loading cart...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center py-12 space-y-6">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <span className="text-lg">Loading cart...</span>
+        </div>
+        <div className="flex space-x-4">
+          <Button variant="outline" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Go Back
+          </Button>
+          <Button onClick={() => router.push('/menu')}>
+            Continue Shopping
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   if (!cart || cart.items.length === 0) {
     return (
-      <div>
-        <p>Your cart is empty.</p>
-        <Button onClick={() => router.push('/menu')}>Continue Shopping</Button>
+      <div className="flex flex-col items-center justify-center py-12 space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Your cart is empty</h2>
+          <p className="text-gray-600">Add some delicious items to get started!</p>
+        </div>
+        <div className="flex space-x-4">
+          <Button variant="outline" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Go Back
+          </Button>
+          <Button onClick={() => router.push('/menu')}>
+            Browse Menu
+          </Button>
+        </div>
       </div>
     );
   }

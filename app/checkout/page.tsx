@@ -34,7 +34,7 @@ import {
 import Link from 'next/link'
 
 export default function CheckoutPage() {
-  const { cart } = useCart()
+  const { cart, clearCart } = useCart()
   const { user, isAuthenticated } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
@@ -148,8 +148,11 @@ export default function CheckoutPage() {
           description: "Your order has been placed successfully",
         })
         
-        // Redirect to order tracking page
-        router.push(`/track/${data.order.id}`)
+        // Clear cart after successful order
+        await clearCart()
+        
+        // Redirect to success page first, then to tracking
+        router.push(`/checkout/success?orderId=${data.order.id}`)
       } else {
         throw new Error(data.error || 'Payment failed')
       }

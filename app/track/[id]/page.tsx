@@ -17,7 +17,8 @@ import {
   User,
   Timer,
   Navigation,
-  Star
+  Star,
+  ArrowLeft
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
@@ -294,6 +295,16 @@ export default function OrderTrackingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 py-8">
       <div className="container mx-auto px-4 max-w-4xl">
+        {/* Navigation */}
+        <div className="flex items-center gap-4 mb-6">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/orders">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Orders
+            </Link>
+          </Button>
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
