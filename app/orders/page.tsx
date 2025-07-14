@@ -122,14 +122,16 @@ export default function OrdersPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
         <Navigation />
         <div className="max-w-6xl mx-auto px-4 py-24">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Your Orders</h1>
-          <p className="text-muted-foreground">
-            Track your orders and view your order history
-          </p>
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">Your Orders</h1>
+            <p className="text-lg text-gray-600 dark:text-gray-300">
+              Track your orders and view your order history
+            </p>
+          </div>
         </div>
 
         {orders.length > 0 ? (
@@ -143,26 +145,28 @@ export default function OrdersPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Card className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
+                  <Card className="hover:shadow-xl transition-all duration-300 border-l-4 border-l-orange-500 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800">
+                    <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <StatusIcon className="w-6 h-6 text-primary" />
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-full">
+                            <StatusIcon className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                          </div>
                           <div>
-                            <CardTitle className="text-xl">
+                            <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
                               Order #{order.id.slice(0, 8)}
                             </CardTitle>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <p className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2 mt-1">
                               <Calendar className="w-4 h-4" />
                               {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString()}
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <Badge className={getStatusColor(order.status)}>
+                          <Badge className={`${getStatusColor(order.status)} font-medium px-3 py-1`}>
                             {getStatusText(order.status)}
                           </Badge>
-                          <p className="text-sm text-muted-foreground mt-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 font-medium">
                             {order.estimatedDeliveryTime}
                           </p>
                         </div>
@@ -205,8 +209,8 @@ export default function OrdersPage() {
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <Link href={`/orders/${order.id}`}>
-                            <Button>
+                          <Link href={`/track/${order.id}`}>
+                            <Button className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
                               View Details
                             </Button>
                           </Link>
