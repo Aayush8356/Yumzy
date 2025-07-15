@@ -45,10 +45,14 @@ export function OrderManagement() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch('/api/admin/orders', {
+        // Add timestamp to prevent cache issues
+        const timestamp = new Date().getTime()
+        const response = await fetch(`/api/admin/orders?_t=${timestamp}`, {
           cache: 'no-cache',
           headers: {
-            'Cache-Control': 'no-cache',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
           },
         });
         const data = await response.json();
@@ -90,10 +94,15 @@ export function OrderManagement() {
     setDeletingOrder(orderId);
     try {
       const authToken = localStorage.getItem('authToken');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      console.log('Delete request - Auth token:', authToken);
+      console.log('Delete request - User:', user);
+      
       const response = await fetch(`/api/admin/orders/${orderId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${authToken}`,
+          'Authorization': `Bearer ${user.id || authToken}`,
           'Content-Type': 'application/json',
         },
       });

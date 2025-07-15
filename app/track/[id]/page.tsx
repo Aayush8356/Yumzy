@@ -181,13 +181,12 @@ export default function OrderTrackingPage() {
             })) || []
           }
           
+          
           setOrderDetails(transformedOrder)
           
           // Update current step based on status
           const stepIndex = statusSteps.findIndex(step => step.key === data.order.status)
           
-          // Debug log for tracking issues
-          console.log('Order status:', data.order.status, 'Step index:', stepIndex)
           
           if (stepIndex !== -1) {
             setCurrentStep(stepIndex)
@@ -392,6 +391,9 @@ export default function OrderTrackingPage() {
                       const isCurrent = index === currentStep
                       const isPending = index > currentStep
                       
+                      // Special case: if this is the last step (delivered) and it's current, it's completed
+                      const isDeliveredAndCurrent = isCurrent && step.key === 'delivered'
+                      
                       return (
                         <motion.div
                           key={step.key}
@@ -399,21 +401,21 @@ export default function OrderTrackingPage() {
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.1 }}
                           className={`flex items-center gap-4 p-4 rounded-lg transition-colors border ${
-                            isCurrent 
+                            isCurrent && !isDeliveredAndCurrent
                               ? 'bg-primary/10 border-primary/30 shadow-sm' 
-                              : isCompleted 
+                              : isCompleted || isDeliveredAndCurrent
                               ? 'bg-green-50 border-green-200' 
                               : 'bg-gray-50 border-gray-200'
                           }`}
                         >
                           <div className={`p-3 rounded-full transition-all ${
-                            isCompleted 
+                            isCompleted || isDeliveredAndCurrent
                               ? 'bg-green-500 text-white' 
                               : isCurrent 
                               ? 'bg-primary text-white animate-pulse' 
                               : 'bg-gray-300 text-gray-500'
                           }`}>
-                            {isCompleted ? (
+                            {isCompleted || isDeliveredAndCurrent ? (
                               <CheckCircle className="h-5 w-5" />
                             ) : (
                               <Icon className="h-5 w-5" />
@@ -421,18 +423,18 @@ export default function OrderTrackingPage() {
                           </div>
                           <div className="flex-1">
                             <p className={`font-medium text-sm ${
-                              isCurrent 
+                              isCurrent && !isDeliveredAndCurrent
                                 ? 'text-primary' 
-                                : isCompleted 
+                                : isCompleted || isDeliveredAndCurrent
                                 ? 'text-green-700' 
                                 : 'text-gray-500'
                             }`}>
                               {step.label}
                             </p>
-                            {isCurrent && (
+                            {isCurrent && !isCompleted && !isDeliveredAndCurrent && (
                               <p className="text-xs text-primary/70 mt-1">In progress...</p>
                             )}
-                            {isCompleted && (
+                            {(isCompleted || isDeliveredAndCurrent) && (
                               <p className="text-xs text-green-600 mt-1">Completed</p>
                             )}
                             {isPending && (
@@ -440,12 +442,12 @@ export default function OrderTrackingPage() {
                             )}
                           </div>
                           <div className="flex items-center">
-                            {isCompleted && (
+                            {(isCompleted || isDeliveredAndCurrent) && (
                               <div className="text-green-500">
                                 <CheckCircle className="h-5 w-5" />
                               </div>
                             )}
-                            {isCurrent && (
+                            {isCurrent && !isDeliveredAndCurrent && (
                               <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                             )}
                             {isPending && (
@@ -506,22 +508,25 @@ export default function OrderTrackingPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-3">
                   {orderDetails.items?.length > 0 ? orderDetails.items.map((item, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                    <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border">
                       <img
                         src={item.itemImage || '/placeholder-food.jpg'}
                         alt={item.itemName || 'Food Item'}
                         className="w-14 h-14 rounded-lg object-cover border"
+                        onError={(e) => {
+                          e.currentTarget.src = '/placeholder-food.jpg'
+                        }}
                       />
                       <div className="flex-1">
-                        <p className="font-medium text-sm">{item.itemName || 'Unknown Item'}</p>
-                        <p className="text-xs text-muted-foreground">Quantity: {item.quantity || 1}</p>
+                        <p className="font-medium text-sm text-gray-900">{item.itemName || 'Unknown Item'}</p>
+                        <p className="text-xs text-gray-600">Quantity: {item.quantity || 1}</p>
                       </div>
                       <p className="font-semibold text-primary">₹{item.price || '0.00'}</p>
                     </div>
                   )) : (
                     <div className="text-center py-8">
                       <Package className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                      <p className="text-muted-foreground">No items found</p>
+                      <p className="text-gray-600">No items found</p>
                     </div>
                   )}
                 </div>
@@ -544,14 +549,14 @@ export default function OrderTrackingPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="p-3 bg-gray-50 rounded-lg border">
                   <div className="flex items-center gap-2 mb-2">
-                    <User className="h-4 w-4 text-gray-500" />
-                    <p className="font-medium">{orderDetails.customerName}</p>
+                    <User className="h-4 w-4 text-gray-600" />
+                    <p className="font-medium text-gray-900">{orderDetails.customerName}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-gray-500" />
-                    <p className="text-sm text-muted-foreground">{orderDetails.customerPhone}</p>
+                    <Phone className="h-4 w-4 text-gray-600" />
+                    <p className="text-sm text-gray-700">{orderDetails.customerPhone}</p>
                   </div>
                 </div>
                 <div>
@@ -559,7 +564,7 @@ export default function OrderTrackingPage() {
                     <MapPin className="h-4 w-4" />
                     Delivery Address
                   </p>
-                  <p className="text-sm text-muted-foreground bg-gray-50 p-3 rounded-lg">
+                  <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border">
                     {typeof orderDetails.deliveryAddress === 'object' 
                       ? `${orderDetails.deliveryAddress.street}, ${orderDetails.deliveryAddress.city}, ${orderDetails.deliveryAddress.state} ${orderDetails.deliveryAddress.zipCode}`
                       : orderDetails.deliveryAddress || 'Address not available'
@@ -572,7 +577,7 @@ export default function OrderTrackingPage() {
                       <CreditCard className="h-4 w-4" />
                       Payment Method
                     </p>
-                    <Badge variant="outline" className="mt-1">
+                    <Badge variant="outline" className="mt-1 text-gray-700 border-gray-300">
                       {orderDetails.paymentMethod.toUpperCase()}
                     </Badge>
                   </div>

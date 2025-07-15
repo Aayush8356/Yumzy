@@ -5,7 +5,7 @@ import { useAuth } from './AuthContext'
 import { useToast } from '@/hooks/use-toast'
 
 export interface RealtimeUpdate {
-  type: 'order_status' | 'delivery_update' | 'payment_status' | 'notification'
+  type: 'order_status' | 'delivery_update' | 'payment_status' | 'notification' | 'order_deleted'
   userId: string
   orderId?: string
   data: any
@@ -47,18 +47,32 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
           if (data.updates && data.updates.length > 0) {
             setUpdates(prev => [...prev, ...data.updates])
             
-            // Show toast for important updates
+            // Show toast for important updates and dispatch window events
             data.updates.forEach((update: RealtimeUpdate) => {
               if (update.type === 'order_status') {
                 toast({
                   title: "Order Update",
                   description: getOrderStatusMessage(update.data.status),
                 })
+                // Dispatch window event for order status updates
+                window.dispatchEvent(new CustomEvent('order-status-updated', {
+                  detail: update
+                }))
               } else if (update.type === 'delivery_update') {
                 toast({
                   title: "Delivery Update",
                   description: update.data.message,
                 })
+              } else if (update.type === 'order_deleted') {
+                toast({
+                  title: "Order Deleted",
+                  description: "An order has been removed from your order history",
+                  variant: "destructive"
+                })
+                // Dispatch window event for order deletion
+                window.dispatchEvent(new CustomEvent('order-deleted', {
+                  detail: update
+                }))
               }
             })
           }

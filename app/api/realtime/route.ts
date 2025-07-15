@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log(`Realtime API: Received ${type} update for user ${userId}`, orderId ? `order ${orderId}` : '', data);
+
     // Broadcast update to connected clients
     const update = {
       type,
@@ -99,6 +101,8 @@ async function broadcastUpdate(update: any) {
   }
   
   (global as any).pendingUpdates.get(key).push(update)
+  
+  console.log(`Stored update for user ${update.userId}. Total pending updates: ${(global as any).pendingUpdates.get(key).length}`);
   
   // Clean up old updates (keep only last 50)
   const userUpdates = (global as any).pendingUpdates.get(key)

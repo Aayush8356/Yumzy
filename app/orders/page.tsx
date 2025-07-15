@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -50,10 +50,14 @@ export default function OrdersPage() {
       if (!user) return
       
       try {
-        const response = await fetch(`/api/orders?userId=${user.id}`, {
+        // Add timestamp to prevent cache issues
+        const timestamp = new Date().getTime()
+        const response = await fetch(`/api/orders?userId=${user.id}&_t=${timestamp}`, {
           cache: 'no-cache',
           headers: {
-            'Cache-Control': 'no-cache',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
           },
         })
         const data = await response.json()
@@ -80,6 +84,64 @@ export default function OrdersPage() {
 
     fetchOrders()
   }, [user, isAuthenticated, router, toast])
+
+  // Create a separate function that can be called from anywhere
+  const refreshOrders = useCallback(async () => {
+    if (!user) return
+    
+    try {
+      // Add timestamp to prevent cache issues
+      const timestamp = new Date().getTime()
+      const response = await fetch(`/api/orders?userId=${user.id}&_t=${timestamp}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      })
+      const data = await response.json()
+      if (data.success) {
+        console.log('Orders refreshed from server:', data.orders.map(o => ({ id: o.id.slice(0, 8), status: o.status })))
+        setOrders(data.orders)
+      }
+    } catch (error) {
+      console.error("Failed to refresh orders:", error)
+    }
+  }, [user])
+
+  // Listen for real-time order updates and deletions
+  useEffect(() => {
+    const handleOrderUpdate = () => {
+      if (user?.id) {
+        console.log('Order update event received, refreshing orders...')
+        refreshOrders() // Refresh orders when updates occur
+      }
+    }
+
+    const handleOrderDeleted = (event) => {
+      if (user?.id) {
+        console.log('Order deletion event received:', event.detail)
+        // Immediately remove the order from state if we have the order ID
+        if (event.detail?.orderId) {
+          setOrders(prevOrders => prevOrders.filter(order => order.id !== event.detail.orderId))
+        }
+        // Also refresh from server to ensure consistency
+        refreshOrders() // Refresh orders when an order is deleted
+      }
+    }
+
+    // Listen for various order events
+    window.addEventListener('order-status-updated', handleOrderUpdate)
+    window.addEventListener('order-deleted', handleOrderDeleted)
+    window.addEventListener('admin-data-refresh', handleOrderUpdate)
+    
+    return () => {
+      window.removeEventListener('order-status-updated', handleOrderUpdate)
+      window.removeEventListener('order-deleted', handleOrderDeleted)
+      window.removeEventListener('admin-data-refresh', handleOrderUpdate)
+    }
+  }, [user?.id, refreshOrders])
 
   const getStatusColor = (status: string) => {
     switch (status) {

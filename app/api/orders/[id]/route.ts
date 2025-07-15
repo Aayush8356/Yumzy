@@ -81,11 +81,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const order = orderWithCustomer.order;
     const customer = orderWithCustomer.customer;
     
-    console.log(`API - Raw order data for ${id}:`, { 
-      status: order.status, 
-      createdAt: order.createdAt,
-      estimatedDeliveryTime: order.estimatedDeliveryTime 
-    });
 
     // Get order items with food details
     const orderItemsWithFood = await db
@@ -112,8 +107,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       customerEmail: customer.email
     };
 
-    console.log(`API - Order ${id}: status="${order.status}", created=${order.createdAt}`)
-    return NextResponse.json({ success: true, order: fullOrder });
+    // Add cache-busting headers to prevent stale data
+    const response = NextResponse.json({ success: true, order: fullOrder });
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    
+    return response;
   } catch (error) {
     console.error(`Failed to fetch order details:`, error);
     return NextResponse.json({ success: false, error: 'Failed to fetch order details' }, { status: 500 });

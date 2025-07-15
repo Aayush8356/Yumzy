@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
     
     const [totalMenuItems] = await db.select({ value: count() }).from(foodItemsTable);
 
-    return NextResponse.json({
+    // Add cache-busting headers to ensure fresh data
+    const response = NextResponse.json({
       success: true,
       stats: {
         totalOrders: totalOrders.value,
@@ -44,6 +45,12 @@ export async function GET(request: NextRequest) {
         totalMenuItems: totalMenuItems.value,
       },
     });
+    
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    
+    return response;
   } catch (error) {
     console.error('Failed to fetch admin stats:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch admin stats' }, { status: 500 });

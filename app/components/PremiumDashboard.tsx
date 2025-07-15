@@ -155,10 +155,13 @@ export function PremiumDashboard() {
         }
 
         // Fetch real user orders
-        const ordersResponse = await fetch(`/api/orders?userId=${user.id}`, {
+        const timestamp = new Date().getTime()
+        const ordersResponse = await fetch(`/api/orders?userId=${user.id}&_t=${timestamp}`, {
           cache: 'no-cache',
           headers: {
-            'Cache-Control': 'no-cache',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
           },
         })
         if (ordersResponse.ok) {
@@ -242,10 +245,12 @@ export function PremiumDashboard() {
         }
 
         // Fetch user's favorite food items
-        const favoritesResponse = await fetch(`/api/favorites?userId=${user.id}`, {
+        const favoritesResponse = await fetch(`/api/favorites?userId=${user.id}&_t=${timestamp}`, {
           cache: 'no-cache',
           headers: {
-            'Cache-Control': 'no-cache',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
           },
         })
         if (favoritesResponse.ok) {
@@ -321,18 +326,31 @@ export function PremiumDashboard() {
   useEffect(() => {
     const handleOrderUpdate = () => {
       if (user?.id) {
+        console.log('Dashboard: Order update event received, refreshing data...')
+        fetchUserData()
+      }
+    }
+
+    const handleOrderDeleted = (event) => {
+      if (user?.id) {
+        console.log('Dashboard: Order deletion event received:', event.detail)
+        // Clear active order if it matches the deleted order
+        if (event.detail?.orderId && activeOrder?.id === event.detail.orderId) {
+          setActiveOrder(null)
+        }
+        // Refresh all user data to ensure consistency
         fetchUserData()
       }
     }
 
     window.addEventListener('order-status-updated', handleOrderUpdate)
-    window.addEventListener('order-deleted', handleOrderUpdate)
+    window.addEventListener('order-deleted', handleOrderDeleted)
     
     return () => {
       window.removeEventListener('order-status-updated', handleOrderUpdate)
-      window.removeEventListener('order-deleted', handleOrderUpdate)
+      window.removeEventListener('order-deleted', handleOrderDeleted)
     }
-  }, [user?.id])
+  }, [user?.id, activeOrder?.id])
 
   // Fetch images for recommended items when they are set
   useEffect(() => {

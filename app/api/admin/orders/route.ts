@@ -97,7 +97,8 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json({
+    // Add cache-busting headers to prevent stale data
+    const response = NextResponse.json({
       success: true,
       orders: ordersWithItems,
       pagination: {
@@ -108,6 +109,12 @@ export async function GET(request: NextRequest) {
         hasPrev: page > 1
       }
     });
+    
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    
+    return response;
 
   } catch (error) {
     console.error('Error fetching admin orders:', error);

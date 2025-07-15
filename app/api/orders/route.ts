@@ -35,15 +35,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'User ID required' }, { status: 401 });
     }
 
+    console.log(`Fetching orders for user ${userId}`);
+    
     const userOrders = await db
       .select()
       .from(ordersTable)
       .where(eq(ordersTable.userId, userId))
       .orderBy(desc(ordersTable.createdAt));
 
-    console.log(`API - User ${userId} orders:`, userOrders.map(o => ({ id: o.id.slice(0, 8), status: o.status })))
+    console.log(`Found ${userOrders.length} orders for user ${userId}:`, userOrders.map(o => ({ id: o.id.slice(0, 8), status: o.status, createdAt: o.createdAt })));
 
-    return NextResponse.json({ success: true, orders: userOrders });
+    // Add cache-busting headers to prevent stale data
+    const response = NextResponse.json({ success: true, orders: userOrders });
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    response.headers.set('ETag', `"${Date.now()}"`);
+    response.headers.set('Last-Modified', new Date().toUTCString());
+    
+    return response;
   } catch (error) {
     console.error('Failed to fetch orders:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch orders' }, { status: 500 });
