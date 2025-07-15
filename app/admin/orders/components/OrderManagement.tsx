@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Eye, Search, Filter } from 'lucide-react';
+import { Eye, Search, Filter, Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface OrderItem {
   id: string;
@@ -38,6 +39,8 @@ export function OrderManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [deletingOrder, setDeletingOrder] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -76,6 +79,53 @@ export function OrderManagement() {
       ));
     } catch (error) {
       console.error("Failed to update order status:", error);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeletingOrder(orderId);
+    try {
+      const authToken = localStorage.getItem('authToken');
+      const response = await fetch(`/api/admin/orders/${orderId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Remove the order from local state
+        setOrders(orders.filter(order => order.id !== orderId));
+        
+        // Trigger admin dashboard refresh
+        window.dispatchEvent(new CustomEvent('admin-data-refresh'));
+        
+        // Trigger user dashboard refresh for affected user
+        window.dispatchEvent(new CustomEvent('order-deleted'));
+        
+        toast({
+          title: "Order Deleted",
+          description: data.message,
+        });
+      } else {
+        throw new Error(data.error || 'Failed to delete order');
+      }
+    } catch (error) {
+      console.error("Failed to delete order:", error);
+      toast({
+        title: "Delete Failed",
+        description: error instanceof Error ? error.message : "Failed to delete order",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingOrder(null);
     }
   };
 
@@ -268,6 +318,15 @@ export function OrderManagement() {
                             <SelectItem value="cancelled">Cancelled</SelectItem>
                           </SelectContent>
                         </Select>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteOrder(order.id)}
+                          disabled={deletingOrder === order.id}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

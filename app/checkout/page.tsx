@@ -34,7 +34,7 @@ import {
 import Link from 'next/link'
 
 export default function CheckoutPage() {
-  const { cart, clearCart } = useCart()
+  const { cart, clearCart, refreshCart } = useCart()
   const { user, isAuthenticated } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
@@ -149,10 +149,25 @@ export default function CheckoutPage() {
         })
         
         // Clear cart after successful order
-        await clearCart()
+        const cartCleared = await clearCart()
         
-        // Redirect to success page first, then to tracking
-        router.push(`/checkout/success?orderId=${data.order.id}`)
+        if (cartCleared) {
+          console.log('Cart cleared successfully after order placement')
+          // Force refresh cart to ensure UI is updated
+          await refreshCart()
+          
+          // Trigger custom event to close any open cart modals
+          window.dispatchEvent(new CustomEvent('cart-cleared'))
+        } else {
+          console.warn('Failed to clear cart after order placement')
+          // Try to refresh cart anyway
+          await refreshCart()
+        }
+        
+        // Small delay to ensure cart state is updated before redirect
+        setTimeout(() => {
+          router.push(`/checkout/success?orderId=${data.order.id}`)
+        }, 800)
       } else {
         throw new Error(data.error || 'Payment failed')
       }

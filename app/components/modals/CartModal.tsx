@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -15,6 +16,18 @@ interface CartModalProps {
 export function CartModal({ isOpen, onClose }: CartModalProps) {
   const { cart, updateCartItem, removeFromCart, isLoading } = useCart()
   const router = useRouter()
+
+  // Listen for cart cleared event to auto-close modal
+  React.useEffect(() => {
+    const handleCartCleared = () => {
+      if (isOpen) {
+        onClose()
+      }
+    }
+
+    window.addEventListener('cart-cleared', handleCartCleared)
+    return () => window.removeEventListener('cart-cleared', handleCartCleared)
+  }, [isOpen, onClose])
 
   const handleStartShopping = () => {
     onClose()

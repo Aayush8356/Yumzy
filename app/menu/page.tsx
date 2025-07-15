@@ -68,6 +68,19 @@ export default function MenuPage() {
   const [spiceLevelFilter, setSpiceLevelFilter] = useState('all')
   const [ratingFilter, setRatingFilter] = useState('all')
   const [showFilters, setShowFilters] = useState(false)
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 12,
+    total: 0,
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false
+  })
 
   const { isAuthenticated } = useAuth()
   const { toast } = useToast()
@@ -85,7 +98,7 @@ export default function MenuPage() {
     }
   }, [isAuthenticated, toast])
 
-  // Fetch menu items
+  // Fetch menu items with pagination and filters
   useEffect(() => {
     const fetchItems = async () => {
       setLoading(true)
@@ -98,7 +111,36 @@ export default function MenuPage() {
           }
         }
 
-        const response = await fetch('/api/menu', { 
+        // Build query parameters
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          limit: '12',
+          sortBy,
+          sortOrder: 'asc'
+        })
+
+        if (searchTerm) params.append('search', searchTerm)
+        if (priceRange !== 'all') {
+          if (priceRange === 'under10') {
+            params.append('maxPrice', '10')
+          } else if (priceRange === '10to20') {
+            params.append('minPrice', '10')
+            params.append('maxPrice', '20')
+          } else if (priceRange === '20to30') {
+            params.append('minPrice', '20')
+            params.append('maxPrice', '30')
+          } else if (priceRange === 'over30') {
+            params.append('minPrice', '30')
+          }
+        }
+        if (dietaryFilter === 'vegetarian') params.append('vegetarian', 'true')
+        if (dietaryFilter === 'vegan') params.append('vegan', 'true')
+        if (dietaryFilter === 'glutenFree') params.append('glutenFree', 'true')
+        if (dietaryFilter === 'popular') params.append('popular', 'true')
+        if (spiceLevelFilter !== 'all') params.append('spicy', 'true')
+        if (ratingFilter !== 'all') params.append('minRating', ratingFilter)
+
+        const response = await fetch(`/api/menu?${params.toString()}`, { 
           headers,
           cache: 'no-cache'
         })
@@ -109,12 +151,23 @@ export default function MenuPage() {
         
         const data = await response.json()
         
-        if (data.success && data.foodItems) {
-          setFoodItems(data.foodItems)
-          setFilteredItems(data.foodItems)
+        if (data.success && data.items) {
+          setFoodItems(data.items)
+          setFilteredItems(data.items)
+          setPagination(data.pagination)
+          setTotalItems(data.pagination.total)
+          setTotalPages(data.pagination.totalPages)
         } else {
           setFoodItems([])
           setFilteredItems([])
+          setPagination({
+            page: 1,
+            limit: 12,
+            total: 0,
+            totalPages: 1,
+            hasNext: false,
+            hasPrev: false
+          })
         }
       } catch (error) {
         console.error('Failed to fetch menu items:', error)
@@ -131,103 +184,14 @@ export default function MenuPage() {
     if (isAuthenticated) {
       fetchItems()
     }
-  }, [isAuthenticated, toast])
+  }, [isAuthenticated, toast, currentPage, searchTerm, sortBy, priceRange, dietaryFilter, spiceLevelFilter, ratingFilter])
 
-  // Apply filters and sorting
+  // Reset to first page when filters change
   useEffect(() => {
-    let filtered = [...foodItems]
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(item =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.ingredients.some(ingredient => 
-          ingredient.toLowerCase().includes(searchTerm.toLowerCase())
-        ) ||
-        item.tags.some(tag => 
-          tag.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      )
+    if (currentPage !== 1) {
+      setCurrentPage(1)
     }
-
-    // Price range filter
-    if (priceRange !== 'all') {
-      switch (priceRange) {
-        case 'under10':
-          filtered = filtered.filter(item => parseFloat(item.price) < 10)
-          break
-        case '10to20':
-          filtered = filtered.filter(item => {
-            const price = parseFloat(item.price)
-            return price >= 10 && price <= 20
-          })
-          break
-        case '20to30':
-          filtered = filtered.filter(item => {
-            const price = parseFloat(item.price)
-            return price >= 20 && price <= 30
-          })
-          break
-        case 'over30':
-          filtered = filtered.filter(item => parseFloat(item.price) > 30)
-          break
-      }
-    }
-
-    // Dietary filter
-    if (dietaryFilter !== 'all') {
-      switch (dietaryFilter) {
-        case 'vegetarian':
-          filtered = filtered.filter(item => item.isVegetarian)
-          break
-        case 'vegan':
-          filtered = filtered.filter(item => item.isVegan)
-          break
-        case 'glutenFree':
-          filtered = filtered.filter(item => item.isGlutenFree)
-          break
-        case 'popular':
-          filtered = filtered.filter(item => item.isPopular)
-          break
-      }
-    }
-
-    // Spice level filter
-    if (spiceLevelFilter !== 'all') {
-      const spiceLevel = parseInt(spiceLevelFilter)
-      filtered = filtered.filter(item => item.spiceLevel <= spiceLevel)
-    }
-
-    // Rating filter
-    if (ratingFilter !== 'all') {
-      const minRating = parseFloat(ratingFilter)
-      filtered = filtered.filter(item => parseFloat(item.rating) >= minRating)
-    }
-
-    // Sorting
-    switch (sortBy) {
-      case 'price':
-        filtered.sort((a, b) => parseFloat(a.price) - parseFloat(b.price))
-        break
-      case 'priceDesc':
-        filtered.sort((a, b) => parseFloat(b.price) - parseFloat(a.price))
-        break
-      case 'rating':
-        filtered.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating))
-        break
-      case 'popularity':
-        filtered.sort((a, b) => b.reviewCount - a.reviewCount)
-        break
-      case 'calories':
-        filtered.sort((a, b) => a.calories - b.calories)
-        break
-      default:
-        filtered.sort((a, b) => a.name.localeCompare(b.name))
-    }
-
-    setFilteredItems(filtered)
-  }, [foodItems, searchTerm, sortBy, priceRange, dietaryFilter, spiceLevelFilter, ratingFilter])
+  }, [searchTerm, sortBy, priceRange, dietaryFilter, spiceLevelFilter, ratingFilter])
 
 
   const clearAllFilters = () => {
@@ -498,6 +462,66 @@ export default function MenuPage() {
                 />
               </motion.div>
             ))}
+          </motion.div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && totalPages > 1 && (
+          <motion.div
+            className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
+            <div className="text-sm text-muted-foreground">
+              Showing page {currentPage} of {totalPages} ({totalItems} total items)
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={!pagination.hasPrev}
+              >
+                Previous
+              </Button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={!pagination.hasNext}
+              >
+                Next
+              </Button>
+            </div>
           </motion.div>
         )}
       </div>

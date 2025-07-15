@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth'
+import { AuthMiddleware } from '@/lib/auth'
 import { OrderMigrationManager } from '@/lib/migrate-old-orders'
 
 export async function POST(request: NextRequest) {
   try {
     // Verify user authentication
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-    const payload = await verifyToken(token)
+    const authResult = await AuthMiddleware.requireAuth(request)
     
-    if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status })
     }
+    
+    const payload = authResult.user
 
     // Get user's orders and check for any that need migration
     const { db } = await import('@/lib/db')
@@ -29,7 +25,7 @@ export async function POST(request: NextRequest) {
       .from(ordersTable)
       .where(
         and(
-          eq(ordersTable.customerId, payload.userId),
+          eq(ordersTable.userId, payload.id),
           eq(ordersTable.status, 'preparing'),
           lt(ordersTable.createdAt, oneHourAgo)
         )

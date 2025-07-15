@@ -35,32 +35,57 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 401 });
     }
 
-    // Get the main order with ownership check
-    let orderQuery;
+    // Get the main order with customer details
+    let orderWithCustomerQuery;
     if (user.role === 'admin') {
       // Admins can access any order
-      orderQuery = db
-        .select()
+      orderWithCustomerQuery = db
+        .select({
+          order: ordersTable,
+          customer: {
+            name: usersTable.name,
+            email: usersTable.email,
+            phone: usersTable.phone
+          }
+        })
         .from(ordersTable)
+        .innerJoin(usersTable, eq(ordersTable.userId, usersTable.id))
         .where(eq(ordersTable.id, id))
         .limit(1);
     } else {
       // Regular users can only access their own orders
-      orderQuery = db
-        .select()
+      orderWithCustomerQuery = db
+        .select({
+          order: ordersTable,
+          customer: {
+            name: usersTable.name,
+            email: usersTable.email,
+            phone: usersTable.phone
+          }
+        })
         .from(ordersTable)
+        .innerJoin(usersTable, eq(ordersTable.userId, usersTable.id))
         .where(and(eq(ordersTable.id, id), eq(ordersTable.userId, userId)))
         .limit(1);
     }
 
-    const [order] = await orderQuery;
-
-    if (!order) {
+    const [orderWithCustomer] = await orderWithCustomerQuery;
+    
+    if (!orderWithCustomer) {
       return NextResponse.json({ 
         success: false, 
         error: user.role === 'admin' ? 'Order not found' : 'Order not found or access denied' 
       }, { status: 404 });
     }
+
+    const order = orderWithCustomer.order;
+    const customer = orderWithCustomer.customer;
+    
+    console.log(`API - Raw order data for ${id}:`, { 
+      status: order.status, 
+      createdAt: order.createdAt,
+      estimatedDeliveryTime: order.estimatedDeliveryTime 
+    });
 
     // Get order items with food details
     const orderItemsWithFood = await db
@@ -78,12 +103,16 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       .innerJoin(foodItemsTable, eq(orderItemsTable.foodItemId, foodItemsTable.id))
       .where(eq(orderItemsTable.orderId, id));
 
-    // Combine order with items
+    // Combine order with items and customer data
     const fullOrder = {
       ...order,
-      orderItems: orderItemsWithFood
+      orderItems: orderItemsWithFood,
+      customerName: customer.name,
+      customerPhone: customer.phone || customer.email,
+      customerEmail: customer.email
     };
 
+    console.log(`API - Order ${id}: status="${order.status}", created=${order.createdAt}`)
     return NextResponse.json({ success: true, order: fullOrder });
   } catch (error) {
     console.error(`Failed to fetch order details:`, error);

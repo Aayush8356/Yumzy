@@ -30,7 +30,7 @@ export class OrderMigrationManager {
       return { success: true, migratedCount: oldOrders.length }
     } catch (error) {
       console.error('Error migrating old orders:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   }
 
@@ -46,7 +46,7 @@ export class OrderMigrationManager {
       if (order.length === 0) return
 
       const orderData = order[0]
-      const createdAt = new Date(orderData.createdAt)
+      const createdAt = new Date(orderData.createdAt || new Date())
       
       // Assume total time from order to delivery is 45-60 minutes
       const deliveredAt = new Date(createdAt.getTime() + (50 * 60 * 1000)) // 50 minutes later
@@ -57,7 +57,7 @@ export class OrderMigrationManager {
         .set({
           status: 'delivered',
           estimatedDeliveryTime: deliveredAt.toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date()
         })
         .where(eq(ordersTable.id, orderId))
 
@@ -84,7 +84,7 @@ export class OrderMigrationManager {
       const orderData = order[0]
       
       // Check if it's an old order that needs migration
-      const createdAt = new Date(orderData.createdAt)
+      const createdAt = new Date(orderData.createdAt || new Date())
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
       
       if (orderData.status === 'preparing' && createdAt < oneHourAgo) {
@@ -95,7 +95,7 @@ export class OrderMigrationManager {
       return { success: true, migrated: false, message: 'Order does not need migration' }
     } catch (error) {
       console.error('Error checking order for migration:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   }
 }

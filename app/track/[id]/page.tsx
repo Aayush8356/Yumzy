@@ -18,7 +18,9 @@ import {
   Timer,
   Navigation,
   Star,
-  ArrowLeft
+  ArrowLeft,
+  Package,
+  CreditCard
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
@@ -28,11 +30,17 @@ import Link from 'next/link'
 interface OrderDetails {
   id: string
   status: string
-  totalAmount: string
+  total: string
   estimatedDeliveryTime: string
   customerName: string
   customerPhone: string
-  deliveryAddress: string
+  deliveryAddress: string | {
+    street: string
+    city: string
+    state: string
+    zipCode: string
+    instructions?: string
+  }
   createdAt: string
   items: Array<{
     itemName: string
@@ -53,10 +61,9 @@ interface StatusUpdate {
 }
 
 const statusSteps = [
-  { key: 'order_confirmed', label: 'Order Confirmed', icon: CheckCircle },
+  { key: 'pending', label: 'Order Placed', icon: CheckCircle },
+  { key: 'confirmed', label: 'Order Confirmed', icon: CheckCircle },
   { key: 'preparing', label: 'Preparing', icon: UtensilsCrossed },
-  { key: 'ready_for_pickup', label: 'Ready for Pickup', icon: Clock },
-  { key: 'driver_assigned', label: 'Driver Assigned', icon: User },
   { key: 'out_for_delivery', label: 'Out for Delivery', icon: Truck },
   { key: 'delivered', label: 'Delivered', icon: CheckCircle }
 ]
@@ -162,12 +169,32 @@ export default function OrderTrackingPage() {
 
         if (response.ok) {
           const data = await response.json()
-          setOrderDetails(data.order)
+          
+          // Transform the order data to match expected interface
+          const transformedOrder = {
+            ...data.order,
+            items: data.order.orderItems?.map((item: any) => ({
+              itemName: item.foodItem?.name || 'Unknown Item',
+              quantity: item.quantity,
+              price: item.price,
+              itemImage: item.foodItem?.image || '/placeholder-food.jpg'
+            })) || []
+          }
+          
+          setOrderDetails(transformedOrder)
           
           // Update current step based on status
           const stepIndex = statusSteps.findIndex(step => step.key === data.order.status)
+          
+          // Debug log for tracking issues
+          console.log('Order status:', data.order.status, 'Step index:', stepIndex)
+          
           if (stepIndex !== -1) {
             setCurrentStep(stepIndex)
+          } else {
+            // Handle unknown status by defaulting to first step
+            console.warn('Unknown order status:', data.order.status, 'Available:', statusSteps.map(s => s.key))
+            setCurrentStep(0)
           }
 
           // Calculate estimated time left
@@ -225,11 +252,10 @@ export default function OrderTrackingPage() {
 
   const getStatusTitle = (status: string): string => {
     const titles = {
-      'order_confirmed': 'Order Confirmed! 🎉',
+      'pending': 'Order Placed! 📋',
+      'confirmed': 'Order Confirmed! 🎉',
       'preparing': 'Cooking Started! 👨‍🍳',
-      'ready_for_pickup': 'Order Ready! 📦',
-      'driver_assigned': 'Driver Assigned! 🚗',
-      'out_for_delivery': 'On the Way! 🛵',
+      'out_for_delivery': 'Out for Delivery! 🛵',
       'delivered': 'Delivered! 🎉'
     }
     return titles[status as keyof typeof titles] || 'Order Update'
@@ -237,10 +263,9 @@ export default function OrderTrackingPage() {
 
   const getStatusColor = (status: string): string => {
     const colors = {
-      'order_confirmed': 'bg-blue-500',
+      'pending': 'bg-blue-500',
+      'confirmed': 'bg-blue-600',
       'preparing': 'bg-orange-500',
-      'ready_for_pickup': 'bg-yellow-500',
-      'driver_assigned': 'bg-purple-500',
       'out_for_delivery': 'bg-green-500',
       'delivered': 'bg-green-600'
     }
@@ -338,22 +363,34 @@ export default function OrderTrackingPage() {
           {/* Order Progress */}
           <div className="lg:col-span-2 space-y-6">
             {/* Progress Bar */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Navigation className="h-5 w-5" />
-                  Order Progress
+            <Card className="shadow-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Navigation className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">Order Progress</h3>
+                    <p className="text-sm text-muted-foreground">Current status: {getStatusTitle(orderDetails.status)}</p>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  <Progress value={progressPercentage} className="h-2" />
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Progress</span>
+                      <span>{Math.round(progressPercentage)}%</span>
+                    </div>
+                    <Progress value={progressPercentage} className="h-3" />
+                  </div>
                   
                   <div className="space-y-4">
                     {statusSteps.map((step, index) => {
                       const Icon = step.icon
-                      const isCompleted = index <= currentStep
+                      const isCompleted = index < currentStep
                       const isCurrent = index === currentStep
+                      const isPending = index > currentStep
                       
                       return (
                         <motion.div
@@ -361,27 +398,60 @@ export default function OrderTrackingPage() {
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.1 }}
-                          className={`flex items-center gap-4 p-3 rounded-lg transition-colors ${
-                            isCurrent ? 'bg-primary/10 border border-primary/20' : 
-                            isCompleted ? 'bg-green-50' : 'bg-muted/30'
+                          className={`flex items-center gap-4 p-4 rounded-lg transition-colors border ${
+                            isCurrent 
+                              ? 'bg-primary/10 border-primary/30 shadow-sm' 
+                              : isCompleted 
+                              ? 'bg-green-50 border-green-200' 
+                              : 'bg-gray-50 border-gray-200'
                           }`}
                         >
-                          <div className={`p-2 rounded-full ${
-                            isCompleted ? 'bg-green-500 text-white' : 'bg-muted text-muted-foreground'
+                          <div className={`p-3 rounded-full transition-all ${
+                            isCompleted 
+                              ? 'bg-green-500 text-white' 
+                              : isCurrent 
+                              ? 'bg-primary text-white animate-pulse' 
+                              : 'bg-gray-300 text-gray-500'
                           }`}>
-                            <Icon className="h-4 w-4" />
+                            {isCompleted ? (
+                              <CheckCircle className="h-5 w-5" />
+                            ) : (
+                              <Icon className="h-5 w-5" />
+                            )}
                           </div>
                           <div className="flex-1">
-                            <p className={`font-medium ${isCurrent ? 'text-primary' : ''}`}>
+                            <p className={`font-medium text-sm ${
+                              isCurrent 
+                                ? 'text-primary' 
+                                : isCompleted 
+                                ? 'text-green-700' 
+                                : 'text-gray-500'
+                            }`}>
                               {step.label}
                             </p>
                             {isCurrent && (
-                              <p className="text-sm text-muted-foreground">In progress...</p>
+                              <p className="text-xs text-primary/70 mt-1">In progress...</p>
+                            )}
+                            {isCompleted && (
+                              <p className="text-xs text-green-600 mt-1">Completed</p>
+                            )}
+                            {isPending && (
+                              <p className="text-xs text-gray-400 mt-1">Pending</p>
                             )}
                           </div>
-                          {isCompleted && (
-                            <CheckCircle className="h-5 w-5 text-green-500" />
-                          )}
+                          <div className="flex items-center">
+                            {isCompleted && (
+                              <div className="text-green-500">
+                                <CheckCircle className="h-5 w-5" />
+                              </div>
+                            )}
+                            {isCurrent && (
+                              <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                            )}
+                            {isPending && (
+                              <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                            )}
+                          </div>
                         </motion.div>
                       )
                     })}
@@ -426,57 +496,82 @@ export default function OrderTrackingPage() {
           {/* Order Details Sidebar */}
           <div className="space-y-6">
             {/* Order Summary */}
-            <Card>
+            <Card className="shadow-lg">
               <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Order Summary
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
-                  {orderDetails.items.map((item, index) => (
-                    <div key={index} className="flex items-center gap-3">
+                  {orderDetails.items?.length > 0 ? orderDetails.items.map((item, index) => (
+                    <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
                       <img
-                        src={item.itemImage}
-                        alt={item.itemName}
-                        className="w-12 h-12 rounded-lg object-cover"
+                        src={item.itemImage || '/placeholder-food.jpg'}
+                        alt={item.itemName || 'Food Item'}
+                        className="w-14 h-14 rounded-lg object-cover border"
                       />
                       <div className="flex-1">
-                        <p className="font-medium text-sm">{item.itemName}</p>
-                        <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                        <p className="font-medium text-sm">{item.itemName || 'Unknown Item'}</p>
+                        <p className="text-xs text-muted-foreground">Quantity: {item.quantity || 1}</p>
                       </div>
-                      <p className="font-medium">₹{item.price}</p>
+                      <p className="font-semibold text-primary">₹{item.price || '0.00'}</p>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-center py-8">
+                      <Package className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                      <p className="text-muted-foreground">No items found</p>
+                    </div>
+                  )}
                 </div>
                 
-                <div className="border-t pt-3">
-                  <div className="flex justify-between font-semibold">
-                    <span>Total</span>
-                    <span>₹{orderDetails.totalAmount}</span>
+                <div className="border-t pt-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold">Total Amount</span>
+                    <span className="text-xl font-bold text-primary">₹{orderDetails.total}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Delivery Information */}
-            <Card>
+            <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
                   Delivery Details
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <p className="font-medium">{orderDetails.customerName}</p>
-                  <p className="text-sm text-muted-foreground">{orderDetails.customerPhone}</p>
+              <CardContent className="space-y-4">
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="h-4 w-4 text-gray-500" />
+                    <p className="font-medium">{orderDetails.customerName}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-gray-500" />
+                    <p className="text-sm text-muted-foreground">{orderDetails.customerPhone}</p>
+                  </div>
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Delivery Address</p>
-                  <p className="text-sm text-muted-foreground">{orderDetails.deliveryAddress}</p>
+                  <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Delivery Address
+                  </p>
+                  <p className="text-sm text-muted-foreground bg-gray-50 p-3 rounded-lg">
+                    {typeof orderDetails.deliveryAddress === 'object' 
+                      ? `${orderDetails.deliveryAddress.street}, ${orderDetails.deliveryAddress.city}, ${orderDetails.deliveryAddress.state} ${orderDetails.deliveryAddress.zipCode}`
+                      : orderDetails.deliveryAddress || 'Address not available'
+                    }
+                  </p>
                 </div>
                 {orderDetails.paymentMethod && (
                   <div>
-                    <p className="text-sm font-medium">Payment Method</p>
+                    <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Payment Method
+                    </p>
                     <Badge variant="outline" className="mt-1">
                       {orderDetails.paymentMethod.toUpperCase()}
                     </Badge>

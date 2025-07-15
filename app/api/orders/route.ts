@@ -41,6 +41,8 @@ export async function GET(request: NextRequest) {
       .where(eq(ordersTable.userId, userId))
       .orderBy(desc(ordersTable.createdAt));
 
+    console.log(`API - User ${userId} orders:`, userOrders.map(o => ({ id: o.id.slice(0, 8), status: o.status })))
+
     return NextResponse.json({ success: true, orders: userOrders });
   } catch (error) {
     console.error('Failed to fetch orders:', error);

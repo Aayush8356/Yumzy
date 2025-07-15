@@ -64,10 +64,10 @@ export default function RegisterPage() {
     if (success) {
       toast({
         title: "Account created successfully!",
-        description: "Please check your email to verify your account before logging in.",
+        description: "We've sent a verification email to your inbox.",
       })
-      // Redirect to login page instead of home
-      router.push('/login?message=Please check your email to verify your account')
+      // Redirect to verification pending page instead of login
+      router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`)
     } else {
       toast({
         title: "Registration failed",

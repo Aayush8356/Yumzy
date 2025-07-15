@@ -14,32 +14,44 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const { user, isAuthenticated } = useAuth();
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/admin/stats', {
-          cache: 'no-cache',
-          headers: {
-            'Cache-Control': 'no-cache',
-          },
-        });
-        const data = await response.json();
-        if (data.success) {
-          setStats(data.stats);
-        }
-      } catch (error) {
-        console.error("Failed to fetch admin stats:", error);
-      } finally {
-        setLoading(false);
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/admin/stats', {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setStats(data.stats);
       }
-    };
+    } catch (error) {
+      console.error("Failed to fetch admin stats:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     // Only fetch if user is authenticated and is admin
     if (isAuthenticated && user?.role === 'admin') {
       fetchStats();
     }
   }, [isAuthenticated, user?.role]); // Re-fetch when auth state changes
+
+  // Listen for admin data refresh events
+  useEffect(() => {
+    const handleRefresh = () => {
+      if (isAuthenticated && user?.role === 'admin') {
+        fetchStats();
+      }
+    };
+
+    window.addEventListener('admin-data-refresh', handleRefresh);
+    return () => window.removeEventListener('admin-data-refresh', handleRefresh);
+  }, [isAuthenticated, user?.role]);
 
   if (loading) {
     return (

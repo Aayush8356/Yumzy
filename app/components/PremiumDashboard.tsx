@@ -147,8 +147,7 @@ export function PremiumDashboard() {
     return fallbackImages[imageIndex]
   }
 
-  useEffect(() => {
-    const fetchUserData = async () => {
+  const fetchUserData = async () => {
       try {
         if (!user?.id) {
           setLoading(false)
@@ -156,12 +155,19 @@ export function PremiumDashboard() {
         }
 
         // Fetch real user orders
-        const ordersResponse = await fetch(`/api/orders?userId=${user.id}`)
+        const ordersResponse = await fetch(`/api/orders?userId=${user.id}`, {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        })
         if (ordersResponse.ok) {
           const ordersData = await ordersResponse.json()
           
           // Check for old orders that might need status update
           const allOrders = ordersData.orders || []
+          console.log('All orders:', allOrders.map((o: any) => ({ id: o.id.slice(0, 8), status: o.status, createdAt: o.createdAt })))
+          
           const oldPreparingOrders = allOrders.filter((order: any) => {
             const orderDate = new Date(order.createdAt)
             const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
@@ -192,10 +198,18 @@ export function PremiumDashboard() {
             }
           }
           
-          // Find active order (preparing, on-the-way)
+          // Find active order (pending, confirmed, preparing, out_for_delivery)
           const activeOrders = allOrders.filter((order: any) => 
-            order.status === 'preparing' || order.status === 'on-the-way'
+            order.status === 'pending' ||
+            order.status === 'confirmed' || 
+            order.status === 'preparing' || 
+            order.status === 'out_for_delivery'
+          ).filter((order: any) => 
+            order.status !== 'delivered' && 
+            order.status !== 'cancelled'
           )
+          
+          console.log('Active orders:', activeOrders.map((o: any) => ({ id: o.id.slice(0, 8), status: o.status })))
           
           if (activeOrders.length > 0) {
             const latestActiveOrder = activeOrders[0]
@@ -207,6 +221,9 @@ export function PremiumDashboard() {
               estimatedDelivery: latestActiveOrder.estimatedDeliveryTime || '30-45 min',
               createdAt: latestActiveOrder.createdAt
             })
+          } else {
+            // No active orders, clear the active order display
+            setActiveOrder(null)
           }
 
           // Calculate user stats from real orders
@@ -225,7 +242,12 @@ export function PremiumDashboard() {
         }
 
         // Fetch user's favorite food items
-        const favoritesResponse = await fetch(`/api/favorites?userId=${user.id}`)
+        const favoritesResponse = await fetch(`/api/favorites?userId=${user.id}`, {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        })
         if (favoritesResponse.ok) {
           const favoritesData = await favoritesResponse.json()
           setFavoriteCount(favoritesData.favorites?.length || 0)
@@ -291,7 +313,25 @@ export function PremiumDashboard() {
       }
     }
 
+  useEffect(() => {
     fetchUserData()
+  }, [user?.id])
+
+  // Listen for real-time order status updates
+  useEffect(() => {
+    const handleOrderUpdate = () => {
+      if (user?.id) {
+        fetchUserData()
+      }
+    }
+
+    window.addEventListener('order-status-updated', handleOrderUpdate)
+    window.addEventListener('order-deleted', handleOrderUpdate)
+    
+    return () => {
+      window.removeEventListener('order-status-updated', handleOrderUpdate)
+      window.removeEventListener('order-deleted', handleOrderUpdate)
+    }
   }, [user?.id])
 
   // Fetch images for recommended items when they are set

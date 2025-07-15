@@ -1,16 +1,24 @@
 // yumzy/app/api/admin/orders/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { ordersTable, usersTable } from '@/lib/db/schema';
+import { ordersTable, orderItemsTable, usersTable } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { getAuth } from '@clerk/nextjs/server';
-
 async function verifyAdmin(request: NextRequest) {
-  const { userId } = getAuth(request);
-  if (!userId) return false;
+  try {
+    const authHeader = request.headers.get('Authorization');
+    const authToken = authHeader?.replace('Bearer ', '');
+    
+    if (!authToken) {
+      return false;
+    }
 
-  const user = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  return user.length > 0 && user[0].role === 'admin';
+    // Check if user exists and is admin
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, authToken)).limit(1);
+    return user?.role === 'admin';
+  } catch (error) {
+    console.error('Error verifying admin:', error);
+    return false;
+  }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
@@ -100,6 +108,40 @@ function getStatusTitle(status: string): string {
     case 'delivered': return 'Order Delivered';
     case 'cancelled': return 'Order Cancelled';
     default: return 'Order Update';
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  const isAdmin = await verifyAdmin(request);
+  if (!isAdmin) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+  }
+
+  const { id } = params;
+  
+  try {
+    // Check if order exists
+    const [existingOrder] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
+    if (!existingOrder) {
+      return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
+    }
+
+    // Delete order items first (foreign key constraint)
+    await db.delete(orderItemsTable).where(eq(orderItemsTable.orderId, id));
+    
+    // Delete the order
+    await db.delete(ordersTable).where(eq(ordersTable.id, id));
+
+    return NextResponse.json({ 
+      success: true, 
+      message: `Order ${id.slice(0, 8)} and all related data deleted successfully` 
+    });
+  } catch (error) {
+    console.error(`Failed to delete order ${id}:`, error);
+    return NextResponse.json({ 
+      success: false, 
+      error: `Failed to delete order ${id}` 
+    }, { status: 500 });
   }
 }
 

@@ -50,7 +50,12 @@ export default function OrdersPage() {
       if (!user) return
       
       try {
-        const response = await fetch(`/api/orders?userId=${user.id}`)
+        const response = await fetch(`/api/orders?userId=${user.id}`, {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        })
         const data = await response.json()
         if (data.success) {
           setOrders(data.orders)

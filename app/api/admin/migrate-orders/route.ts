@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { OrderMigrationManager } from '@/lib/migrate-old-orders'
-import { verifyToken } from '@/lib/auth'
+import { AuthMiddleware } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
     // Verify admin authentication
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-    const payload = await verifyToken(token)
+    const authResult = await AuthMiddleware.requireAdmin(request)
     
-    if (!payload || payload.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status })
     }
 
     // Run migration
@@ -45,16 +39,10 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Verify admin authentication
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-    const payload = await verifyToken(token)
+    const authResult = await AuthMiddleware.requireAdmin(request)
     
-    if (!payload || payload.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status })
     }
 
     // Import database dependencies
@@ -70,8 +58,7 @@ export async function GET(request: NextRequest) {
         id: ordersTable.id,
         status: ordersTable.status,
         createdAt: ordersTable.createdAt,
-        customerName: ordersTable.customerName,
-        total: ordersTable.totalAmount
+        total: ordersTable.total
       })
       .from(ordersTable)
       .where(
