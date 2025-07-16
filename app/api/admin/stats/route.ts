@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const [totalOrders] = await db.select({ value: count() }).from(ordersTable);
+    console.log('Admin stats - Total orders:', totalOrders.value);
     
     // Count only regular users (exclude admin and demo users)
     const [totalUsers] = await db.select({ value: count() }).from(usersTable)
@@ -33,8 +34,10 @@ export async function GET(request: NextRequest) {
           not(like(usersTable.email, '%demo%'))
         )
       );
+    console.log('Admin stats - Total users:', totalUsers.value);
     
     const [totalMenuItems] = await db.select({ value: count() }).from(foodItemsTable);
+    console.log('Admin stats - Total menu items:', totalMenuItems.value);
 
     // Add cache-busting headers to ensure fresh data
     const response = NextResponse.json({

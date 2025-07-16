@@ -17,13 +17,17 @@ export function AdminDashboard() {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/stats', {
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/admin/stats?_t=${timestamp}`, {
         cache: 'no-cache',
         headers: {
-          'Cache-Control': 'no-cache',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
       });
       const data = await response.json();
+      console.log('AdminDashboard stats fetched:', data.stats);
       if (data.success) {
         setStats(data.stats);
       }
@@ -45,12 +49,20 @@ export function AdminDashboard() {
   useEffect(() => {
     const handleRefresh = () => {
       if (isAuthenticated && user?.role === 'admin') {
+        console.log('AdminDashboard: Refresh event received, updating stats...');
         fetchStats();
       }
     };
 
     window.addEventListener('admin-data-refresh', handleRefresh);
-    return () => window.removeEventListener('admin-data-refresh', handleRefresh);
+    window.addEventListener('order-deleted', handleRefresh);
+    window.addEventListener('order-status-updated', handleRefresh);
+    
+    return () => {
+      window.removeEventListener('admin-data-refresh', handleRefresh);
+      window.removeEventListener('order-deleted', handleRefresh);
+      window.removeEventListener('order-status-updated', handleRefresh);
+    };
   }, [isAuthenticated, user?.role]);
 
   if (loading) {

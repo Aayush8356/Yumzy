@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { ordersTable, orderItemsTable, foodItemsTable, usersTable } from '@/lib/db/schema'
-import { eq, desc, and, gte, lte, ilike, or } from 'drizzle-orm'
+import { eq, desc, and, gte, lte, ilike, or, count } from 'drizzle-orm'
 import { AuthMiddleware } from '@/lib/auth'
 import { OrderStatusManager } from '@/lib/order-status-manager'
 
@@ -20,14 +20,46 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const status = searchParams.get('status');
+    const countOnly = searchParams.get('countOnly') === 'true';
 
     const offset = (page - 1) * limit;
+    
+    console.log('Admin orders API - countOnly:', countOnly, 'status:', status);
 
     // Build query conditions
     const conditions = [];
     
     if (status && status !== 'all') {
       conditions.push(eq(ordersTable.status, status));
+    }
+    
+    // If only count is requested, return count only
+    if (countOnly) {
+      try {
+        const countQuery = conditions.length > 0 
+          ? db.select({ count: count() }).from(ordersTable).where(and(...conditions))
+          : db.select({ count: count() }).from(ordersTable);
+        
+        const [result] = await countQuery;
+        console.log('Orders count result:', result);
+        
+        const response = NextResponse.json({
+          success: true,
+          count: result.count
+        });
+        
+        response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        response.headers.set('Pragma', 'no-cache');
+        response.headers.set('Expires', '0');
+        
+        return response;
+      } catch (error) {
+        console.error('Error fetching orders count:', error);
+        return NextResponse.json(
+          { success: false, error: 'Failed to fetch orders count' },
+          { status: 500 }
+        );
+      }
     }
 
     // Get orders with user details

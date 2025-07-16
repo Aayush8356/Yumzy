@@ -128,12 +128,19 @@ function AdminPage() {
     try {
       setQuickActionCounts(prev => ({ ...prev, loading: true }));
       
+      const timestamp = new Date().getTime();
+      const cacheHeaders = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      };
+      
       // Fetch all counts in parallel
       const [usersRes, ordersRes, menuRes, messagesRes] = await Promise.all([
-        fetch('/api/admin/users?countOnly=true', { cache: 'no-cache' }),
-        fetch('/api/admin/orders?countOnly=true', { cache: 'no-cache' }),
-        fetch('/api/admin/menu?countOnly=true', { cache: 'no-cache' }),
-        fetch('/api/contact?countOnly=true', { cache: 'no-cache' })
+        fetch(`/api/admin/users?countOnly=true&_t=${timestamp}`, { cache: 'no-cache', headers: cacheHeaders }),
+        fetch(`/api/admin/orders?countOnly=true&_t=${timestamp}`, { cache: 'no-cache', headers: cacheHeaders }),
+        fetch(`/api/admin/menu?countOnly=true&_t=${timestamp}`, { cache: 'no-cache', headers: cacheHeaders }),
+        fetch(`/api/contact?countOnly=true&_t=${timestamp}`, { cache: 'no-cache', headers: cacheHeaders })
       ]);
 
       const [usersData, ordersData, menuData, messagesData] = await Promise.all([
@@ -143,6 +150,13 @@ function AdminPage() {
         messagesRes.json()
       ]);
 
+      console.log('Quick Action Counts fetched:', {
+        users: usersData.count || 0,
+        orders: ordersData.count || 0,
+        menuItems: menuData.count || 0,
+        messages: messagesData.count || 0
+      });
+      
       setQuickActionCounts({
         users: usersData.count || 0,
         orders: ordersData.count || 0,
@@ -177,6 +191,27 @@ function AdminPage() {
       return () => clearInterval(interval);
     }
   }, [user?.role, activityPage]); // Re-setup interval when page changes
+  
+  // Listen for admin data refresh events
+  useEffect(() => {
+    const handleAdminRefresh = () => {
+      if (user?.role === 'admin') {
+        console.log('Admin data refresh event received, updating counts...');
+        fetchQuickActionCounts();
+        fetchRecentActivity(activityPage);
+      }
+    };
+
+    window.addEventListener('admin-data-refresh', handleAdminRefresh);
+    window.addEventListener('order-deleted', handleAdminRefresh);
+    window.addEventListener('order-status-updated', handleAdminRefresh);
+    
+    return () => {
+      window.removeEventListener('admin-data-refresh', handleAdminRefresh);
+      window.removeEventListener('order-deleted', handleAdminRefresh);
+      window.removeEventListener('order-status-updated', handleAdminRefresh);
+    };
+  }, [user?.role, activityPage])
 
   const formatTimeAgo = (timestamp: Date) => {
     const now = new Date();
