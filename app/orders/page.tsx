@@ -102,7 +102,7 @@ export default function OrdersPage() {
       })
       const data = await response.json()
       if (data.success) {
-        console.log('Orders refreshed from server:', data.orders.map(o => ({ id: o.id.slice(0, 8), status: o.status })))
+        console.log('Orders refreshed from server:', data.orders.map((o: any) => ({ id: o.id.slice(0, 8), status: o.status })))
         setOrders(data.orders)
       }
     } catch (error) {
@@ -119,7 +119,7 @@ export default function OrdersPage() {
       }
     }
 
-    const handleOrderDeleted = (event) => {
+    const handleOrderDeleted = (event: any) => {
       if (user?.id) {
         console.log('Order deletion event received:', event.detail)
         // Immediately remove the order from state if we have the order ID

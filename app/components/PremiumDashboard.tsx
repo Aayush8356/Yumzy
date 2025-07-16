@@ -331,7 +331,7 @@ export function PremiumDashboard() {
       }
     }
 
-    const handleOrderDeleted = (event) => {
+    const handleOrderDeleted = (event: any) => {
       if (user?.id) {
         console.log('Dashboard: Order deletion event received:', event.detail)
         // Clear active order if it matches the deleted order
