@@ -66,27 +66,27 @@ export function HeroSection() {
         <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-accent/3 rounded-full blur-3xl animate-pulse delay-1000" />
       </div>
       
-      <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
-        <div className="grid lg:grid-cols-2 gap-12 xl:gap-16 items-center min-h-[calc(100vh-10rem)]">
+      <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-8 sm:pb-12">
+        <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 xl:gap-16 items-center min-h-[calc(100vh-8rem)] sm:min-h-[calc(100vh-10rem)]">
           {/* Left Content */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="space-y-8 lg:space-y-10 lg:pr-8"
+            className="space-y-6 sm:space-y-8 lg:space-y-10 lg:pr-8 text-center lg:text-left"
           >
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <motion.h1
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
-                className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[0.9] tracking-tight"
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold leading-[0.9] tracking-tight"
               >
                 <span className="block">Delicious</span>
                 <span className="block bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
                   Food Delivered
                 </span>
-                <span className="block text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-medium text-muted-foreground/80">
+                <span className="block text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-medium text-muted-foreground/80">
                   in minutes
                 </span>
               </motion.h1>
@@ -95,7 +95,7 @@ export function HeroSection() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.6 }}
-                className="text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed"
+                className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed mx-auto lg:mx-0"
               >
                 Experience premium cuisine from top restaurants delivered to your doorstep with our lightning-fast service and quality guarantee.
               </motion.p>
@@ -106,22 +106,22 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.8 }}
-              className="flex flex-col sm:flex-row gap-4"
+              className="flex flex-col sm:flex-row gap-3 sm:gap-4 max-w-md sm:max-w-none mx-auto lg:mx-0"
             >
-              <Link href="/menu">
+              <Link href="/menu" className="w-full sm:w-auto">
                 <Button 
                   size="lg" 
-                  className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground px-8 py-6 text-lg font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 group"
+                  className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-semibold rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 group"
                 >
-                  <ShoppingCart className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />
+                  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 group-hover:scale-110 transition-transform" />
                   Start Ordering
                 </Button>
               </Link>
-              <Link href="/menu">
+              <Link href="/menu" className="w-full sm:w-auto">
                 <Button 
                   variant="outline" 
                   size="lg" 
-                  className="px-8 py-6 text-lg font-semibold rounded-2xl border-2 hover:bg-accent/5 backdrop-blur-sm"
+                  className="w-full sm:w-auto px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-semibold rounded-xl sm:rounded-2xl border-2 hover:bg-accent/5 backdrop-blur-sm"
                 >
                   Explore Menu
                 </Button>
@@ -133,19 +133,19 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 1.0 }}
-              className="grid grid-cols-3 gap-8 pt-6"
+              className="grid grid-cols-3 gap-4 sm:gap-6 lg:gap-8 pt-4 sm:pt-6"
             >
               <div className="text-center lg:text-left">
-                <div className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">50K+</div>
-                <div className="text-sm font-medium text-muted-foreground mt-1">Happy Customers</div>
+                <div className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">50K+</div>
+                <div className="text-xs sm:text-sm font-medium text-muted-foreground mt-1">Happy Customers</div>
               </div>
               <div className="text-center lg:text-left">
-                <div className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">25min</div>
-                <div className="text-sm font-medium text-muted-foreground mt-1">Avg. Delivery</div>
+                <div className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">25min</div>
+                <div className="text-xs sm:text-sm font-medium text-muted-foreground mt-1">Avg. Delivery</div>
               </div>
               <div className="text-center lg:text-left">
-                <div className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">4.9★</div>
-                <div className="text-sm font-medium text-muted-foreground mt-1">User Rating</div>
+                <div className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">4.9★</div>
+                <div className="text-xs sm:text-sm font-medium text-muted-foreground mt-1">User Rating</div>
               </div>
             </motion.div>
           </motion.div>
@@ -155,21 +155,21 @@ export function HeroSection() {
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="relative lg:pl-8 mt-12 lg:mt-0"
+            className="relative lg:pl-8 mt-8 sm:mt-12 lg:mt-0"
           >
             {loading ? (
-              <div className="w-full h-[450px] bg-muted rounded-[2rem] animate-pulse" />
+              <div className="w-full h-[300px] sm:h-[400px] lg:h-[450px] bg-muted rounded-[1.5rem] sm:rounded-[2rem] animate-pulse" />
             ) : dailySpecial ? (
               <div className="relative">
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.6, delay: 1.0 }}
-                  className="absolute -top-4 left-6 z-30"
+                  className="absolute -top-3 sm:-top-4 left-4 sm:left-6 z-30"
                 >
                   <div className="relative">
-                    <Badge className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-red-500 via-orange-500 to-red-500 text-white shadow-lg">
-                      <Flame className="w-4 h-4 mr-2" />
+                    <Badge className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-bold bg-gradient-to-r from-red-500 via-orange-500 to-red-500 text-white shadow-lg">
+                      <Flame className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                       TODAY'S SPECIAL
                     </Badge>
                     <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-orange-500 to-red-500 rounded-full blur-md opacity-30 animate-pulse" />
@@ -177,20 +177,20 @@ export function HeroSection() {
                 </motion.div>
 
                 <motion.div
-                  animate={{ y: [0, -12, 0], rotateY: [0, 2, 0] }}
+                  animate={{ y: [0, -8, 0], rotateY: [0, 1, 0] }}
                   transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", repeatType: "reverse" }}
-                  className="relative rounded-[2rem] overflow-hidden shadow-[0_25px_60px_-10px_rgba(0,0,0,0.3)] bg-card will-change-transform group"
+                  className="relative rounded-[1.5rem] sm:rounded-[2rem] overflow-hidden shadow-[0_15px_40px_-10px_rgba(0,0,0,0.3)] sm:shadow-[0_25px_60px_-10px_rgba(0,0,0,0.3)] bg-card will-change-transform group"
                   style={{ transform: "translateZ(0) perspective(1000px)", backfaceVisibility: "hidden" }}
                 >
-                  <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 p-1">
-                    <div className="w-full h-full bg-background rounded-[calc(2rem-4px)]" />
+                  <div className="absolute inset-0 rounded-[1.5rem] sm:rounded-[2rem] bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 p-1">
+                    <div className="w-full h-full bg-background rounded-[calc(1.5rem-4px)] sm:rounded-[calc(2rem-4px)]" />
                   </div>
                   
-                  <div className="relative rounded-[calc(2rem-4px)] overflow-hidden">
+                  <div className="relative rounded-[calc(1.5rem-4px)] sm:rounded-[calc(2rem-4px)] overflow-hidden">
                     <img 
                       src={getImageUrl(dailySpecial)}
                       alt={dailySpecial.name}
-                      className="w-full h-[450px] object-cover group-hover:scale-105 transition-transform duration-700"
+                      className="w-full h-[300px] sm:h-[400px] lg:h-[450px] object-cover group-hover:scale-105 transition-transform duration-700"
                       loading="eager"
                       decoding="async"
                       onError={handleImageError}

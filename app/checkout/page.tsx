@@ -196,19 +196,20 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 py-8">
-      <div className="container mx-auto px-4 max-w-6xl">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 py-4 sm:py-8">
+      <div className="container mx-auto px-4 sm:px-6 max-w-6xl">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/cart">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Cart
+              <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Back to Cart</span>
+              <span className="sm:hidden">Back</span>
             </Link>
           </Button>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold">Checkout</h1>
-            <p className="text-muted-foreground">Complete your order</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Checkout</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Complete your order</p>
           </div>
         </div>
 
@@ -235,7 +236,7 @@ export default function CheckoutPage() {
           </motion.div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
           {/* Left Column - Forms */}
           <div className="space-y-6">
             {/* Delivery Address */}

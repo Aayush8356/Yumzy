@@ -219,77 +219,80 @@ export default function MenuPage() {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <Navigation />
       
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-8 sm:pb-12">
         {/* Header */}
         <motion.div 
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             Our Premium Menu
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4 sm:px-0">
             Discover delicious dishes crafted with premium ingredients, exclusively for our members
           </p>
         </motion.div>
 
         {/* Search and Filter Controls */}
         <motion.div
-          className="bg-card/50 backdrop-blur-sm rounded-xl border p-6 mb-8 space-y-4"
+          className="bg-card/50 backdrop-blur-sm rounded-lg sm:rounded-xl border p-4 sm:p-6 mb-6 sm:mb-8 space-y-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
         >
           {/* Search and Quick Filters Row */}
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <div className="flex flex-col gap-3 sm:gap-4">
             {/* Search */}
-            <div className="relative flex-1 w-full">
+            <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search dishes, ingredients, or cuisines..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-12 text-base"
+                className="pl-10 h-10 sm:h-12 text-sm sm:text-base"
               />
             </div>
 
-            {/* Sort By */}
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full sm:w-48 h-12">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name">Name (A-Z)</SelectItem>
-                <SelectItem value="price">Price (Low to High)</SelectItem>
-                <SelectItem value="priceDesc">Price (High to Low)</SelectItem>
-                <SelectItem value="rating">Highest Rated</SelectItem>
-                <SelectItem value="popularity">Most Popular</SelectItem>
-                <SelectItem value="calories">Lowest Calories</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Sort and Filter Row */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              {/* Sort By */}
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-full sm:flex-1 h-10 sm:h-12">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Name (A-Z)</SelectItem>
+                  <SelectItem value="price">Price (Low to High)</SelectItem>
+                  <SelectItem value="priceDesc">Price (High to Low)</SelectItem>
+                  <SelectItem value="rating">Highest Rated</SelectItem>
+                  <SelectItem value="popularity">Most Popular</SelectItem>
+                  <SelectItem value="calories">Lowest Calories</SelectItem>
+                </SelectContent>
+              </Select>
 
-            {/* Filters Toggle */}
-            <Button
-              variant={showFilters ? "default" : "outline"}
-              className="w-full sm:w-auto h-12 gap-2"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              Filters
-              {activeFiltersCount > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] flex items-center justify-center">
-                  {activeFiltersCount}
-                </Badge>
-              )}
-            </Button>
+              {/* Filters Toggle */}
+              <Button
+                variant={showFilters ? "default" : "outline"}
+                className="w-full sm:w-auto h-10 sm:h-12 gap-2"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+                {activeFiltersCount > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] flex items-center justify-center">
+                    {activeFiltersCount}
+                  </Badge>
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* Advanced Filters Panel */}
           {showFilters && (
             <motion.div
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-4 border-t"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
@@ -413,14 +416,14 @@ export default function MenuPage() {
 
         {/* Menu Items Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {Array.from({ length: 8 }).map((_, index) => (
               <Card key={index} className="animate-pulse">
-                <div className="h-48 bg-muted rounded-t-lg"></div>
-                <CardContent className="p-4 space-y-3">
-                  <div className="h-4 bg-muted rounded w-3/4"></div>
-                  <div className="h-3 bg-muted rounded w-full"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
+                <div className="h-40 sm:h-48 bg-muted rounded-t-lg"></div>
+                <CardContent className="p-3 sm:p-4 space-y-2 sm:space-y-3">
+                  <div className="h-3 sm:h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-2 sm:h-3 bg-muted rounded w-full"></div>
+                  <div className="h-2 sm:h-3 bg-muted rounded w-1/2"></div>
                 </CardContent>
               </Card>
             ))}
@@ -445,7 +448,7 @@ export default function MenuPage() {
           </motion.div>
         ) : (
           <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -468,12 +471,12 @@ export default function MenuPage() {
         {/* Pagination Controls */}
         {!loading && totalPages > 1 && (
           <motion.div
-            className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4"
+            className="mt-8 sm:mt-12 flex flex-col sm:flex-row items-center justify-between gap-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            <div className="text-sm text-muted-foreground">
+            <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
               Showing page {currentPage} of {totalPages} ({totalItems} total items)
             </div>
             

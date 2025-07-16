@@ -115,7 +115,7 @@ export default function LoginPage() {
 
   return (
     <PublicRoute>
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-accent/5 to-background flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-accent/5 to-background flex items-center justify-center p-4 sm:p-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -123,28 +123,28 @@ export default function LoginPage() {
           className="w-full max-w-md"
         >
           {/* Back Button */}
-          <Link href="/" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-6 transition-colors">
+          <Link href="/" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4 sm:mb-6 transition-colors">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Home
+            <span className="text-sm sm:text-base">Back to Home</span>
           </Link>
 
           <Card className="shadow-elegant">
-            <CardHeader className="text-center">
-              <div className="mx-auto w-12 h-12 bg-gradient-hero rounded-lg flex items-center justify-center mb-4">
-                <span className="text-white font-bold text-xl">W</span>
+            <CardHeader className="text-center p-4 sm:p-6">
+              <div className="mx-auto w-10 h-10 sm:w-12 sm:h-12 bg-gradient-hero rounded-lg flex items-center justify-center mb-3 sm:mb-4">
+                <span className="text-white font-bold text-lg sm:text-xl">Y</span>
               </div>
-              <CardTitle className="text-2xl">Welcome Back</CardTitle>
-              <p className="text-muted-foreground">
+              <CardTitle className="text-xl sm:text-2xl">Welcome Back</CardTitle>
+              <p className="text-muted-foreground text-sm sm:text-base">
                 Sign in to your account to continue ordering
               </p>
             </CardHeader>
             
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
               {/* Demo Login */}
               <Button 
                 onClick={handleDemoLogin}
                 variant="outline" 
-                className="w-full"
+                className="w-full h-10 sm:h-12 text-sm sm:text-base"
                 disabled={isLoading}
               >
                 Try Demo Account
@@ -159,7 +159,7 @@ export default function LoginPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-sm sm:text-base">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
@@ -169,14 +169,14 @@ export default function LoginPage() {
                       placeholder="Enter your email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="pl-10"
+                      className="pl-10 h-10 sm:h-12 text-sm sm:text-base"
                       required
                     />
                   </div>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-sm sm:text-base">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
@@ -186,7 +186,7 @@ export default function LoginPage() {
                       placeholder="Enter your password"
                       value={formData.password}
                       onChange={handleInputChange}
-                      className="pl-10 pr-10"
+                      className="pl-10 pr-10 h-10 sm:h-12 text-sm sm:text-base"
                       required
                     />
                     <button
@@ -199,14 +199,14 @@ export default function LoginPage() {
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center space-x-2 text-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                  <label className="flex items-center space-x-2 text-xs sm:text-sm">
                     <input type="checkbox" className="rounded border border-input" />
                     <span>Remember me</span>
                   </label>
                   <Link 
                     href="/auth/forgot-password" 
-                    className="text-sm text-primary hover:underline"
+                    className="text-xs sm:text-sm text-primary hover:underline"
                   >
                     Forgot password?
                   </Link>
