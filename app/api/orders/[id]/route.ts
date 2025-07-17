@@ -3,12 +3,13 @@ import { db } from '@/lib/db';
 import { ordersTable, orderItemsTable, foodItemsTable, usersTable } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import jwt from 'jsonwebtoken';
+import { OrderStatusManager } from '@/lib/order-status-manager';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
 
-    // Authenticate user
+    // Authenticate user - support both JWT and simple token approach
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -18,10 +19,17 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     let userId: string;
     
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-      userId = decoded.userId;
+      // Try JWT first
+      if (process.env.JWT_SECRET) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+        userId = decoded.userId;
+      } else {
+        // Fall back to simple token approach (token is user ID)
+        userId = token;
+      }
     } catch (error) {
-      return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
+      // If JWT fails, try simple token approach
+      userId = token;
     }
 
     // Get user role
@@ -78,9 +86,51 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       }, { status: 404 });
     }
 
-    const order = orderWithCustomer.order;
-    const customer = orderWithCustomer.customer;
+    let order = orderWithCustomer.order;
+    let customer = orderWithCustomer.customer;
     
+    // Update order status based on timeline before returning data
+    if (order.status !== 'delivered' && order.status !== 'cancelled') {
+      console.log(`🔄 Updating order status for order ${id}...`);
+      try {
+        await OrderStatusManager.checkAndUpdateOrderStatus(id);
+        
+        // Fetch fresh order data after status update
+        const [updatedOrderResult] = await (user.role === 'admin' ? 
+          db.select({
+            order: ordersTable,
+            customer: {
+              name: usersTable.name,
+              email: usersTable.email,
+              phone: usersTable.phone
+            }
+          })
+          .from(ordersTable)
+          .innerJoin(usersTable, eq(ordersTable.userId, usersTable.id))
+          .where(eq(ordersTable.id, id))
+          .limit(1) :
+          db.select({
+            order: ordersTable,
+            customer: {
+              name: usersTable.name,
+              email: usersTable.email,
+              phone: usersTable.phone
+            }
+          })
+          .from(ordersTable)
+          .innerJoin(usersTable, eq(ordersTable.userId, usersTable.id))
+          .where(and(eq(ordersTable.id, id), eq(ordersTable.userId, userId)))
+          .limit(1)
+        );
+        
+        if (updatedOrderResult) {
+          order = updatedOrderResult.order;
+          customer = updatedOrderResult.customer;
+        }
+      } catch (error) {
+        console.error(`Failed to update status for order ${id}:`, error);
+      }
+    }
 
     // Get order items with food details
     const orderItemsWithFood = await db

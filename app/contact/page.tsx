@@ -50,7 +50,7 @@ const faqs = [
   },
   {
     question: 'What are your delivery charges?',
-    answer: 'Delivery is free for orders over $25. For orders under $25, a small delivery fee of $2.99 applies.'
+    answer: 'Delivery is free for orders over ₹500. For orders under ₹500, a small delivery fee of ₹49 applies.'
   },
   {
     question: 'Can I modify my order after placing it?',

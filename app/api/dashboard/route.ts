@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ordersTable, orderItemsTable, foodItemsTable, favoritesTable } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { OrderStatusManager } from '@/lib/order-status-manager';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,28 @@ export async function GET(request: NextRequest) {
 
     // Fetch recent orders
     const recentOrders = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.userId, userId))
+      .orderBy(desc(ordersTable.createdAt))
+      .limit(3);
+
+    // Update order statuses based on timeline before returning data
+    console.log('🔄 Updating order statuses for dashboard...');
+    await Promise.all(
+      recentOrders.map(async (order) => {
+        if (order.status !== 'delivered' && order.status !== 'cancelled') {
+          try {
+            await OrderStatusManager.checkAndUpdateOrderStatus(order.id);
+          } catch (error) {
+            console.error(`Failed to update status for order ${order.id}:`, error);
+          }
+        }
+      })
+    );
+
+    // Fetch fresh order data after status updates
+    const updatedRecentOrders = await db
       .select()
       .from(ordersTable)
       .where(eq(ordersTable.userId, userId))
@@ -41,14 +64,14 @@ export async function GET(request: NextRequest) {
       { icon: 'ShoppingCart', label: 'Total Orders', value: '0', color: 'text-blue-600' },
       { icon: 'Clock', label: 'Avg. Delivery', value: 'N/A', color: 'text-green-600' },
       { icon: 'Star', label: 'Your Rating', value: 'N/A', color: 'text-yellow-600' },
-      { icon: 'TrendingUp', label: 'Saved Money', value: '$0', color: 'text-purple-600' },
+      { icon: 'TrendingUp', label: 'Saved Money', value: '₹0', color: 'text-purple-600' },
     ];
 
     return NextResponse.json({
       success: true,
       data: {
         quickStats,
-        recentOrders,
+        recentOrders: updatedRecentOrders,
         favorites,
       },
     });

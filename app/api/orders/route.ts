@@ -45,8 +45,31 @@ export async function GET(request: NextRequest) {
 
     console.log(`Found ${userOrders.length} orders for user ${userId}:`, userOrders.map(o => ({ id: o.id.slice(0, 8), status: o.status, createdAt: o.createdAt })));
 
+    // Update order statuses based on timeline before returning data
+    console.log('🔄 Updating order statuses for user orders...');
+    await Promise.all(
+      userOrders.map(async (order) => {
+        if (order.status !== 'delivered' && order.status !== 'cancelled') {
+          try {
+            await OrderStatusManager.checkAndUpdateOrderStatus(order.id);
+          } catch (error) {
+            console.error(`Failed to update status for order ${order.id}:`, error);
+          }
+        }
+      })
+    );
+
+    // Fetch fresh order data after status updates
+    const updatedUserOrders = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.userId, userId))
+      .orderBy(desc(ordersTable.createdAt));
+
+    console.log(`Updated orders for user ${userId}:`, updatedUserOrders.map(o => ({ id: o.id.slice(0, 8), status: o.status, createdAt: o.createdAt })));
+
     // Add cache-busting headers to prevent stale data
-    const response = NextResponse.json({ success: true, orders: userOrders });
+    const response = NextResponse.json({ success: true, orders: updatedUserOrders });
     response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     response.headers.set('Pragma', 'no-cache');
     response.headers.set('Expires', '0');
@@ -80,24 +103,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Order must contain at least one item' }, { status: 400 });
     }
 
-    // Get food item details for preparation time calculation
-    const foodItemIds = items.map((item: any) => item.foodItem.id);
-    const foodItemDetails = await db
-      .select()
-      .from(foodItemsTable)
-      .where(inArray(foodItemsTable.id, foodItemIds));
-
-    // Enrich items with food details for status calculation
-    const enrichedItems = items.map((item: any) => ({
-      ...item,
-      foodItem: {
-        ...item.foodItem,
-        cookTime: foodItemDetails.find(fi => fi.id === item.foodItem.id)?.cookTime || '15 mins'
-      }
-    }));
-
-    // Calculate estimated delivery time
-    const estimatedDeliveryTime = OrderStatusManager.getEstimatedDeliveryTime(enrichedItems);
+    // Calculate estimated delivery time (simple: 55 minutes from now)
+    const orderCreationTime = new Date();
+    const estimatedDeliveryTime = OrderStatusManager.getEstimatedDeliveryTime(orderCreationTime);
     const estimatedTimeString = OrderStatusManager.formatTimeRemaining(estimatedDeliveryTime);
 
     // Create the order
@@ -113,12 +121,12 @@ export async function POST(request: NextRequest) {
         deliveryAddress,
         paymentMethod,
         paymentStatus: 'completed', // Assuming payment is successful at this point
-        estimatedDeliveryTime: estimatedTimeString,
+        estimatedDeliveryTime: estimatedDeliveryTime.toISOString(),
         trackingInfo: {
           status: 'confirmed',
-          estimatedArrival: estimatedDeliveryTime,
-          lastUpdate: new Date(),
-          timeline: OrderStatusManager.createOrderTimeline(enrichedItems)
+          estimatedArrival: estimatedDeliveryTime.toISOString(),
+          lastUpdate: orderCreationTime.toISOString(),
+          createdAt: orderCreationTime.toISOString()
         } as any
       })
       .returning();
@@ -138,9 +146,9 @@ export async function POST(request: NextRequest) {
 
     console.log('Order items created:', orderItemsToInsert);
 
-    // Schedule automatic status updates
+    // Send initial order confirmation notification
     setTimeout(() => {
-      OrderStatusManager.scheduleOrderStatusUpdates(newOrder.id, enrichedItems);
+      OrderStatusManager.notifyStatusChange(newOrder.id, 'confirmed');
     }, 1000); // Small delay to ensure order is fully created
 
     return NextResponse.json({ 

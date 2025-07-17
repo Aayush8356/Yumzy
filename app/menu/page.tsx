@@ -122,15 +122,15 @@ export default function MenuPage() {
         if (searchTerm) params.append('search', searchTerm)
         if (priceRange !== 'all') {
           if (priceRange === 'under10') {
-            params.append('maxPrice', '10')
+            params.append('maxPrice', '250')
           } else if (priceRange === '10to20') {
-            params.append('minPrice', '10')
-            params.append('maxPrice', '20')
+            params.append('minPrice', '250')
+            params.append('maxPrice', '500')
           } else if (priceRange === '20to30') {
-            params.append('minPrice', '20')
-            params.append('maxPrice', '30')
+            params.append('minPrice', '500')
+            params.append('maxPrice', '750')
           } else if (priceRange === 'over30') {
-            params.append('minPrice', '30')
+            params.append('minPrice', '750')
           }
         }
         if (dietaryFilter === 'vegetarian') params.append('vegetarian', 'true')
@@ -308,10 +308,10 @@ export default function MenuPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Any price</SelectItem>
-                    <SelectItem value="under10">Under $10</SelectItem>
-                    <SelectItem value="10to20">$10 - $20</SelectItem>
-                    <SelectItem value="20to30">$20 - $30</SelectItem>
-                    <SelectItem value="over30">Over $30</SelectItem>
+                    <SelectItem value="under10">Under ₹250</SelectItem>
+                    <SelectItem value="10to20">₹250 - ₹500</SelectItem>
+                    <SelectItem value="20to30">₹500 - ₹750</SelectItem>
+                    <SelectItem value="over30">Over ₹750</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

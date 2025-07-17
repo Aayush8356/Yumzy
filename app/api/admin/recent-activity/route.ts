@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { usersTable, ordersTable, notificationsTable, contactMessages, foodItems } from '@/lib/db/schema';
 import { eq, ne, and, not, like, desc } from 'drizzle-orm';
+import { OrderStatusManager } from '@/lib/order-status-manager';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,7 +85,31 @@ export async function GET(request: NextRequest) {
         .orderBy(desc(ordersTable.createdAt))
         .limit(10);
 
-      recentOrders.forEach(order => {
+      // Update order statuses based on timeline before returning data
+      await Promise.all(
+        recentOrders.map(async (order) => {
+          if (order.status !== 'delivered' && order.status !== 'cancelled') {
+            try {
+              await OrderStatusManager.checkAndUpdateOrderStatus(order.id);
+            } catch (error) {
+              console.error(`Failed to update status for order ${order.id}:`, error);
+            }
+          }
+        })
+      );
+
+      // Fetch fresh order data after status updates
+      const updatedRecentOrders = await db.select({
+        id: ordersTable.id,
+        total: ordersTable.total,
+        status: ordersTable.status,
+        createdAt: ordersTable.createdAt,
+        userId: ordersTable.userId
+      }).from(ordersTable)
+        .orderBy(desc(ordersTable.createdAt))
+        .limit(10);
+
+      updatedRecentOrders.forEach(order => {
         activities.push({
           id: `order_${order.id}`,
           type: 'order_placed',

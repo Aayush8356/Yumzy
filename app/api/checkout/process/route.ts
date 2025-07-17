@@ -97,7 +97,8 @@ export async function POST(request: NextRequest) {
       const totalAmount = body.amount + paymentFee
 
       // Calculate delivery time using OrderStatusManager
-      const estimatedDeliveryTime = OrderStatusManager.getEstimatedDeliveryTime(cartItemsWithDetails)
+      const orderCreationTime = new Date();
+      const estimatedDeliveryTime = OrderStatusManager.getEstimatedDeliveryTime(orderCreationTime)
       
       // Create order in database
       const [newOrder] = await db.insert(ordersTable).values({
@@ -136,9 +137,9 @@ export async function POST(request: NextRequest) {
 
       await db.insert(orderItemsTable).values(orderItemsData)
 
-      // Start automatic order status progression
+      // Send initial order confirmation notification
       setTimeout(async () => {
-        await OrderStatusManager.scheduleOrderStatusUpdates(newOrder.id, cartItemsWithDetails)
+        await OrderStatusManager.notifyStatusChange(newOrder.id, 'confirmed')
       }, 1000) // Start after 1 second delay
 
       // Cart clearing will be handled on the frontend after successful payment

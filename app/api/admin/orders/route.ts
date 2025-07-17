@@ -94,9 +94,28 @@ export async function GET(request: NextRequest) {
       ? await baseQuery.where(and(...conditions)).limit(limit).offset(offset)
       : await baseQuery.limit(limit).offset(offset);
 
+    // Update order statuses based on timeline before returning data
+    console.log('🔄 Updating order statuses for admin panel...');
+    await Promise.all(
+      orders.map(async (order) => {
+        if (order.status !== 'delivered' && order.status !== 'cancelled') {
+          try {
+            await OrderStatusManager.checkAndUpdateOrderStatus(order.id);
+          } catch (error) {
+            console.error(`Failed to update status for order ${order.id}:`, error);
+          }
+        }
+      })
+    );
+
+    // Fetch fresh order data after status updates
+    const updatedOrders = conditions.length > 0 
+      ? await baseQuery.where(and(...conditions)).limit(limit).offset(offset)
+      : await baseQuery.limit(limit).offset(offset);
+
     // Get order items for each order
     const ordersWithItems = await Promise.all(
-      orders.map(async (order) => {
+      updatedOrders.map(async (order) => {
         const items = await db
           .select({
             id: orderItemsTable.id,
@@ -136,8 +155,8 @@ export async function GET(request: NextRequest) {
       pagination: {
         page,
         limit,
-        totalCount: orders.length,
-        hasNext: orders.length === limit,
+        totalCount: updatedOrders.length,
+        hasNext: updatedOrders.length === limit,
         hasPrev: page > 1
       }
     });

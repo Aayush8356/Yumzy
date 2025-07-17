@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { ordersTable } from '@/lib/db/schema'
+import { ordersTable, orderItemsTable } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
 export interface OrderStatusTimeline {
@@ -76,31 +76,27 @@ export class OrderStatusManager {
     return Math.floor(Math.random() * (50 - 25 + 1)) + 25;
   }
   
-  // Create order status timeline
-  static createOrderTimeline(orderItems: any[]): OrderStatusTimeline[] {
-    const now = new Date();
-    const preparationTime = this.calculatePreparationTime(orderItems);
-    const deliveryTime = this.generateDeliveryTime();
-    
+  // Get time-based status timeline for display
+  static getOrderTimeline(orderCreatedAt: Date): OrderStatusTimeline[] {
     return [
       {
         status: 'confirmed',
-        timestamp: now,
-        estimatedDuration: 0
+        timestamp: orderCreatedAt,
+        estimatedDuration: 2
       },
       {
         status: 'preparing',
-        timestamp: new Date(now.getTime() + 2 * 60 * 1000), // 2 minutes after confirmation
-        estimatedDuration: preparationTime
+        timestamp: new Date(orderCreatedAt.getTime() + 2 * 60 * 1000),
+        estimatedDuration: 23
       },
       {
         status: 'out_for_delivery',
-        timestamp: new Date(now.getTime() + (2 + preparationTime) * 60 * 1000),
-        estimatedDuration: deliveryTime
+        timestamp: new Date(orderCreatedAt.getTime() + 25 * 60 * 1000),
+        estimatedDuration: 30
       },
       {
         status: 'delivered',
-        timestamp: new Date(now.getTime() + (2 + preparationTime + deliveryTime) * 60 * 1000),
+        timestamp: new Date(orderCreatedAt.getTime() + 55 * 60 * 1000),
         estimatedDuration: 0
       }
     ];
@@ -137,37 +133,48 @@ export class OrderStatusManager {
     }
   }
   
-  // Schedule status updates for an order (store timeline in database)
-  static async scheduleOrderStatusUpdates(orderId: string, orderItems: any[]) {
-    const timeline = this.createOrderTimeline(orderItems);
+  // Simple helper to get remaining time for a status
+  static getTimeRemainingForStatus(orderCreatedAt: Date, currentStatus: string): number {
+    const now = new Date();
+    const minutesSinceOrder = Math.floor((now.getTime() - orderCreatedAt.getTime()) / (1000 * 60));
     
-    // Store the complete timeline in the order tracking info for client-side processing
-    const trackingInfo = {
-      timeline: timeline.map(t => ({
-        status: t.status,
-        timestamp: t.timestamp.toISOString(),
-        estimatedDuration: t.estimatedDuration
-      })),
-      currentStatus: 'confirmed',
-      lastUpdate: new Date().toISOString(),
-      nextStatusTime: timeline[1]?.timestamp.toISOString()
-    };
-    
-    // Update order with timeline information
-    await this.updateOrderStatus(orderId, 'confirmed', trackingInfo);
-    
-    // Send initial confirmation notification
-    await this.notifyStatusChange(orderId, 'confirmed');
-    
-    console.log(`📅 Order ${orderId} timeline stored:`, {
-      confirmed: 'now',
-      preparing: timeline[1]?.timestamp.toLocaleString(),
-      out_for_delivery: timeline[2]?.timestamp.toLocaleString(), 
-      delivered: timeline[3]?.timestamp.toLocaleString()
-    });
+    switch (currentStatus) {
+      case 'confirmed':
+        return Math.max(0, 2 - minutesSinceOrder);
+      case 'preparing':
+        return Math.max(0, 25 - minutesSinceOrder);
+      case 'out_for_delivery':
+        return Math.max(0, 55 - minutesSinceOrder);
+      default:
+        return 0;
+    }
   }
   
-  // Check and update order status based on timeline (called by tracking page)
+  // Simple time-based order status calculation
+  static calculateOrderStatus(orderCreatedAt: Date): string {
+    const now = new Date();
+    const minutesSinceOrder = Math.floor((now.getTime() - orderCreatedAt.getTime()) / (1000 * 60));
+    
+    console.log(`📅 Order created ${minutesSinceOrder} minutes ago`);
+    
+    // Simple time-based progression:
+    // 0-2 minutes: confirmed
+    // 2-25 minutes: preparing  
+    // 25-55 minutes: out_for_delivery
+    // 55+ minutes: delivered
+    
+    if (minutesSinceOrder < 2) {
+      return 'confirmed';
+    } else if (minutesSinceOrder < 25) {
+      return 'preparing';
+    } else if (minutesSinceOrder < 55) {
+      return 'out_for_delivery';
+    } else {
+      return 'delivered';
+    }
+  }
+
+  // Check and update order status based on time since creation
   static async checkAndUpdateOrderStatus(orderId: string) {
     try {
       const [order] = await db
@@ -175,35 +182,35 @@ export class OrderStatusManager {
         .from(ordersTable)
         .where(eq(ordersTable.id, orderId));
         
-      if (!order || !order.trackingInfo?.timeline) {
+      if (!order) {
         return false;
       }
-      
-      const timeline = order.trackingInfo.timeline;
-      const currentTime = new Date();
+
+      // Skip if already delivered or cancelled
+      if (order.status === 'delivered' || order.status === 'cancelled') {
+        return false;
+      }
+
       const currentStatus = order.status;
       
-      // Find the next status that should be active
-      let newStatus = currentStatus;
-      for (const timelineItem of timeline) {
-        const statusTime = new Date(timelineItem.timestamp);
-        if (currentTime >= statusTime && timelineItem.status !== currentStatus) {
-          newStatus = timelineItem.status;
-        }
+      // Normalize old status names to new ones first
+      const normalizedStatus = this.normalizeOrderStatus(currentStatus);
+      if (normalizedStatus !== currentStatus) {
+        console.log(`🔄 Normalizing order ${orderId} status: ${currentStatus} → ${normalizedStatus}`);
+        await this.updateOrderStatus(orderId, normalizedStatus);
+        return true;
       }
+
+      // Calculate what status should be based on creation time
+      const orderCreatedAt = order.createdAt ? new Date(order.createdAt) : new Date();
+      const calculatedStatus = this.calculateOrderStatus(orderCreatedAt);
       
-      // Update status if it changed
-      if (newStatus !== currentStatus) {
-        const updatedTrackingInfo = {
-          ...order.trackingInfo,
-          currentStatus: newStatus,
-          lastUpdate: new Date().toISOString()
-        };
+      // Update status if it has progressed
+      if (calculatedStatus !== currentStatus) {
+        console.log(`🔄 Order ${orderId} status updated: ${currentStatus} → ${calculatedStatus} (${Math.floor((new Date().getTime() - orderCreatedAt.getTime()) / (1000 * 60))} minutes since creation)`);
         
-        await this.updateOrderStatus(orderId, newStatus, updatedTrackingInfo);
-        await this.notifyStatusChange(orderId, newStatus);
-        
-        console.log(`🔄 Order ${orderId} status updated: ${currentStatus} → ${newStatus}`);
+        await this.updateOrderStatus(orderId, calculatedStatus);
+        await this.notifyStatusChange(orderId, calculatedStatus);
         return true;
       }
       
@@ -212,6 +219,22 @@ export class OrderStatusManager {
       console.error(`Error checking order status for ${orderId}:`, error);
       return false;
     }
+  }
+
+  // Normalize old status names to new standard
+  static normalizeOrderStatus(status: string): string {
+    const statusMap: Record<string, string> = {
+      'pending': 'confirmed',
+      'order_confirmed': 'confirmed',
+      'preparing': 'preparing',
+      'ready': 'out_for_delivery',
+      'on_the_way': 'out_for_delivery',
+      'out_for_delivery': 'out_for_delivery',
+      'delivered': 'delivered',
+      'cancelled': 'cancelled'
+    };
+    
+    return statusMap[status] || status;
   }
   
   // Notify status change with real-time updates
@@ -331,31 +354,17 @@ export class OrderStatusManager {
     return statusProgress[status] || 0;
   }
   
-  // Get estimated delivery time for an order
-  static getEstimatedDeliveryTime(orderItems: any[]): Date {
-    const preparationTime = this.calculatePreparationTime(orderItems);
-    const deliveryTime = this.generateDeliveryTime();
-    const confirmationTime = 2; // 2 minutes for order confirmation
-    const totalTime = confirmationTime + preparationTime + deliveryTime;
+  // Get estimated delivery time for an order (simple: 55 minutes from creation)
+  static getEstimatedDeliveryTime(orderCreatedAt?: Date): Date {
+    const creationTime = orderCreatedAt || new Date();
+    const deliveryTime = new Date(creationTime.getTime() + 55 * 60 * 1000); // 55 minutes from creation
     
-    // Ensure total time is reasonable (between 30-90 minutes)
-    const minTotalTime = 30; // minimum 30 minutes
-    const maxTotalTime = 90; // maximum 90 minutes
-    const validatedTotalTime = Math.max(minTotalTime, Math.min(totalTime, maxTotalTime));
+    console.log(`🍕 Simple Delivery Time Calculation:
+      - Order Created: ${creationTime.toLocaleTimeString()}
+      - Estimated Delivery: ${deliveryTime.toLocaleTimeString()}
+      - Total Time: 55 minutes`);
     
-    const now = new Date();
-    const estimatedTime = new Date(now.getTime() + validatedTotalTime * 60 * 1000);
-    
-    console.log(`🍕 Delivery Time Calculation:
-      - Current Time: ${now.toLocaleTimeString()}
-      - Confirmation: ${confirmationTime} min
-      - Preparation: ${preparationTime} min  
-      - Delivery: ${deliveryTime} min
-      - Total: ${totalTime} min
-      - Validated: ${validatedTotalTime} min
-      - Estimated Delivery: ${estimatedTime.toLocaleTimeString()}`);
-    
-    return estimatedTime;
+    return deliveryTime;
   }
   
   // Format time remaining

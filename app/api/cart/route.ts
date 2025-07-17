@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       return total + (itemPrice * item.quantity)
     }, 0)
 
-    const deliveryFee = subtotal > 25 ? 0 : 3.99 // Free delivery over $25
+    const deliveryFee = subtotal > 500 ? 0 : 49 // Free delivery over ₹500
     const tax = subtotal * 0.08 // 8% tax
     const total = subtotal + deliveryFee + tax
 
