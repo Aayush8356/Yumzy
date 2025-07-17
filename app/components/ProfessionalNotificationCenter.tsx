@@ -56,6 +56,12 @@ interface NotificationData {
   salePrice?: number;
   originalPrice?: number;
   promoCode?: string;
+  // Order notification data
+  orderId?: string;
+  status?: string;
+  previousStatus?: string;
+  orderTotal?: string;
+  estimatedDeliveryTime?: string;
 }
 
 export function ProfessionalNotificationCenter({ className = '' }: ProfessionalNotificationCenterProps) {
@@ -292,11 +298,11 @@ export function ProfessionalNotificationCenter({ className = '' }: ProfessionalN
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <p className="text-sm font-medium text-gray-900">
-                                  Order #{data.orderId?.toString().slice(0, 8) || 'Unknown'}
+                                  Order #{data.orderId?.slice(0, 8) || 'Unknown'}
                                 </p>
                                 <div className="flex items-center gap-2 mt-1">
                                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    {data.status?.toString().replace('_', ' ').toUpperCase() || 'UPDATED'}
+                                    {data.status?.replace('_', ' ').toUpperCase() || 'UPDATED'}
                                   </span>
                                   {data.orderTotal && (
                                     <span className="text-sm font-semibold text-gray-700">
@@ -306,7 +312,7 @@ export function ProfessionalNotificationCenter({ className = '' }: ProfessionalN
                                 </div>
                                 {data.estimatedDeliveryTime && (
                                   <p className="text-xs text-gray-500 mt-1">
-                                    Expected: {new Date(data.estimatedDeliveryTime.toString()).toLocaleTimeString([], {
+                                    Expected: {new Date(data.estimatedDeliveryTime).toLocaleTimeString([], {
                                       hour: '2-digit',
                                       minute: '2-digit'
                                     })}
