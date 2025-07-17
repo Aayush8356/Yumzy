@@ -3,7 +3,7 @@ import { getDailyFeaturedItem } from '@/data/food-items'
 
 export interface ProfessionalNotification {
   id: string
-  type: 'hot_deal' | 'order' | 'promo' | 'system' | 'delivery'
+  type: 'hot_deal' | 'order' | 'order_update' | 'promo' | 'system' | 'delivery'
   title: string
   message: string
   data?: Record<string, unknown>
@@ -158,6 +158,9 @@ class ProfessionalNotificationSystem {
   getUserNotifications(userId: string): ProfessionalNotification[] {
     const notifications: ProfessionalNotification[] = []
 
+    // Add persistent notifications from localStorage
+    notifications.push(...this.loadPersistentNotifications(userId))
+
     // Add hot deal if needed
     if (this.shouldCreateHotDeal()) {
       notifications.push(this.createHotDealNotification(userId))
@@ -166,8 +169,19 @@ class ProfessionalNotificationSystem {
     // Add system notifications
     notifications.push(...this.createSystemNotifications(userId))
 
+    // Add any runtime notifications already in state
+    notifications.push(...this.state.notifications.filter(n => n.userId === userId))
+
+    // Remove duplicates by ID
+    const unique = notifications.reduce((acc, notification) => {
+      if (!acc.find(n => n.id === notification.id)) {
+        acc.push(notification)
+      }
+      return acc
+    }, [] as ProfessionalNotification[])
+
     // Filter out dismissed notifications and apply read status
-    const filtered = notifications
+    const filtered = unique
       .filter(n => !this.state.dismissedNotifications.has(n.id))
       .map(n => ({
         ...n,
@@ -246,6 +260,89 @@ class ProfessionalNotificationSystem {
     this.state.lastHotDealDate = null
     this.saveState()
     this.getUserNotifications(userId) // This will create new hot deal
+  }
+
+  // Create a new notification programmatically
+  createNotification(config: {
+    userId: string
+    type: ProfessionalNotification['type']
+    title: string
+    message: string
+    data?: Record<string, unknown>
+    isImportant?: boolean
+    isPersistent?: boolean
+    expiresAt?: string
+  }): ProfessionalNotification {
+    const notification: ProfessionalNotification = {
+      id: `${config.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: config.type,
+      title: config.title,
+      message: config.message,
+      data: config.data || {},
+      isRead: false,
+      isImportant: config.isImportant || false,
+      isPersistent: config.isPersistent || false,
+      expiresAt: config.expiresAt,
+      createdAt: new Date().toISOString(),
+      userId: config.userId
+    }
+
+    // Add to current state
+    this.state.notifications.unshift(notification) // Add to beginning for newest first
+    
+    // Save persistent notifications to localStorage
+    if (notification.isPersistent) {
+      this.savePersistentNotification(notification)
+    }
+
+    console.log(`📬 Created ${config.type} notification for user ${config.userId}: ${config.title}`)
+    return notification
+  }
+
+  // Save persistent notification to localStorage
+  private savePersistentNotification(notification: ProfessionalNotification): void {
+    if (typeof window === 'undefined') return
+
+    try {
+      const key = `persistent_notification_${notification.id}`
+      localStorage.setItem(key, JSON.stringify(notification))
+    } catch (error) {
+      console.error('Failed to save persistent notification:', error)
+    }
+  }
+
+  // Load persistent notifications from localStorage
+  private loadPersistentNotifications(userId: string): ProfessionalNotification[] {
+    if (typeof window === 'undefined') return []
+
+    const notifications: ProfessionalNotification[] = []
+    
+    try {
+      // Get all keys that match persistent notification pattern
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith('persistent_notification_')) {
+          const stored = localStorage.getItem(key)
+          if (stored) {
+            const notification = JSON.parse(stored) as ProfessionalNotification
+            
+            // Only include notifications for this user that haven't expired
+            if (notification.userId === userId) {
+              if (!notification.expiresAt || new Date(notification.expiresAt) > new Date()) {
+                notifications.push(notification)
+              } else {
+                // Remove expired notification
+                localStorage.removeItem(key)
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load persistent notifications:', error)
+    }
+
+    return notifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }
 }
 

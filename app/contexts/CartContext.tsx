@@ -65,14 +65,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      setIsLoading(true)
       const response = await fetch(`/api/cart?userId=${user.id}`)
       
       if (response.ok) {
         const data = await response.json()
         setCart(data.cart)
       } else {
-        console.error('Failed to fetch cart')
+        // Set empty cart on error
         setCart({ items: [], summary: {
           itemCount: 0,
           totalQuantity: 0,
@@ -85,9 +84,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }})
       }
     } catch (error) {
-      console.error('Cart fetch error:', error)
-    } finally {
-      setIsLoading(false)
+      // Set empty cart on network error
+      setCart({ items: [], summary: {
+        itemCount: 0,
+        totalQuantity: 0,
+        subtotal: 0,
+        deliveryFee: 0,
+        tax: 0,
+        total: 0,
+        freeDeliveryThreshold: 25,
+        amountForFreeDelivery: 25
+      }})
     }
   }, [isAuthenticated, user])
 
@@ -102,115 +109,54 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     quantity: number = 1, 
     specialInstructions: string = ''
   ): Promise<boolean> => {
-    console.log('🛒 AddToCart called with:', { foodItemId, quantity, specialInstructions })
-    console.log('🔐 Auth state:', { isAuthenticated, user: user ? { id: user.id, email: user.email } : null })
-    
     if (!isAuthenticated || !user) {
-      console.error('❌ User not authenticated:', { isAuthenticated, user })
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to add items to cart",
-        variant: "destructive"
-      })
       return false
     }
 
     try {
-      setIsLoading(true)
-      
-      // Log request data for debugging
-      console.log('🔐 User ID:', user.id)
-      console.log('🍕 Food Item ID:', foodItemId)
-
-      const requestData = {
-        userId: user.id,
-        foodItemId,
-        quantity,
-        specialInstructions
-      }
-      
-      console.log('📤 Sending request to /api/cart:', requestData)
-
       const response = await fetch('/api/cart', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestData)
+        body: JSON.stringify({
+          userId: user.id,
+          foodItemId,
+          quantity,
+          specialInstructions
+        })
       })
 
-      console.log('📥 Response status:', response.status, response.statusText)
-      
-      let data
-      try {
-        data = await response.json()
-        console.log('📥 Response data:', data)
-      } catch (jsonError) {
-        console.error('❌ Failed to parse response JSON:', jsonError)
-        toast({
-          title: "Server Error",
-          description: "Invalid response from server. Please try again.",
-          variant: "destructive"
-        })
-        return false
-      }
-
-      if (response.ok && data.success) {
-        console.log('✅ Cart addition successful:', data)
-        await refreshCart() // Refresh to get updated cart
-        toast({
-          title: "Added to cart",
-          description: data.message || "Item added successfully",
-        })
-        return true
-      } else {
-        const errorMessage = data.error || `Server error: ${response.status}`
-        console.error('❌ Add to cart failed:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorMessage,
-          fullResponse: data
-        })
-        
-        // Check if it's an authentication error
-        if (response.status === 401 || response.status === 403) {
-          toast({
-            title: "Session Expired",
-            description: "Please sign in again to continue",
-            variant: "destructive"
-          })
-          // Clear auth data if authentication failed
-          localStorage.removeItem('user')
-          localStorage.removeItem('authToken')
-          localStorage.removeItem('cart')
-          window.location.href = '/auth/login'
-          return false
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          // Optimistic update - update cart state immediately
+          if (cart) {
+            const updatedCart = { ...cart }
+            updatedCart.summary.itemCount = (updatedCart.summary.itemCount || 0) + 1
+            updatedCart.summary.totalQuantity = (updatedCart.summary.totalQuantity || 0) + quantity
+            setCart(updatedCart)
+          }
+          
+          // Refresh cart in background for accuracy
+          setTimeout(() => refreshCart(), 100)
+          return true
         }
-        
-        toast({
-          title: "Failed to add to cart",
-          description: errorMessage,
-          variant: "destructive"
-        })
-        return false
       }
-    } catch (error) {
-      console.error('❌ Add to cart network error:', error)
-      console.error('❌ Error details:', {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack trace'
-      })
-      toast({
-        title: "Network Error",
-        description: "Could not connect to server. Please check your internet connection.",
-        variant: "destructive"
-      })
+      
+      // Handle errors silently - let the component handle user feedback
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('user')
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('cart')
+        window.location.href = '/auth/login'
+      }
+      
       return false
-    } finally {
-      setIsLoading(false)
+    } catch (error) {
+      return false
     }
-  }, [isAuthenticated, user, toast, refreshCart])
+  }, [isAuthenticated, user, refreshCart])
 
   // Update cart item
   const updateCartItem = useCallback(async (

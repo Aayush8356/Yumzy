@@ -13,8 +13,8 @@ const featuredFoods = [
     id: 'featured-1',
     name: 'Truffle Beef Burger',
     description: 'Premium beef patty with truffle sauce, aged cheddar, and caramelized onions',
-    price: '24.99',
-    originalPrice: '29.99',
+    price: '699',
+    originalPrice: '899',
     rating: 4.9,
     image: '🍔',
     badge: 'Chef\'s Special',
@@ -24,8 +24,8 @@ const featuredFoods = [
     id: 'featured-2',
     name: 'Margherita Suprema',
     description: 'Wood-fired pizza with San Marzano tomatoes, buffalo mozzarella, and fresh basil',
-    price: '18.99',
-    originalPrice: '22.99',
+    price: '549',
+    originalPrice: '699',
     rating: 4.8,
     image: '🍕',
     badge: 'Best Seller',
@@ -35,8 +35,8 @@ const featuredFoods = [
     id: 'featured-3',
     name: 'Dragon Roll Deluxe',
     description: 'Premium sushi roll with tempura shrimp, avocado, and spicy mayo drizzle',
-    price: '32.99',
-    originalPrice: '38.99',
+    price: '899',
+    originalPrice: '1199',
     rating: 5.0,
     image: '🍣',
     badge: 'Premium',
@@ -46,8 +46,8 @@ const featuredFoods = [
     id: 'featured-4',
     name: 'Quinoa Power Bowl',
     description: 'Organic quinoa with grilled chicken, avocado, and superfood dressing',
-    price: '16.99',
-    originalPrice: '19.99',
+    price: '449',
+    originalPrice: '599',
     rating: 4.7,
     image: '🥗',
     badge: 'Healthy Choice',
@@ -156,10 +156,10 @@ export function FeaturedFood() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <span className="text-2xl font-bold text-primary">
-                          ${food.price}
+                          ₹{food.price}
                         </span>
                         <span className="text-sm text-muted-foreground line-through">
-                          ${food.originalPrice}
+                          ₹{food.originalPrice}
                         </span>
                       </div>
                     </div>

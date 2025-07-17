@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search, Leaf, Award, SlidersHorizontal } from 'lucide-react'
+import { Search, Leaf, Award, SlidersHorizontal, UtensilsCrossed } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -135,6 +135,7 @@ export default function MenuPage() {
         }
         if (dietaryFilter === 'vegetarian') params.append('vegetarian', 'true')
         if (dietaryFilter === 'vegan') params.append('vegan', 'true')
+        if (dietaryFilter === 'nonVegetarian') params.append('nonVegetarian', 'true')
         if (dietaryFilter === 'glutenFree') params.append('glutenFree', 'true')
         if (dietaryFilter === 'popular') params.append('popular', 'true')
         if (spiceLevelFilter !== 'all') params.append('spicy', 'true')
@@ -334,6 +335,12 @@ export default function MenuPage() {
                       <div className="flex items-center gap-2">
                         <Leaf className="h-4 w-4 text-green-600" />
                         Vegan
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="nonVegetarian">
+                      <div className="flex items-center gap-2">
+                        <UtensilsCrossed className="h-4 w-4 text-red-600" />
+                        Non-Vegetarian
                       </div>
                     </SelectItem>
                     <SelectItem value="glutenFree">Gluten-Free</SelectItem>

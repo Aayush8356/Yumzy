@@ -106,48 +106,24 @@ export async function POST(request: NextRequest) {
 
     const { userId, foodItemId, quantity, specialInstructions } = validation.data!
 
-    // Log the received data for debugging
-    console.log('📊 Received user ID:', userId)
-    console.log('📊 Received food item ID:', foodItemId)
-
-    // Validate user exists in database
-    const existingUser = await db
-      .select({ id: usersTable.id })
-      .from(usersTable)
-      .where(eq(usersTable.id, userId))
-      .limit(1)
-
-    if (existingUser.length === 0) {
-      throw new AuthenticationError('User not found. Please sign in again.')
-    }
-
-    // Validate food item exists
-    console.log('🔍 Validating food item exists:', foodItemId)
-    const foodItem = await db
-      .select()
+    // Validate food item exists and is available
+    const [foodItem] = await db
+      .select({ id: foodItems.id, name: foodItems.name, isAvailable: foodItems.isAvailable })
       .from(foodItems)
       .where(eq(foodItems.id, foodItemId))
       .limit(1)
 
-    console.log('📊 Food item query result:', { 
-      found: foodItem.length > 0, 
-      count: foodItem.length,
-      item: foodItem.length > 0 ? { id: foodItem[0].id, name: foodItem[0].name, isAvailable: foodItem[0].isAvailable } : null
-    })
-
-    if (foodItem.length === 0) {
+    if (!foodItem) {
       throw new NotFoundError('Food item not found')
     }
 
-    // Check if food item is available
-    if (!foodItem[0].isAvailable) {
+    if (!foodItem.isAvailable) {
       throw new ValidationError('This item is currently unavailable')
     }
 
     // Check if item already exists in cart
-    console.log('🔍 Checking if item exists in cart:', { userId, foodItemId })
-    const existingCartItem = await db
-      .select()
+    const [existingCartItem] = await db
+      .select({ id: cart.id, quantity: cart.quantity })
       .from(cart)
       .where(and(
         eq(cart.userId, userId),
@@ -155,21 +131,9 @@ export async function POST(request: NextRequest) {
       ))
       .limit(1)
 
-    console.log('📊 Cart item query result:', { 
-      found: existingCartItem.length > 0, 
-      count: existingCartItem.length,
-      item: existingCartItem.length > 0 ? { id: existingCartItem[0].id, quantity: existingCartItem[0].quantity } : null
-    })
-
-    if (existingCartItem.length > 0) {
+    if (existingCartItem) {
       // Update existing item quantity
-      const newQuantity = existingCartItem[0].quantity + quantity
-      
-      console.log('📝 Updating existing cart item:', { 
-        existingQuantity: existingCartItem[0].quantity, 
-        addingQuantity: quantity, 
-        newQuantity 
-      })
+      const newQuantity = existingCartItem.quantity + quantity
       
       // Prevent excessive quantities
       if (newQuantity > 50) {
@@ -180,43 +144,38 @@ export async function POST(request: NextRequest) {
         .update(cart)
         .set({ 
           quantity: newQuantity,
-          specialInstructions: specialInstructions || existingCartItem[0].specialInstructions,
+          specialInstructions: specialInstructions || '',
           updatedAt: new Date()
         })
-        .where(eq(cart.id, existingCartItem[0].id))
+        .where(eq(cart.id, existingCartItem.id))
 
-      console.log('✅ Cart item updated successfully:', { id: existingCartItem[0].id, newQuantity })
       return NextResponse.json({
         success: true,
-        message: `${foodItem[0].name} quantity updated to ${newQuantity}`,
+        message: `${foodItem.name} quantity updated to ${newQuantity}`,
         cartItem: {
-          id: existingCartItem[0].id,
+          id: existingCartItem.id,
           quantity: newQuantity,
-          specialInstructions: specialInstructions || existingCartItem[0].specialInstructions
+          specialInstructions: specialInstructions || ''
         }
       })
     } else {
       // Add new item to cart
-      console.log('➕ Adding new item to cart:', { userId, foodItemId, quantity })
-      
-      const newCartItem = await db
+      const [newCartItem] = await db
         .insert(cart)
         .values({
-          id: randomUUID(),
           userId,
           foodItemId,
           quantity,
-          specialInstructions,
+          specialInstructions: specialInstructions || '',
           createdAt: new Date(),
           updatedAt: new Date()
         })
         .returning()
 
-      console.log('✅ New cart item added successfully:', newCartItem[0])
       return NextResponse.json({
         success: true,
-        message: `${foodItem[0].name} added to cart`,
-        cartItem: newCartItem[0]
+        message: `${foodItem.name} added to cart`,
+        cartItem: newCartItem
       })
     }
   })

@@ -31,6 +31,46 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function POST(request: NextRequest) {
+  try {
+    const userId = request.headers.get('Authorization')?.replace('Bearer ', '')
+    
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const body = await request.json()
+    const { type, title, message, data, isImportant } = body
+
+    // Create new notification
+    const notification = professionalNotificationSystem.createNotification({
+      userId,
+      type: type || 'order_update',
+      title,
+      message,
+      data,
+      isImportant: isImportant || false,
+      isPersistent: true // Order notifications should persist
+    })
+
+    console.log(`📬 Created notification for user ${userId}: ${title}`)
+
+    return NextResponse.json({
+      success: true,
+      notification
+    })
+  } catch (error) {
+    console.error('Create notification API error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to create notification' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const userId = request.headers.get('Authorization')?.replace('Bearer ', '')

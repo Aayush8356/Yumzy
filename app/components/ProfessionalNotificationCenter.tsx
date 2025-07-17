@@ -97,6 +97,8 @@ export function ProfessionalNotificationCenter({ className = '' }: ProfessionalN
         return <Gift className="w-4 h-4 text-orange-500" />
       case 'order':
         return <Truck className="w-4 h-4 text-blue-500" />
+      case 'order_update':
+        return <BellRing className="w-4 h-4 text-green-500" />
       case 'delivery':
         return <Truck className="w-4 h-4 text-green-500" />
       case 'system':
@@ -279,6 +281,37 @@ export function ProfessionalNotificationCenter({ className = '' }: ProfessionalN
                                     </span>
                                   )}
                                 </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Order Update Display */}
+                        {notification.type === 'order_update' && data && (
+                          <div className="mt-3 p-3 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-md">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900">
+                                  Order #{data.orderId?.toString().slice(0, 8) || 'Unknown'}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    {data.status?.toString().replace('_', ' ').toUpperCase() || 'UPDATED'}
+                                  </span>
+                                  {data.orderTotal && (
+                                    <span className="text-sm font-semibold text-gray-700">
+                                      ₹{data.orderTotal}
+                                    </span>
+                                  )}
+                                </div>
+                                {data.estimatedDeliveryTime && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Expected: {new Date(data.estimatedDeliveryTime.toString()).toLocaleTimeString([], {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </div>

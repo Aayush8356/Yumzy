@@ -96,13 +96,21 @@ export default function OrderTrackingPage() {
           setCurrentStep(stepIndex)
         }
 
-        // Show toast for important updates
-        if (['out_for_delivery', 'delivered'].includes(data.status)) {
-          toast({
-            title: `Order ${data.status.replace('_', ' ')}!`,
-            description: data.message,
-          })
+        // Show toast notification for all status updates
+        const statusTitles = {
+          'confirmed': 'Order Confirmed! 🎉',
+          'preparing': 'Kitchen Started Cooking! 👨‍🍳',
+          'out_for_delivery': 'Out for Delivery! 🛵',
+          'delivered': 'Order Delivered! 🎉'
         }
+        
+        const statusTitle = statusTitles[data.status as keyof typeof statusTitles] || 'Order Status Updated'
+        
+        toast({
+          title: statusTitle,
+          description: data.message || `Your order status has been updated to: ${data.status.replace('_', ' ')}`,
+          duration: 5000, // Show for 5 seconds
+        })
 
         // Refresh order details after status change
         fetchOrderDetails()
@@ -111,6 +119,82 @@ export default function OrderTrackingPage() {
 
     // Add event listener for order status updates
     window.addEventListener('order-status-updated', handleOrderStatusUpdate)
+
+    // Function to check and update order status
+    const checkOrderStatus = async () => {
+      try {
+        // Store current status before checking for updates
+        const currentStatus = orderDetails?.status
+        
+        const response = await fetch('/api/orders/check-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ orderId })
+        })
+        
+        if (response.ok) {
+          const result = await response.json()
+          if (result.updated) {
+            console.log('Order status updated automatically')
+            
+            // Refresh order details to get updated status
+            await fetchOrderDetails()
+            
+            // Get the updated order details to compare status
+            setTimeout(async () => {
+              try {
+                const token = localStorage.getItem('authToken')
+                const orderResponse = await fetch(`/api/orders/${orderId}`, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  }
+                })
+                
+                if (orderResponse.ok) {
+                  const orderData = await orderResponse.json()
+                  const newStatus = orderData.order?.status
+                  
+                  if (newStatus && newStatus !== currentStatus) {
+                    // Show notification for status change
+                    const statusTitles = {
+                      'confirmed': 'Order Confirmed! 🎉',
+                      'preparing': 'Kitchen Started Cooking! 👨‍🍳',
+                      'out_for_delivery': 'Out for Delivery! 🛵',
+                      'delivered': 'Order Delivered! 🎉'
+                    }
+                    
+                    const statusMessages = {
+                      'confirmed': 'Your order has been confirmed and is being prepared',
+                      'preparing': 'Our kitchen is preparing your delicious meal',
+                      'out_for_delivery': 'Your order is on the way! Our delivery partner is heading to you',
+                      'delivered': 'Your order has been delivered successfully. Enjoy your meal!'
+                    }
+                    
+                    const statusTitle = statusTitles[newStatus as keyof typeof statusTitles] || 'Order Status Updated'
+                    const statusMessage = statusMessages[newStatus as keyof typeof statusMessages] || `Your order status has been updated to: ${newStatus.replace('_', ' ')}`
+                    
+                    toast({
+                      title: statusTitle,
+                      description: statusMessage,
+                      duration: 6000, // Show for 6 seconds
+                    })
+                    
+                    console.log(`🔔 Status changed from ${currentStatus} to ${newStatus}`)
+                  }
+                }
+              } catch (error) {
+                console.error('Error fetching updated order status:', error)
+              }
+            }, 500) // Small delay to ensure data is updated
+          }
+        }
+      } catch (error) {
+        console.error('Error checking order status:', error)
+      }
+    }
 
     const fetchOrderDetails = async () => {
       try {
@@ -218,11 +302,16 @@ export default function OrderTrackingPage() {
     // Initial fetch
     fetchOrderDetails()
 
-    // Fallback polling every 30 seconds
-    const interval = setInterval(fetchOrderDetails, 30000)
+    // Check order status immediately and then every 10 seconds
+    checkOrderStatus()
+    const statusInterval = setInterval(checkOrderStatus, 10000)
+
+    // Fallback polling every 30 seconds for order details
+    const detailsInterval = setInterval(fetchOrderDetails, 30000)
 
     return () => {
-      clearInterval(interval)
+      clearInterval(statusInterval)
+      clearInterval(detailsInterval)
       window.removeEventListener('order-status-updated', handleOrderStatusUpdate)
     }
   }, [orderId, isAuthenticated, user, toast])

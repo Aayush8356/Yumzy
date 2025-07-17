@@ -229,9 +229,9 @@ export function PremiumDashboard() {
             setActiveOrder(null)
           }
 
-          // Calculate user stats from real orders
-          const completedOrders = ordersData.orders?.filter((order: any) => order.status === 'delivered') || []
-          setTotalOrders(completedOrders.length)
+          // Calculate user stats from real orders  
+          const completedOrders = allOrders.filter((order: any) => order.status === 'delivered')
+          setTotalOrders(allOrders.length)
           
           const thisWeekStart = new Date()
           thisWeekStart.setDate(thisWeekStart.getDate() - 7)

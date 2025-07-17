@@ -109,6 +109,13 @@ export const orders = pgTable('orders', {
     status?: string;
     estimatedArrival?: Date;
     lastUpdate?: Date;
+    timeline?: Array<{
+      status: string;
+      timestamp: string;
+      estimatedDuration: number;
+    }>;
+    currentStatus?: string;
+    nextStatusTime?: string;
   }>(),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),

@@ -187,6 +187,8 @@ export function ProfessionalFoodCard({ item, index = 0 }: ProfessionalFoodCardPr
     }
   };
 
+  const [isAdding, setIsAdding] = useState(false);
+
   const handleAddToCart = async () => {
     if (!user) {
       toast({
@@ -197,21 +199,31 @@ export function ProfessionalFoodCard({ item, index = 0 }: ProfessionalFoodCardPr
       return;
     }
 
+    if (isAdding) return; // Prevent double clicks
+
     try {
+      setIsAdding(true);
       const success = await addToCart(item.id, 1);
       if (success) {
         toast({
           title: "Added to cart",
           description: `${item.name} has been added to your cart`,
         });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to add item to cart. Please try again.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
-      console.error('Error adding to cart:', error);
       toast({
-        title: "Error",
+        title: "Error", 
         description: "Failed to add item to cart. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -475,9 +487,10 @@ export function ProfessionalFoodCard({ item, index = 0 }: ProfessionalFoodCardPr
                       <Button 
                         className="w-full gap-2" 
                         onClick={handleAddToCart}
+                        disabled={isAdding}
                       >
                         <ShoppingCart className="w-4 h-4" />
-                        Add to Cart - ${selectedItem.price}
+                        {isAdding ? "Adding..." : `Add to Cart - $${selectedItem.price}`}
                       </Button>
                     </div>
                   )}
@@ -512,9 +525,10 @@ export function ProfessionalFoodCard({ item, index = 0 }: ProfessionalFoodCardPr
                   size="sm" 
                   className="gap-2 font-medium" 
                   onClick={handleAddToCart}
+                  disabled={isAdding}
                 >
                   <ShoppingCart className="w-4 h-4" />
-                  Add
+                  {isAdding ? "Adding..." : "Add"}
                 </Button>
               )}
             </div>

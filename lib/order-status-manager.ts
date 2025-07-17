@@ -137,43 +137,81 @@ export class OrderStatusManager {
     }
   }
   
-  // Schedule status updates for an order
+  // Schedule status updates for an order (store timeline in database)
   static async scheduleOrderStatusUpdates(orderId: string, orderItems: any[]) {
     const timeline = this.createOrderTimeline(orderItems);
     
-    timeline.forEach((statusUpdate, index) => {
-      if (index === 0) return; // Skip initial confirmed status
-      
-      const delay = statusUpdate.timestamp.getTime() - Date.now();
-      
-      // Schedule the status update
-      setTimeout(async () => {
-        const trackingInfo = {
-          status: statusUpdate.status,
-          lastUpdate: new Date(),
-          estimatedArrival: index < timeline.length - 1 ? timeline[index + 1].timestamp : null
-        };
-        
-        await this.updateOrderStatus(orderId, statusUpdate.status, trackingInfo);
-        
-        // Trigger real-time update
-        await this.notifyStatusChange(orderId, statusUpdate.status);
-        
-      }, Math.max(delay, 0));
-    });
-    
-    // Store timeline in order tracking info
-    const initialTrackingInfo = {
-      timeline: timeline,
+    // Store the complete timeline in the order tracking info for client-side processing
+    const trackingInfo = {
+      timeline: timeline.map(t => ({
+        status: t.status,
+        timestamp: t.timestamp.toISOString(),
+        estimatedDuration: t.estimatedDuration
+      })),
       currentStatus: 'confirmed',
-      lastUpdate: new Date(),
-      estimatedArrival: timeline[1].timestamp
+      lastUpdate: new Date().toISOString(),
+      nextStatusTime: timeline[1]?.timestamp.toISOString()
     };
     
-    await this.updateOrderStatus(orderId, 'confirmed', initialTrackingInfo);
+    // Update order with timeline information
+    await this.updateOrderStatus(orderId, 'confirmed', trackingInfo);
     
     // Send initial confirmation notification
     await this.notifyStatusChange(orderId, 'confirmed');
+    
+    console.log(`📅 Order ${orderId} timeline stored:`, {
+      confirmed: 'now',
+      preparing: timeline[1]?.timestamp.toLocaleString(),
+      out_for_delivery: timeline[2]?.timestamp.toLocaleString(), 
+      delivered: timeline[3]?.timestamp.toLocaleString()
+    });
+  }
+  
+  // Check and update order status based on timeline (called by tracking page)
+  static async checkAndUpdateOrderStatus(orderId: string) {
+    try {
+      const [order] = await db
+        .select()
+        .from(ordersTable)
+        .where(eq(ordersTable.id, orderId));
+        
+      if (!order || !order.trackingInfo?.timeline) {
+        return false;
+      }
+      
+      const timeline = order.trackingInfo.timeline;
+      const currentTime = new Date();
+      const currentStatus = order.status;
+      
+      // Find the next status that should be active
+      let newStatus = currentStatus;
+      for (const timelineItem of timeline) {
+        const statusTime = new Date(timelineItem.timestamp);
+        if (currentTime >= statusTime && timelineItem.status !== currentStatus) {
+          newStatus = timelineItem.status;
+        }
+      }
+      
+      // Update status if it changed
+      if (newStatus !== currentStatus) {
+        const updatedTrackingInfo = {
+          ...order.trackingInfo,
+          currentStatus: newStatus,
+          lastUpdate: new Date().toISOString()
+        };
+        
+        await this.updateOrderStatus(orderId, newStatus, updatedTrackingInfo);
+        await this.notifyStatusChange(orderId, newStatus);
+        
+        console.log(`🔄 Order ${orderId} status updated: ${currentStatus} → ${newStatus}`);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error(`Error checking order status for ${orderId}:`, error);
+      return false;
+    }
   }
   
   // Notify status change with real-time updates
@@ -202,29 +240,69 @@ export class OrderStatusManager {
         estimatedDeliveryTime: order.estimatedDeliveryTime
       }
 
-      // Send browser notification event
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('order-status-updated', {
-          detail: notificationData
-        }))
+      // Send notification to notification center API (server-side safe)
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+        await fetch(`${baseUrl}/api/notifications`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${order.userId}`
+          },
+          body: JSON.stringify({
+            userId: order.userId,
+            type: 'order_update',
+            title: this.getStatusTitle(newStatus),
+            message: this.getStatusMessage(newStatus),
+            data: {
+              orderId,
+              status: newStatus,
+              previousStatus: order.status,
+              orderTotal: order.total,
+              estimatedDeliveryTime: order.estimatedDeliveryTime
+            },
+            isImportant: true
+          })
+        })
+      } catch (apiError) {
+        console.error('Failed to send notification to API:', apiError)
       }
 
-      // Send admin notification
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('admin-order-updated', {
-          detail: notificationData
-        }))
-        
-        // Trigger analytics refresh
-        window.dispatchEvent(new CustomEvent('admin-data-refresh', {
-          detail: { type: 'order_status_change', orderId, newStatus }
-        }))
+      // Send real-time update
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+        await fetch(`${baseUrl}/api/realtime`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            type: 'order_status',
+            userId: order.userId,
+            orderId,
+            data: notificationData
+          })
+        })
+      } catch (realtimeError) {
+        console.error('Failed to send real-time update:', realtimeError)
       }
 
-      console.log(`🔔 Order ${orderId} status changed to: ${newStatus}`)
+      console.log(`🔔 Order ${orderId} status notification sent: ${newStatus}`)
     } catch (error) {
       console.error(`Error sending notification for order ${orderId}:`, error)
     }
+  }
+
+  // Get status title for notifications
+  static getStatusTitle(status: string): string {
+    const titles = {
+      'confirmed': 'Order Confirmed! 🎉',
+      'preparing': 'Kitchen Started Cooking! 👨‍🍳',
+      'out_for_delivery': 'Out for Delivery! 🛵',
+      'delivered': 'Order Delivered! 🎉',
+      'cancelled': 'Order Cancelled'
+    }
+    return titles[status as keyof typeof titles] || 'Order Status Updated'
   }
 
   // Get status message for notifications
@@ -260,19 +338,22 @@ export class OrderStatusManager {
     const confirmationTime = 2; // 2 minutes for order confirmation
     const totalTime = confirmationTime + preparationTime + deliveryTime;
     
-    // Validate total time is reasonable (max 3 hours)
-    const maxTotalTime = 3 * 60; // 3 hours
-    const validatedTotalTime = Math.min(totalTime, maxTotalTime);
+    // Ensure total time is reasonable (between 30-90 minutes)
+    const minTotalTime = 30; // minimum 30 minutes
+    const maxTotalTime = 90; // maximum 90 minutes
+    const validatedTotalTime = Math.max(minTotalTime, Math.min(totalTime, maxTotalTime));
     
-    console.log(`Estimated delivery time calculation:
-      - Confirmation: ${confirmationTime} minutes
-      - Preparation: ${preparationTime} minutes  
-      - Delivery: ${deliveryTime} minutes
-      - Total: ${totalTime} minutes
-      - Validated Total: ${validatedTotalTime} minutes`);
+    const now = new Date();
+    const estimatedTime = new Date(now.getTime() + validatedTotalTime * 60 * 1000);
     
-    const estimatedTime = new Date(Date.now() + validatedTotalTime * 60 * 1000);
-    console.log(`Estimated delivery time: ${estimatedTime.toLocaleString()}`);
+    console.log(`🍕 Delivery Time Calculation:
+      - Current Time: ${now.toLocaleTimeString()}
+      - Confirmation: ${confirmationTime} min
+      - Preparation: ${preparationTime} min  
+      - Delivery: ${deliveryTime} min
+      - Total: ${totalTime} min
+      - Validated: ${validatedTotalTime} min
+      - Estimated Delivery: ${estimatedTime.toLocaleTimeString()}`);
     
     return estimatedTime;
   }

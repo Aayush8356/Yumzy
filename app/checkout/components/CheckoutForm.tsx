@@ -41,22 +41,47 @@ export function CheckoutForm() {
     if (!cart || !user) return;
 
     try {
-      const response = await fetch('/api/orders', {
+      // Format cart items for checkout API
+      const cartItems = cart.items.map(item => ({
+        foodItemId: item.foodItem.id,
+        quantity: item.quantity,
+        specialInstructions: item.specialInstructions || ''
+      }));
+
+      const customerAddress = `${data.address}, ${data.city}, ${data.state}, ${data.zip}`;
+
+      const response = await fetch('/api/checkout/process', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.id}`
+        },
         body: JSON.stringify({
-          userId: user.id,
-          cart,
-          shippingAddress: data,
+          orderId: `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          paymentMethod: 'card',
+          amount: cart.summary.total,
+          customerDetails: {
+            name: user.name || user.email,
+            email: user.email,
+            phone: user.phone || '123-456-7890',
+            address: customerAddress
+          },
+          cartItems
         }),
       });
 
-      if (response.ok) {
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
         toast({ title: 'Success', description: 'Order placed successfully!' });
         clearCart();
-        router.push('/orders');
+        router.push(`/track/${result.order.id}`);
       } else {
-        toast({ title: 'Error', description: 'Failed to place order.', variant: 'destructive' });
+        toast({ 
+          title: 'Error', 
+          description: result.error || 'Failed to place order.', 
+          variant: 'destructive' 
+        });
       }
     } catch (error) {
       console.error('Failed to place order:', error);
