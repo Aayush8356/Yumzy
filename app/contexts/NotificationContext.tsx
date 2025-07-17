@@ -36,6 +36,58 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const { user, isAuthenticated } = useAuth()
   const { toast } = useToast()
 
+  // Load initial notifications - optimized for HMR
+  const refreshNotifications = useCallback(async () => {
+    if (!isAuthenticated || !user) return
+
+    try {
+      const response = await fetch('/api/notifications', {
+        headers: {
+          'Authorization': `Bearer ${user.id}`, // In real app, use proper JWT
+        },
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setNotifications(data.notifications || [])
+        
+        // Show toast for unread important notifications (exclude promotional ones for admins)
+        const unreadImportant = (data.notifications || []).filter(
+          (n: Notification) => !n.isRead && n.isImportant && 
+          // Don't show promotional notifications (hot deals, promos) to admin users
+          !(user.role === 'admin' && (n.type === 'hot_deal' || n.type === 'promo'))
+        )
+        
+        // Prioritize delivery notifications
+        const deliveryNotifications = unreadImportant.filter((n: Notification) => 
+          n.type === 'order_update' && 
+          n.data?.status && 
+          ['out_for_delivery', 'delivered'].includes(n.data.status as string)
+        )
+        
+        if (deliveryNotifications.length > 0) {
+          // Show the most recent delivery notification
+          const latest = deliveryNotifications[0]
+          toast({
+            title: latest.title,
+            description: latest.message,
+            duration: 6000, // Longer duration for delivery notifications
+          })
+        } else if (unreadImportant.length > 0) {
+          // Show the most recent important notification if no delivery notifications
+          const latest = unreadImportant[0]
+          toast({
+            title: latest.title,
+            description: latest.message,
+            duration: 5000,
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load notifications:', error)
+    }
+  }, [isAuthenticated, user?.id, user, toast]) // More specific dependency
+
   // Initialize connection (simplified for demo - no websockets needed)
   useEffect(() => {
     if (!isAuthenticated || !user) return
@@ -75,57 +127,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [isAuthenticated, user, toast, refreshNotifications])
 
-  // Load initial notifications - optimized for HMR
-  const refreshNotifications = useCallback(async () => {
-    if (!isAuthenticated || !user) return
-
-    try {
-      const response = await fetch('/api/notifications', {
-        headers: {
-          'Authorization': `Bearer ${user.id}`, // In real app, use proper JWT
-        },
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setNotifications(data.notifications || [])
-        
-        // Show toast for unread important notifications (exclude promotional ones for admins)
-        const unreadImportant = (data.notifications || []).filter(
-          (n: Notification) => !n.isRead && n.isImportant && 
-          // Don't show promotional notifications (hot deals, promos) to admin users
-          !(user.role === 'admin' && (n.type === 'hot_deal' || n.type === 'promo'))
-        )
-        
-        // Prioritize delivery notifications
-        const deliveryNotifications = unreadImportant.filter(n => 
-          n.type === 'order_update' && 
-          n.data?.status && 
-          ['out_for_delivery', 'delivered'].includes(n.data.status as string)
-        )
-        
-        if (deliveryNotifications.length > 0) {
-          // Show the most recent delivery notification
-          const latest = deliveryNotifications[0]
-          toast({
-            title: latest.title,
-            description: latest.message,
-            duration: 6000, // Longer duration for delivery notifications
-          })
-        } else if (unreadImportant.length > 0) {
-          // Show the most recent important notification if no delivery notifications
-          const latest = unreadImportant[0]
-          toast({
-            title: latest.title,
-            description: latest.message,
-            duration: 5000,
-          })
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load notifications:', error)
-    }
-  }, [isAuthenticated, user?.id, user, toast]) // More specific dependency
 
   // Set up periodic refresh for delivery notifications
   useEffect(() => {

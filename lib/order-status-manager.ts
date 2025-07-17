@@ -359,14 +359,15 @@ export class OrderStatusManager {
           }
           
           const update = {
-            type: 'order_status',
+            type: 'order_status' as const,
             userId: order.userId,
             orderId,
             data: notificationData,
             timestamp: new Date().toISOString()
           }
           
-          (global as any).pendingUpdates.get(key).push(update)
+          const userUpdates = (global as any).pendingUpdates.get(key) as any[]
+          userUpdates.push(update)
           console.log(`🔄 Fallback: Real-time update stored directly for order ${orderId}: ${newStatus}`)
         } catch (fallbackError) {
           console.error('Failed to store fallback update:', fallbackError)
