@@ -11,7 +11,7 @@ const client = postgres(connectionString, {
   max: 1,
   idle_timeout: 20,
   max_lifetime: 60 * 30,
-  ssl: { rejectUnauthorized: false },
+  ssl: connectionString.includes('supabase') ? { rejectUnauthorized: false } : false,
   onnotice: () => {}, // Disable notice logs
 })
 

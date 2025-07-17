@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { orders, orderItems, foodItems, users } from '@/lib/db/schema'
+import { ordersTable, orderItemsTable, foodItemsTable, usersTable } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import PaymentSimulator from '@/lib/payment-simulator'
-import OrderSimulator from '@/lib/order-simulator'
+import { OrderStatusManager } from '@/lib/order-status-manager'
 import { ErrorHandler } from '@/lib/error-handler'
 
 export const dynamic = 'force-dynamic'
@@ -54,8 +54,8 @@ export async function POST(request: NextRequest) {
         body.cartItems.map(async (item) => {
           const [foodItem] = await db
             .select()
-            .from(foodItems)
-            .where(eq(foodItems.id, item.foodItemId))
+            .from(foodItemsTable)
+            .where(eq(foodItemsTable.id, item.foodItemId))
             .limit(1)
           
           if (!foodItem) {
@@ -96,16 +96,22 @@ export async function POST(request: NextRequest) {
       const paymentFee = paymentSimulator.getPaymentMethodFee(body.paymentMethod, body.amount)
       const totalAmount = body.amount + paymentFee
 
+      // Calculate delivery time using OrderStatusManager
+      const estimatedDeliveryTime = OrderStatusManager.getEstimatedDeliveryTime(cartItemsWithDetails)
+      
       // Create order in database
-      const [newOrder] = await db.insert(orders).values({
+      const [newOrder] = await db.insert(ordersTable).values({
         userId: userId,
-        status: 'payment_confirmed',
+        status: 'confirmed',
         total: totalAmount.toString(),
         subtotal: body.amount.toString(),
         tax: '0',
         deliveryFee: '0',
         paymentMethod: body.paymentMethod,
-        paymentStatus: 'completed',
+        paymentStatus: 'paid',
+        customerName: body.customerDetails.name,
+        customerEmail: body.customerDetails.email,
+        customerPhone: body.customerDetails.phone,
         deliveryAddress: {
           street: body.customerDetails.address.split(',')[0] || '',
           city: body.customerDetails.address.split(',')[1]?.trim() || '',
@@ -113,7 +119,7 @@ export async function POST(request: NextRequest) {
           zipCode: body.customerDetails.address.split(',')[3]?.trim() || '',
           instructions: ''
         },
-        estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000).toISOString(), // 45 minutes from now
+        estimatedDeliveryTime: estimatedDeliveryTime.toISOString(),
         notes: `Transaction ID: ${paymentResult.transactionId}`,
       }).returning()
 
@@ -128,72 +134,12 @@ export async function POST(request: NextRequest) {
         itemImage: item.image
       }))
 
-      await db.insert(orderItems).values(orderItemsData)
+      await db.insert(orderItemsTable).values(orderItemsData)
 
-      // Start order simulation process
-      const orderSimulator = OrderSimulator.getInstance()
-      
-      // Create order simulation config
-      const simulationConfig = {
-        orderId: newOrder.id,
-        items: cartItemsWithDetails.map(item => ({
-          id: item.foodItemId,
-          name: item.name,
-          cookTime: item.cookTime,
-          difficulty: item.difficulty,
-          quantity: item.quantity
-        })),
-        totalAmount: totalAmount,
-        customerDetails: {
-          name: body.customerDetails.name,
-          address: body.customerDetails.address,
-          phone: body.customerDetails.phone
-        }
-      }
-
-      // Start order simulation with real-time updates
-      orderSimulator.startOrderSimulation(simulationConfig, async (statusUpdate) => {
-        try {
-          // Update order status in database
-          await db
-            .update(orders)
-            .set({
-              status: statusUpdate.status,
-              estimatedDeliveryTime: statusUpdate.estimatedTime 
-                ? new Date(Date.now() + statusUpdate.estimatedTime * 60 * 1000).toISOString()
-                : undefined,
-              updatedAt: new Date()
-            })
-            .where(eq(orders.id, newOrder.id))
-
-          // Send real-time notification using SSE
-          const { broadcastToUser } = await import('@/lib/sse-broadcaster')
-          broadcastToUser(userId, {
-            id: `order-${body.orderId}-${statusUpdate.status}`,
-            type: 'order_status',
-            userId: userId,
-            orderId: newOrder.id,
-            title: getNotificationTitle(statusUpdate.status),
-            message: statusUpdate.message,
-            data: statusUpdate,
-            timestamp: new Date().toISOString(),
-            priority: ['payment_confirmed', 'out_for_delivery', 'delivered'].includes(statusUpdate.status) ? 'high' : 'medium'
-          })
-
-          // Log notification creation (removed fetch to avoid server-side fetch issues)
-          console.log('📧 Notification created:', {
-            userId: userId,
-            type: statusUpdate.status.includes('delivery') ? 'delivery' : 'order',
-            title: getNotificationTitle(statusUpdate.status),
-            message: statusUpdate.message,
-            orderId: newOrder.id,
-            status: statusUpdate.status
-          })
-
-        } catch (error) {
-          console.error('Failed to update order status:', error)
-        }
-      })
+      // Start automatic order status progression
+      setTimeout(async () => {
+        await OrderStatusManager.scheduleOrderStatusUpdates(newOrder.id, cartItemsWithDetails)
+      }, 1000) // Start after 1 second delay
 
       // Cart clearing will be handled on the frontend after successful payment
       console.log('🛒 Cart should be cleared for user:', userId)

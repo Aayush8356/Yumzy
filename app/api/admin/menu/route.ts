@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { foodItems, users } from '@/lib/db/schema';
+import { foodItemsTable, usersTable, categoriesTable } from '@/lib/db/schema';
 import { getAuth } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
 
@@ -25,12 +25,41 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
 
     if (countOnly) {
-      const items = await db.select().from(foodItems);
+      const items = await db.select().from(foodItemsTable);
       return NextResponse.json({ success: true, count: items.length });
     }
 
-    // Get all items first to apply search filter
-    let allItems = await db.select().from(foodItems).orderBy(foodItems.name);
+    // Get all items with category information
+    let allItems = await db
+      .select({
+        id: foodItemsTable.id,
+        name: foodItemsTable.name,
+        description: foodItemsTable.description,
+        price: foodItemsTable.price,
+        image: foodItemsTable.image,
+        categoryId: foodItemsTable.categoryId,
+        category: categoriesTable.name,
+        rating: foodItemsTable.rating,
+        isAvailable: foodItemsTable.isAvailable,
+        createdAt: foodItemsTable.createdAt,
+        updatedAt: foodItemsTable.updatedAt,
+        cookTime: foodItemsTable.cookTime,
+        ingredients: foodItemsTable.ingredients,
+        allergens: foodItemsTable.allergens,
+        nutritionInfo: foodItemsTable.nutritionInfo,
+        isVegetarian: foodItemsTable.isVegetarian,
+        isVegan: foodItemsTable.isVegan,
+        isGlutenFree: foodItemsTable.isGlutenFree,
+        spiceLevel: foodItemsTable.spiceLevel,
+        servingSize: foodItemsTable.servingSize,
+        discount: foodItemsTable.discount,
+        tags: foodItemsTable.tags,
+        isPopular: foodItemsTable.isPopular,
+        calories: foodItemsTable.calories,
+      })
+      .from(foodItemsTable)
+      .leftJoin(categoriesTable, eq(foodItemsTable.categoryId, categoriesTable.id))
+      .orderBy(foodItemsTable.name);
 
     // Apply search filter if provided
     if (search) {
@@ -41,11 +70,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Remove duplicates based on ID (in case of data inconsistency)
+    const uniqueItems = allItems.filter((item, index, self) => 
+      index === self.findIndex(i => i.id === item.id)
+    );
+    
     // Calculate pagination
-    const total = allItems.length;
+    const total = uniqueItems.length;
     const totalPages = Math.ceil(total / limit);
     const offset = (page - 1) * limit;
-    const paginatedItems = allItems.slice(offset, offset + limit);
+    const paginatedItems = uniqueItems.slice(offset, offset + limit);
 
     return NextResponse.json({ 
       success: true, 
@@ -73,7 +107,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const [newItem] = await db.insert(foodItems).values(body).returning();
+    const [newItem] = await db.insert(foodItemsTable).values(body).returning();
     return NextResponse.json({ success: true, item: newItem }, { status: 201 });
   } catch (error) {
     console.error('Failed to create menu item:', error);

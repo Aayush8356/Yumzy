@@ -23,15 +23,15 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(now.getTime() - (daysAgo * 24 * 60 * 60 * 1000))
     const lastPeriodStart = new Date(startDate.getTime() - (daysAgo * 24 * 60 * 60 * 1000))
 
-    // Get revenue data
+    // Get revenue data with proper date filtering (include all paid orders, not just delivered)
     const [revenueResult] = await db
       .select({
         total: sql<number>`sum(${ordersTable.total})::numeric`,
-        thisMonth: sql<number>`sum(case when ${ordersTable.createdAt} >= ${startDate} then ${ordersTable.total} else 0 end)::numeric`,
-        lastMonth: sql<number>`sum(case when ${ordersTable.createdAt} >= ${lastPeriodStart} and ${ordersTable.createdAt} < ${startDate} then ${ordersTable.total} else 0 end)::numeric`
+        thisMonth: sql<number>`sum(case when ${ordersTable.createdAt} >= ${startDate.toISOString()} then ${ordersTable.total} else 0 end)::numeric`,
+        lastMonth: sql<number>`sum(case when ${ordersTable.createdAt} >= ${lastPeriodStart.toISOString()} and ${ordersTable.createdAt} < ${startDate.toISOString()} then ${ordersTable.total} else 0 end)::numeric`
       })
       .from(ordersTable)
-      .where(eq(ordersTable.status, 'completed'))
+      .where(eq(ordersTable.paymentStatus, 'paid'))
 
     const revenue = {
       total: Number(revenueResult?.total || 0),
@@ -44,13 +44,16 @@ export async function GET(request: NextRequest) {
       revenue.growth = ((revenue.thisMonth - revenue.lastMonth) / revenue.lastMonth) * 100
     }
 
-    // Get orders data
+    // Get orders data with proper date filtering
     const [ordersResult] = await db
       .select({
         total: sql<number>`count(*)::int`,
-        thisMonth: sql<number>`sum(case when ${ordersTable.createdAt} >= ${startDate} then 1 else 0 end)::int`,
+        thisMonth: sql<number>`sum(case when ${ordersTable.createdAt} >= ${startDate.toISOString()} then 1 else 0 end)::int`,
         pending: sql<number>`sum(case when ${ordersTable.status} = 'pending' then 1 else 0 end)::int`,
-        completed: sql<number>`sum(case when ${ordersTable.status} = 'completed' then 1 else 0 end)::int`,
+        confirmed: sql<number>`sum(case when ${ordersTable.status} = 'confirmed' then 1 else 0 end)::int`,
+        preparing: sql<number>`sum(case when ${ordersTable.status} = 'preparing' then 1 else 0 end)::int`,
+        out_for_delivery: sql<number>`sum(case when ${ordersTable.status} = 'out_for_delivery' then 1 else 0 end)::int`,
+        completed: sql<number>`sum(case when ${ordersTable.status} = 'delivered' then 1 else 0 end)::int`,
         cancelled: sql<number>`sum(case when ${ordersTable.status} = 'cancelled' then 1 else 0 end)::int`
       })
       .from(ordersTable)
@@ -59,18 +62,21 @@ export async function GET(request: NextRequest) {
       total: Number(ordersResult?.total || 0),
       thisMonth: Number(ordersResult?.thisMonth || 0),
       pending: Number(ordersResult?.pending || 0),
+      confirmed: Number(ordersResult?.confirmed || 0),
+      preparing: Number(ordersResult?.preparing || 0),
+      out_for_delivery: Number(ordersResult?.out_for_delivery || 0),
       completed: Number(ordersResult?.completed || 0),
       cancelled: Number(ordersResult?.cancelled || 0)
     }
 
-    // Get users data
+    // Get users data with proper date filtering
     const [usersResult] = await db
       .select({
         total: sql<number>`count(*)::int`,
         verified: sql<number>`sum(case when ${usersTable.isVerified} = true then 1 else 0 end)::int`,
         unverified: sql<number>`sum(case when ${usersTable.isVerified} = false then 1 else 0 end)::int`,
-        newThisMonth: sql<number>`sum(case when ${usersTable.createdAt} >= ${startDate} then 1 else 0 end)::int`,
-        newLastMonth: sql<number>`sum(case when ${usersTable.createdAt} >= ${lastPeriodStart} and ${usersTable.createdAt} < ${startDate} then 1 else 0 end)::int`
+        newThisMonth: sql<number>`sum(case when ${usersTable.createdAt} >= ${startDate.toISOString()} then 1 else 0 end)::int`,
+        newLastMonth: sql<number>`sum(case when ${usersTable.createdAt} >= ${lastPeriodStart.toISOString()} and ${usersTable.createdAt} < ${startDate.toISOString()} then 1 else 0 end)::int`
       })
       .from(usersTable)
 
@@ -102,7 +108,7 @@ export async function GET(request: NextRequest) {
       .where(
         and(
           gte(ordersTable.createdAt, startDate),
-          eq(ordersTable.status, 'completed')
+          eq(ordersTable.paymentStatus, 'paid')
         )
       )
       .groupBy(foodItemsTable.id, foodItemsTable.name, foodItemsTable.rating)
@@ -120,7 +126,7 @@ export async function GET(request: NextRequest) {
       .where(
         and(
           gte(ordersTable.createdAt, new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000))),
-          eq(ordersTable.status, 'completed')
+          eq(ordersTable.paymentStatus, 'paid')
         )
       )
       .groupBy(sql`date(${ordersTable.createdAt})`)
@@ -151,7 +157,7 @@ export async function GET(request: NextRequest) {
       .leftJoin(ordersTable, and(
         eq(orderItemsTable.orderId, ordersTable.id),
         gte(ordersTable.createdAt, startDate),
-        eq(ordersTable.status, 'completed')
+        eq(ordersTable.paymentStatus, 'paid')
       ))
       .groupBy(categoriesTable.id, categoriesTable.name)
       .orderBy(desc(sql`sum(${orderItemsTable.price} * ${orderItemsTable.quantity})`))

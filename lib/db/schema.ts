@@ -100,6 +100,9 @@ export const orders = pgTable('orders', {
   paymentMethod: text('payment_method'),
   paymentStatus: text('payment_status').default('pending'),
   notes: text('notes'),
+  customerName: text('customer_name'),
+  customerEmail: text('customer_email'),
+  customerPhone: text('customer_phone'),
   trackingInfo: jsonb('tracking_info').$type<{
     driverId?: string;
     currentLocation?: string; // JSON string for location

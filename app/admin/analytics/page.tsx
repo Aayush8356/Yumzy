@@ -35,6 +35,9 @@ interface AnalyticsData {
     total: number
     thisMonth: number
     pending: number
+    confirmed: number
+    preparing: number
+    out_for_delivery: number
     completed: number
     cancelled: number
   }
@@ -76,7 +79,7 @@ function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('30d') // 7d, 30d, 90d
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     revenue: { total: 0, thisMonth: 0, lastMonth: 0, growth: 0 },
-    orders: { total: 0, thisMonth: 0, pending: 0, completed: 0, cancelled: 0 },
+    orders: { total: 0, thisMonth: 0, pending: 0, confirmed: 0, preparing: 0, out_for_delivery: 0, completed: 0, cancelled: 0 },
     users: { total: 0, verified: 0, unverified: 0, newThisMonth: 0, growth: 0 },
     popularItems: [],
     ordersByDay: [],
@@ -109,6 +112,34 @@ function AnalyticsPage() {
       fetchAnalytics()
     }
   }, [user?.role, dateRange])
+
+  // Real-time analytics updates
+  useEffect(() => {
+    if (user?.role !== 'admin') return
+
+    const handleOrderUpdate = () => {
+      console.log('Analytics: Order update detected, refreshing analytics...')
+      fetchAnalytics()
+    }
+
+    const handleOrderDeleted = () => {
+      console.log('Analytics: Order deleted, refreshing analytics...')
+      fetchAnalytics()
+    }
+
+    // Listen for order status changes and new orders
+    window.addEventListener('order-status-updated', handleOrderUpdate)
+    window.addEventListener('order-deleted', handleOrderDeleted)
+    window.addEventListener('admin-order-updated', handleOrderUpdate)
+    window.addEventListener('admin-data-refresh', handleOrderUpdate)
+
+    return () => {
+      window.removeEventListener('order-status-updated', handleOrderUpdate)
+      window.removeEventListener('order-deleted', handleOrderDeleted)
+      window.removeEventListener('admin-order-updated', handleOrderUpdate)
+      window.removeEventListener('admin-data-refresh', handleOrderUpdate)
+    }
+  }, [user?.role, fetchAnalytics])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -185,8 +216,11 @@ function AnalyticsPage() {
                 Back to Dashboard
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics Dashboard</h1>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Comprehensive business insights and metrics</p>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics Dashboard</h1>
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Real-time updates enabled"></div>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Comprehensive business insights and metrics • Real-time updates</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -204,10 +238,11 @@ function AnalyticsPage() {
               <Button
                 variant="outline"
                 onClick={fetchAnalytics}
+                disabled={loading}
                 className="gap-2"
               >
-                <RefreshCw className="w-4 h-4" />
-                Refresh
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? 'Refreshing...' : 'Refresh'}
               </Button>
               <Button
                 variant="outline"
@@ -267,8 +302,11 @@ function AnalyticsPage() {
               <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">
                 {analytics.orders.total}
               </p>
-              <div className="flex gap-4 mt-2 text-sm">
-                <span className="text-green-600">{analytics.orders.completed} completed</span>
+              <div className="flex flex-wrap gap-2 mt-2 text-sm">
+                <span className="text-green-600">{analytics.orders.completed} delivered</span>
+                <span className="text-purple-600">{analytics.orders.out_for_delivery} out for delivery</span>
+                <span className="text-orange-600">{analytics.orders.preparing} preparing</span>
+                <span className="text-blue-600">{analytics.orders.confirmed} confirmed</span>
                 <span className="text-yellow-600">{analytics.orders.pending} pending</span>
                 <span className="text-red-600">{analytics.orders.cancelled} cancelled</span>
               </div>

@@ -61,7 +61,7 @@ interface StatusUpdate {
 }
 
 const statusSteps = [
-  { key: 'pending', label: 'Order Placed', icon: CheckCircle },
+  { key: 'pending', label: 'Order Placed', icon: Package },
   { key: 'confirmed', label: 'Order Confirmed', icon: CheckCircle },
   { key: 'preparing', label: 'Preparing', icon: UtensilsCrossed },
   { key: 'out_for_delivery', label: 'Out for Delivery', icon: Truck },
@@ -84,54 +84,33 @@ export default function OrderTrackingPage() {
   useEffect(() => {
     if (!orderId || !isAuthenticated || !user) return
 
-    const notificationManager = WebSocketNotificationManager.getInstance()
+    // Listen for order status updates
+    const handleOrderStatusUpdate = (event: any) => {
+      const data = event.detail
+      if (data && data.orderId === orderId) {
+        console.log('Order status updated:', data)
+        
+        // Update current step
+        const stepIndex = statusSteps.findIndex(step => step.key === data.status)
+        if (stepIndex !== -1) {
+          setCurrentStep(stepIndex)
+        }
 
-    const initializeConnection = async () => {
-      try {
-        // Connect to real-time notifications
-        await notificationManager.connect(user.id)
-        setIsConnected(true)
+        // Show toast for important updates
+        if (['out_for_delivery', 'delivered'].includes(data.status)) {
+          toast({
+            title: `Order ${data.status.replace('_', ' ')}!`,
+            description: data.message,
+          })
+        }
 
-        // Listen for order-specific notifications
-        notificationManager.on('order-updates', (notification) => {
-          if (notification.orderId === orderId && notification.data) {
-            const update = notification.data as StatusUpdate
-            setStatusUpdates(prev => [update, ...prev])
-            
-            // Update current step
-            const stepIndex = statusSteps.findIndex(step => step.key === update.status)
-            if (stepIndex !== -1) {
-              setCurrentStep(stepIndex)
-            }
-
-            // Show toast for important updates
-            if (['out_for_delivery', 'delivered'].includes(update.status)) {
-              toast({
-                title: notification.title,
-                description: notification.message,
-              })
-            }
-
-            // Update estimated time
-            if (update.estimatedTime) {
-              setEstimatedTimeLeft(update.estimatedTime)
-            }
-
-            // Refresh order details after status change
-            fetchOrderDetails()
-          }
-        })
-
-        // Listen for connection status changes
-        notificationManager.on('connection-status', (status: any) => {
-          setIsConnected(status.connected)
-        })
-
-      } catch (error) {
-        console.error('Failed to initialize real-time connection:', error)
-        setIsConnected(false)
+        // Refresh order details after status change
+        fetchOrderDetails()
       }
     }
+
+    // Add event listener for order status updates
+    window.addEventListener('order-status-updated', handleOrderStatusUpdate)
 
     const fetchOrderDetails = async () => {
       try {
@@ -201,7 +180,27 @@ export default function OrderTrackingPage() {
             const deliveryTime = new Date(data.order.estimatedDeliveryTime)
             const now = new Date()
             const timeLeft = Math.max(0, Math.floor((deliveryTime.getTime() - now.getTime()) / (1000 * 60)))
-            setEstimatedTimeLeft(timeLeft)
+            
+            console.log('Order tracking time calculation:', {
+              estimatedDeliveryTime: data.order.estimatedDeliveryTime,
+              deliveryTime: deliveryTime.toLocaleString(),
+              currentTime: now.toLocaleString(),
+              timeLeftMinutes: timeLeft,
+              timeLeftHours: Math.floor(timeLeft / 60)
+            })
+            
+            // Validate time is reasonable (less than 24 hours)
+            if (timeLeft > 24 * 60) {
+              console.warn('Estimated time seems too long:', timeLeft, 'minutes')
+              setEstimatedTimeLeft(60) // Default to 1 hour if calculation seems wrong
+            } else {
+              setEstimatedTimeLeft(timeLeft)
+            }
+          } else {
+            // If no estimated delivery time, calculate a reasonable default
+            const defaultTime = 45; // 45 minutes default
+            console.log('No estimated delivery time found, using default:', defaultTime, 'minutes')
+            setEstimatedTimeLeft(defaultTime)
           }
         }
       } catch (error) {
@@ -218,17 +217,13 @@ export default function OrderTrackingPage() {
 
     // Initial fetch
     fetchOrderDetails()
-    
-    // Initialize real-time connection
-    initializeConnection()
 
-    // Fallback polling every 30 seconds (reduced frequency due to real-time updates)
+    // Fallback polling every 30 seconds
     const interval = setInterval(fetchOrderDetails, 30000)
 
     return () => {
       clearInterval(interval)
-      notificationManager.off('order-updates')
-      notificationManager.off('connection-status')
+      window.removeEventListener('order-status-updated', handleOrderStatusUpdate)
     }
   }, [orderId, isAuthenticated, user, toast])
 
@@ -353,7 +348,18 @@ export default function OrderTrackingPage() {
               <span className="font-semibold text-primary">Estimated Time Remaining</span>
             </div>
             <div className="text-2xl font-bold text-primary">
-              {estimatedTimeLeft} minutes
+              {estimatedTimeLeft > 60 
+                ? `${Math.floor(estimatedTimeLeft / 60)}h ${estimatedTimeLeft % 60}m`
+                : `${estimatedTimeLeft} minutes`
+              }
+            </div>
+            <div className="text-sm text-primary/70 mt-2">
+              Expected delivery: {orderDetails.estimatedDeliveryTime ? 
+                new Date(orderDetails.estimatedDeliveryTime).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }) : 'Calculating...'
+              }
             </div>
           </motion.div>
         )}

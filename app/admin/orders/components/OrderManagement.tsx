@@ -70,21 +70,10 @@ export function OrderManagement() {
     fetchOrders();
   }, []);
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
-    try {
-      await fetch(`/api/admin/orders/${orderId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      
-      setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus } : order
-      ));
-    } catch (error) {
-      console.error("Failed to update order status:", error);
-    }
-  };
+  // Status changes are now automatic - no manual intervention needed
+  // const handleStatusChange = async (orderId: string, newStatus: string) => {
+  //   // This has been removed - status changes are now automatic
+  // };
 
   const handleDeleteOrder = async (orderId: string) => {
     if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
@@ -141,18 +130,33 @@ export function OrderManagement() {
   const getStatusBadge = (status: string) => {
     const statusColors = {
       pending: 'bg-yellow-100 text-yellow-800',
-      preparing: 'bg-blue-100 text-blue-800',
-      'on-the-way': 'bg-purple-100 text-purple-800',
+      confirmed: 'bg-blue-100 text-blue-800',
+      preparing: 'bg-orange-100 text-orange-800',
+      out_for_delivery: 'bg-purple-100 text-purple-800',
       delivered: 'bg-green-100 text-green-800',
       cancelled: 'bg-red-100 text-red-800'
     };
     return statusColors[status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800';
   };
 
+  const getStatusText = (status: string) => {
+    const statusTexts = {
+      pending: 'Pending',
+      confirmed: 'Confirmed',
+      preparing: 'Preparing',
+      out_for_delivery: 'Out for Delivery',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled'
+    };
+    return statusTexts[status as keyof typeof statusTexts] || status;
+  };
+
   const filteredOrders = orders.filter(order => {
+    const customerName = (order as any).userName || order.customerName || '';
+    const customerEmail = (order as any).userEmail || order.customerEmail || '';
     const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.customerEmail?.toLowerCase().includes(searchTerm.toLowerCase());
+                         customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         customerEmail.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -185,8 +189,9 @@ export function OrderManagement() {
           <SelectContent>
             <SelectItem value="all">All Orders</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="confirmed">Confirmed</SelectItem>
             <SelectItem value="preparing">Preparing</SelectItem>
-            <SelectItem value="on-the-way">On the way</SelectItem>
+            <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
             <SelectItem value="delivered">Delivered</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
@@ -236,14 +241,14 @@ export function OrderManagement() {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{order.customerName || 'Unknown'}</div>
-                        <div className="text-sm text-gray-500">{order.customerEmail}</div>
+                        <div className="font-medium">{(order as any).userName || order.customerName || 'Unknown'}</div>
+                        <div className="text-sm text-gray-500">{(order as any).userEmail || order.customerEmail}</div>
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">${order.total}</TableCell>
                     <TableCell>
                       <Badge className={getStatusBadge(order.status)}>
-                        {order.status}
+                        {getStatusText(order.status)}
                       </Badge>
                     </TableCell>
                     <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
@@ -273,14 +278,14 @@ export function OrderManagement() {
                                   <div>
                                     <label className="font-medium">Status:</label>
                                     <Badge className={getStatusBadge(selectedOrder.status)}>
-                                      {selectedOrder.status}
+                                      {getStatusText(selectedOrder.status)}
                                     </Badge>
                                   </div>
                                 </div>
                                 <div>
                                   <label className="font-medium">Customer:</label>
-                                  <p>{selectedOrder.customerName || 'Unknown'}</p>
-                                  <p className="text-sm text-gray-500">{selectedOrder.customerEmail}</p>
+                                  <p>{(selectedOrder as any).userName || selectedOrder.customerName || 'Unknown'}</p>
+                                  <p className="text-sm text-gray-500">{(selectedOrder as any).userEmail || selectedOrder.customerEmail}</p>
                                 </div>
                                 {selectedOrder.deliveryAddress && (
                                   <div>
@@ -312,21 +317,6 @@ export function OrderManagement() {
                             )}
                           </DialogContent>
                         </Dialog>
-                        <Select 
-                          value={order.status} 
-                          onValueChange={(newStatus) => handleStatusChange(order.id, newStatus)}
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="preparing">Preparing</SelectItem>
-                            <SelectItem value="on-the-way">On the way</SelectItem>
-                            <SelectItem value="delivered">Delivered</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
                         <Button
                           variant="outline"
                           size="sm"
