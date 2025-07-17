@@ -50,14 +50,41 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
             // Show toast for important updates and dispatch window events
             data.updates.forEach((update: RealtimeUpdate) => {
               if (update.type === 'order_status') {
-                toast({
-                  title: "Order Update",
-                  description: getOrderStatusMessage(update.data.status),
-                })
+                const status = update.data.status
+                const isDeliveryStatus = status === 'out_for_delivery' || status === 'delivered'
+                
+                // Show more prominent toast for delivery statuses
+                if (isDeliveryStatus) {
+                  toast({
+                    title: status === 'out_for_delivery' ? "Out for Delivery! 🛵" : "Order Delivered! 🎉",
+                    description: getOrderStatusMessage(status),
+                    duration: 6000, // Longer duration for delivery notifications
+                  })
+                } else {
+                  toast({
+                    title: "Order Update",
+                    description: getOrderStatusMessage(status),
+                  })
+                }
+                
                 // Dispatch window event for order status updates
                 window.dispatchEvent(new CustomEvent('order-status-updated', {
                   detail: update
                 }))
+                
+                // Additional event for delivery notifications
+                if (isDeliveryStatus) {
+                  window.dispatchEvent(new CustomEvent('delivery-notification', {
+                    detail: {
+                      orderId: update.orderId,
+                      status: status,
+                      notification: {
+                        title: status === 'out_for_delivery' ? "Out for Delivery! 🛵" : "Order Delivered! 🎉",
+                        message: getOrderStatusMessage(status)
+                      }
+                    }
+                  }))
+                }
               } else if (update.type === 'delivery_update') {
                 toast({
                   title: "Delivery Update",
@@ -151,8 +178,8 @@ function getOrderStatusMessage(status: string): string {
     'confirmed': 'Order confirmed by restaurant',
     'preparing': 'Your food is being prepared',
     'ready': 'Order is ready for pickup',
-    'out_for_delivery': 'Your order is on the way!',
-    'delivered': 'Order delivered successfully',
+    'out_for_delivery': 'Your order is on the way! Our delivery partner is heading to you',
+    'delivered': 'Your order has been delivered successfully. Enjoy your meal!',
     'cancelled': 'Order has been cancelled'
   }
   

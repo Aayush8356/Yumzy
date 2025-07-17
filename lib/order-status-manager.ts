@@ -263,38 +263,70 @@ export class OrderStatusManager {
         estimatedDeliveryTime: order.estimatedDeliveryTime
       }
 
-      // Send notification to notification center API (server-side safe)
+      // Use direct notification system instead of API call to avoid server-side fetch issues
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-        await fetch(`${baseUrl}/api/notifications`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${order.userId}`
+        const { professionalNotificationSystem } = await import('@/lib/data/professional-notifications')
+        
+        // Create notification directly using the professional notification system
+        professionalNotificationSystem.createNotification({
+          userId: order.userId,
+          type: 'order_update',
+          title: this.getStatusTitle(newStatus),
+          message: this.getStatusMessage(newStatus),
+          data: {
+            orderId,
+            status: newStatus,
+            previousStatus: order.status,
+            orderTotal: order.total,
+            estimatedDeliveryTime: order.estimatedDeliveryTime
           },
-          body: JSON.stringify({
-            userId: order.userId,
-            type: 'order_update',
-            title: this.getStatusTitle(newStatus),
-            message: this.getStatusMessage(newStatus),
-            data: {
-              orderId,
-              status: newStatus,
-              previousStatus: order.status,
-              orderTotal: order.total,
-              estimatedDeliveryTime: order.estimatedDeliveryTime
-            },
-            isImportant: true
-          })
+          isImportant: true,
+          isPersistent: true // Make delivery notifications persistent
         })
-      } catch (apiError) {
-        console.error('Failed to send notification to API:', apiError)
+        
+        console.log(`📬 Direct notification created for order ${orderId}: ${newStatus}`)
+      } catch (directError) {
+        console.error('Failed to create direct notification:', directError)
+        
+        // Fallback to API call with better error handling
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+          const response = await fetch(`${baseUrl}/api/notifications`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${order.userId}`
+            },
+            body: JSON.stringify({
+              userId: order.userId,
+              type: 'order_update',
+              title: this.getStatusTitle(newStatus),
+              message: this.getStatusMessage(newStatus),
+              data: {
+                orderId,
+                status: newStatus,
+                previousStatus: order.status,
+                orderTotal: order.total,
+                estimatedDeliveryTime: order.estimatedDeliveryTime
+              },
+              isImportant: true
+            })
+          })
+          
+          if (!response.ok) {
+            throw new Error(`API returned ${response.status}: ${response.statusText}`)
+          }
+          
+          console.log(`📬 API notification created for order ${orderId}: ${newStatus}`)
+        } catch (apiError) {
+          console.error('Failed to send notification to API:', apiError)
+        }
       }
 
-      // Send real-time update
+      // Send real-time update with better error handling
       try {
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-        await fetch(`${baseUrl}/api/realtime`, {
+        const response = await fetch(`${baseUrl}/api/realtime`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -306,11 +338,42 @@ export class OrderStatusManager {
             data: notificationData
           })
         })
+        
+        if (!response.ok) {
+          throw new Error(`Realtime API returned ${response.status}: ${response.statusText}`)
+        }
+        
+        console.log(`🔄 Real-time update sent for order ${orderId}: ${newStatus}`)
       } catch (realtimeError) {
         console.error('Failed to send real-time update:', realtimeError)
+        
+        // Fallback: Store update in global state directly
+        try {
+          if (!(global as any).pendingUpdates) {
+            (global as any).pendingUpdates = new Map()
+          }
+          
+          const key = `updates:${order.userId}`
+          if (!(global as any).pendingUpdates.has(key)) {
+            (global as any).pendingUpdates.set(key, [])
+          }
+          
+          const update = {
+            type: 'order_status',
+            userId: order.userId,
+            orderId,
+            data: notificationData,
+            timestamp: new Date().toISOString()
+          }
+          
+          (global as any).pendingUpdates.get(key).push(update)
+          console.log(`🔄 Fallback: Real-time update stored directly for order ${orderId}: ${newStatus}`)
+        } catch (fallbackError) {
+          console.error('Failed to store fallback update:', fallbackError)
+        }
       }
 
-      console.log(`🔔 Order ${orderId} status notification sent: ${newStatus}`)
+      console.log(`🔔 Order ${orderId} status notification processing completed: ${newStatus}`)
     } catch (error) {
       console.error(`Error sending notification for order ${orderId}:`, error)
     }

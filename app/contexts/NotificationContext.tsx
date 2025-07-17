@@ -44,10 +44,36 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setIsConnected(true)
     console.log('🔗 Notification system initialized')
 
+    // Listen for delivery notifications
+    const handleDeliveryNotification = (event: CustomEvent) => {
+      console.log('🚚 Delivery notification received:', event.detail)
+      const { notification, orderId, status } = event.detail
+      
+      // Show toast for delivery status updates
+      if (status === 'out_for_delivery' || status === 'delivered') {
+        toast({
+          title: notification.title,
+          description: notification.message,
+          duration: 6000, // Longer duration for delivery notifications
+        })
+      }
+      
+      // Refresh notifications to show the new one
+      refreshNotifications()
+    }
+
+    // Add event listener for delivery notifications
+    if (typeof window !== 'undefined') {
+      window.addEventListener('delivery-notification', handleDeliveryNotification as EventListener)
+    }
+
     return () => {
       setIsConnected(false)
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('delivery-notification', handleDeliveryNotification as EventListener)
+      }
     }
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, user, toast, refreshNotifications])
 
   // Load initial notifications - optimized for HMR
   const refreshNotifications = useCallback(async () => {
@@ -71,8 +97,23 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           !(user.role === 'admin' && (n.type === 'hot_deal' || n.type === 'promo'))
         )
         
-        if (unreadImportant.length > 0) {
-          // Show the most recent important notification
+        // Prioritize delivery notifications
+        const deliveryNotifications = unreadImportant.filter(n => 
+          n.type === 'order_update' && 
+          n.data?.status && 
+          ['out_for_delivery', 'delivered'].includes(n.data.status as string)
+        )
+        
+        if (deliveryNotifications.length > 0) {
+          // Show the most recent delivery notification
+          const latest = deliveryNotifications[0]
+          toast({
+            title: latest.title,
+            description: latest.message,
+            duration: 6000, // Longer duration for delivery notifications
+          })
+        } else if (unreadImportant.length > 0) {
+          // Show the most recent important notification if no delivery notifications
           const latest = unreadImportant[0]
           toast({
             title: latest.title,
@@ -85,6 +126,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       console.error('Failed to load notifications:', error)
     }
   }, [isAuthenticated, user?.id, user, toast]) // More specific dependency
+
+  // Set up periodic refresh for delivery notifications
+  useEffect(() => {
+    if (!isAuthenticated || !user) return
+
+    // Check for order updates every 30 seconds
+    const interval = setInterval(() => {
+      refreshNotifications()
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [isAuthenticated, user, refreshNotifications])
 
   useEffect(() => {
     refreshNotifications()

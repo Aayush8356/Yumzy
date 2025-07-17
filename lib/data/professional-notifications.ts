@@ -15,6 +15,34 @@ export interface ProfessionalNotification {
   userId: string
 }
 
+// Export function to create delivery notifications from server-side
+export function createDeliveryNotification(userId: string, orderId: string, status: string, orderData?: any) {
+  const titles = {
+    'out_for_delivery': 'Out for Delivery! 🛵',
+    'delivered': 'Order Delivered! 🎉'
+  }
+  
+  const messages = {
+    'out_for_delivery': 'Your order is on the way! Our delivery partner is heading to you',
+    'delivered': 'Your order has been delivered successfully. Enjoy your meal!'
+  }
+  
+  return professionalNotificationSystem.createNotification({
+    userId,
+    type: 'order_update',
+    title: titles[status as keyof typeof titles] || 'Order Status Updated',
+    message: messages[status as keyof typeof messages] || 'Your order status has been updated',
+    data: {
+      orderId,
+      status,
+      orderTotal: orderData?.total,
+      estimatedDeliveryTime: orderData?.estimatedDeliveryTime
+    },
+    isImportant: true,
+    isPersistent: true
+  })
+}
+
 interface NotificationState {
   notifications: ProfessionalNotification[]
   readNotifications: Set<string>
@@ -293,6 +321,23 @@ class ProfessionalNotificationSystem {
     // Save persistent notifications to localStorage
     if (notification.isPersistent) {
       this.savePersistentNotification(notification)
+    }
+
+    // For delivery status notifications, also trigger a window event for immediate UI updates
+    if (config.type === 'order_update' && config.data?.status && typeof window !== 'undefined') {
+      const deliveryStatuses = ['out_for_delivery', 'delivered']
+      if (deliveryStatuses.includes(config.data.status as string)) {
+        // Dispatch custom event for immediate UI updates
+        window.dispatchEvent(new CustomEvent('delivery-notification', {
+          detail: {
+            notification,
+            orderId: config.data.orderId,
+            status: config.data.status
+          }
+        }))
+        
+        console.log(`🚚 Delivery notification dispatched for status: ${config.data.status}`)
+      }
     }
 
     console.log(`📬 Created ${config.type} notification for user ${config.userId}: ${config.title}`)
