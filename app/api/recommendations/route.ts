@@ -62,29 +62,34 @@ export async function GET(request: NextRequest) {
       // Extract food item IDs from order history
       const orderedItemIds = userOrders
         .filter(order => order.foodItemId)
-        .map(order => order.foodItemId);
+        .map(order => order.foodItemId)
+        .filter(id => id !== null) as string[];
 
       console.log(`🍽️ Found ${orderedItemIds.length} unique food items in order history`);
       console.log(`🍽️ Sample food item IDs:`, orderedItemIds.slice(0, 5));
 
-      // Get categories of previously ordered items
-      const orderedItems = await db
-        .select({
-          id: foodItemsTable.id,
-          categoryId: foodItemsTable.categoryId,
-          isVegetarian: foodItemsTable.isVegetarian,
-          isSpicy: foodItemsTable.isSpicy
-      })
-        .from(foodItemsTable)
-        .where(inArray(foodItemsTable.id, orderedItemIds));
+      // Skip processing if no valid item IDs
+      if (orderedItemIds.length === 0) {
+        console.log('⚠️ No valid food item IDs found in order history');
+      } else {
+        // Get categories of previously ordered items
+        const orderedItems = await db
+          .select({
+            id: foodItemsTable.id,
+            categoryId: foodItemsTable.categoryId,
+            isVegetarian: foodItemsTable.isVegetarian,
+            isSpicy: foodItemsTable.isSpicy
+        })
+          .from(foodItemsTable)
+          .where(inArray(foodItemsTable.id, orderedItemIds));
 
-      // Extract user preferences
-      const categoryIds = [...new Set(orderedItems.map(item => item.categoryId))];
-      const isVegetarianPreferred = orderedItems.filter(item => item.isVegetarian).length > orderedItems.length * 0.6;
-      const isSpicyPreferred = orderedItems.filter(item => item.isSpicy).length > orderedItems.length * 0.4;
+        // Extract user preferences
+        const categoryIds = [...new Set(orderedItems.map(item => item.categoryId))].filter(id => id !== null) as string[];
+        const isVegetarianPreferred = orderedItems.filter(item => item.isVegetarian).length > orderedItems.length * 0.6;
+        const isSpicyPreferred = orderedItems.filter(item => item.isSpicy).length > orderedItems.length * 0.4;
 
-      // Get similar items based on preferences (not previously ordered)
-      let similarItems = await db
+        // Get similar items based on preferences (not previously ordered)
+        let similarItems = await db
         .select({
           id: foodItemsTable.id,
           name: foodItemsTable.name,
@@ -108,7 +113,7 @@ export async function GET(request: NextRequest) {
           and(
             eq(foodItemsTable.isAvailable, true),
             not(inArray(foodItemsTable.id, orderedItemIds)),
-            inArray(foodItemsTable.categoryId, categoryIds),
+            categoryIds.length > 0 ? inArray(foodItemsTable.categoryId, categoryIds) : undefined,
             isVegetarianPreferred ? eq(foodItemsTable.isVegetarian, true) : undefined,
             isSpicyPreferred ? eq(foodItemsTable.isSpicy, true) : undefined
           )
@@ -116,43 +121,44 @@ export async function GET(request: NextRequest) {
         .orderBy(desc(foodItemsTable.rating), desc(foodItemsTable.reviewCount))
         .limit(4);
 
-      // If not enough similar items, get popular items from preferred categories
-      if (similarItems.length < 4) {
-        const additionalItems = await db
-          .select({
-            id: foodItemsTable.id,
-            name: foodItemsTable.name,
-            description: foodItemsTable.description,
-            shortDescription: foodItemsTable.shortDescription,
-            price: foodItemsTable.price,
-            originalPrice: foodItemsTable.originalPrice,
-            discount: foodItemsTable.discount,
-            rating: foodItemsTable.rating,
-            reviewCount: foodItemsTable.reviewCount,
-            cookTime: foodItemsTable.cookTime,
-            image: foodItemsTable.image,
-            isVegetarian: foodItemsTable.isVegetarian,
-            isSpicy: foodItemsTable.isSpicy,
-            isPopular: foodItemsTable.isPopular,
-            categoryName: categoriesTable.name
-          })
-          .from(foodItemsTable)
-          .leftJoin(categoriesTable, eq(foodItemsTable.categoryId, categoriesTable.id))
-          .where(
-            and(
-              eq(foodItemsTable.isAvailable, true),
-              not(inArray(foodItemsTable.id, orderedItemIds)),
-              not(inArray(foodItemsTable.id, similarItems.map(item => item.id))),
-              eq(foodItemsTable.isPopular, true)
+        // If not enough similar items, get popular items from preferred categories
+        if (similarItems.length < 4) {
+          const additionalItems = await db
+            .select({
+              id: foodItemsTable.id,
+              name: foodItemsTable.name,
+              description: foodItemsTable.description,
+              shortDescription: foodItemsTable.shortDescription,
+              price: foodItemsTable.price,
+              originalPrice: foodItemsTable.originalPrice,
+              discount: foodItemsTable.discount,
+              rating: foodItemsTable.rating,
+              reviewCount: foodItemsTable.reviewCount,
+              cookTime: foodItemsTable.cookTime,
+              image: foodItemsTable.image,
+              isVegetarian: foodItemsTable.isVegetarian,
+              isSpicy: foodItemsTable.isSpicy,
+              isPopular: foodItemsTable.isPopular,
+              categoryName: categoriesTable.name
+            })
+            .from(foodItemsTable)
+            .leftJoin(categoriesTable, eq(foodItemsTable.categoryId, categoriesTable.id))
+            .where(
+              and(
+                eq(foodItemsTable.isAvailable, true),
+                not(inArray(foodItemsTable.id, orderedItemIds)),
+                not(inArray(foodItemsTable.id, similarItems.map(item => item.id))),
+                eq(foodItemsTable.isPopular, true)
+              )
             )
-          )
-          .orderBy(desc(foodItemsTable.rating))
-          .limit(4 - similarItems.length);
+            .orderBy(desc(foodItemsTable.rating))
+            .limit(4 - similarItems.length);
 
-        similarItems = [...similarItems, ...additionalItems];
+          similarItems = [...similarItems, ...additionalItems];
+        }
+
+        recommendedItems = similarItems;
       }
-
-      recommendedItems = similarItems;
     }
 
     // If no order history or not enough recommendations, get popular items
@@ -181,7 +187,7 @@ export async function GET(request: NextRequest) {
           and(
             eq(foodItemsTable.isAvailable, true),
             eq(foodItemsTable.isPopular, true),
-            not(inArray(foodItemsTable.id, recommendedItems.map(item => item.id)))
+            recommendedItems.length > 0 ? not(inArray(foodItemsTable.id, recommendedItems.map(item => item.id))) : undefined
           )
         )
         .orderBy(desc(foodItemsTable.rating), desc(foodItemsTable.reviewCount))
@@ -215,7 +221,7 @@ export async function GET(request: NextRequest) {
         .where(
           and(
             eq(foodItemsTable.isAvailable, true),
-            not(inArray(foodItemsTable.id, recommendedItems.map(item => item.id)))
+            recommendedItems.length > 0 ? not(inArray(foodItemsTable.id, recommendedItems.map(item => item.id))) : undefined
           )
         )
         .orderBy(desc(foodItemsTable.rating))
