@@ -26,7 +26,8 @@
     "test:ci": "jest --ci --coverage --watchAll=false",
     "migrate": "tsx scripts/migrations/migrate.ts",
     "migrate:status": "tsx scripts/migrations/status.ts",
-    "migrate:validate": "tsx scripts/migrations/validate.ts"
+    "migrate:validate": "tsx scripts/migrations/validate.ts",
+    "migrate-pricing": "tsx scripts/migrate-order-pricing.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.23.3",

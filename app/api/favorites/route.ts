@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { favoritesTable, usersTable } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { TokenManager } from '@/lib/auth';
 
 async function verifyUser(request: NextRequest) {
   try {
@@ -13,9 +14,15 @@ async function verifyUser(request: NextRequest) {
       return null;
     }
 
-    // In a real app, you'd verify the JWT token here
-    // For now, we'll use the token as user ID (assuming it's stored in localStorage)
-    const userId = authToken;
+    // Try to decode JWT token to get user ID
+    let userId: string;
+    try {
+      const decoded = TokenManager.verify(authToken);
+      userId = decoded.userId;
+    } catch (tokenError) {
+      // Fallback: try using token as user ID directly (for backward compatibility)
+      userId = authToken;
+    }
     
     // Verify user exists in database
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);

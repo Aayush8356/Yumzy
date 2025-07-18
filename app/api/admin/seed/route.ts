@@ -67,8 +67,8 @@ const generateDatabaseFoodItems = () => {
     shortDescription: item.description.length > 100 
       ? item.description.substring(0, 100) + '...' 
       : item.description,
-    price: item.price.replace('$', ''),
-    originalPrice: item.originalPrice?.replace('$', ''),
+    price: item.price.replace('₹', ''),
+    originalPrice: item.originalPrice?.replace('₹', ''),
     discount: item.discount,
     rating: item.rating.toString(),
     reviewCount: Math.floor(Math.random() * 500) + 50,

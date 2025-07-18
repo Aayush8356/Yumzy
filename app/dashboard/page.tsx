@@ -196,10 +196,10 @@ export default function DashboardPage() {
             <div>
               <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
                 <BarChart3 className="w-8 h-8 text-blue-500" />
-                Analytics Dashboard
+                Analytics & Insights
               </h1>
               <p className="text-muted-foreground text-lg">
-                Track your dining patterns and preferences
+                Discover your dining patterns, spending habits, and achieve your food goals
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -244,7 +244,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-green-600">Total Spent</p>
-                  <p className="text-3xl font-bold text-green-700">₹{orderStats?.totalSpent}</p>
+                  <p className="text-3xl font-bold text-green-700">₹{orderStats?.totalSpent?.toFixed(1) || '0.0'}</p>
                   <p className="text-xs text-green-500">all time</p>
                 </div>
                 <CreditCard className="w-8 h-8 text-green-500" />
@@ -257,7 +257,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-purple-600">Avg Order</p>
-                  <p className="text-3xl font-bold text-purple-700">₹{orderStats?.avgOrderValue}</p>
+                  <p className="text-3xl font-bold text-purple-700">₹{orderStats?.avgOrderValue?.toFixed(1) || '0.0'}</p>
                   <p className="text-xs text-purple-500">per order</p>
                 </div>
                 <Target className="w-8 h-8 text-purple-500" />
@@ -375,7 +375,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-green-600">₹{order.total}</p>
+                      <p className="font-bold text-green-600">₹{parseFloat(order.total).toFixed(1)}</p>
                     </div>
                   </motion.div>
                 ))}

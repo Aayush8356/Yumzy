@@ -9,24 +9,19 @@ import {
   ShoppingCart, 
   Clock, 
   Star, 
-  TrendingUp, 
   Package, 
   Heart,
-  User,
-  Plus,
   ArrowRight,
-  Crown,
-  Gift,
   Zap,
   Award,
   Timer,
   Bell,
-  MapPin,
-  CreditCard,
-  Calendar,
-  Activity,
   Utensils,
-  Flame
+  Flame,
+  RefreshCw,
+  Plus,
+  Sparkles,
+  TrendingUp
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCart } from '@/contexts/CartContext'
@@ -43,22 +38,25 @@ interface ActiveOrder {
   createdAt: string
 }
 
-interface FavoriteItem {
+interface RecommendedItem {
   id: string
   name: string
-  image: string
-  price: number
-}
-
-interface TrendingItem {
-  id: string
-  name: string
-  description: string
   image: string
   price: number
   rating: number
+  description: string
   cookTime: string
   category: string
+  imageUrl?: string
+  isLoadingImage?: boolean
+}
+
+interface RecentOrder {
+  id: string
+  items: string[]
+  total: number
+  status: string
+  createdAt: string
 }
 
 interface AuthenticatedHomepageProps {
@@ -70,24 +68,38 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
   const { cart, addToCart } = useCart()
   const { toast } = useToast()
   
+  const [loading, setLoading] = useState(true)
+  const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null)
+  const [recommendedItems, setRecommendedItems] = useState<RecommendedItem[]>([])
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([])
+  const [favoriteCount, setFavoriteCount] = useState(0)
+
   const cartItems = cart?.items || []
 
-  const handleAddToCart = async (foodItemId: string, foodName: string) => {
-    if (!user) {
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Good morning'
+    if (hour < 17) return 'Good afternoon'
+    return 'Good evening'
+  }
+
+  const handleAddToCart = async (item: RecommendedItem) => {
+    if (!user?.id) {
       toast({
-        title: "Please sign in",
-        description: "You need to be logged in to add items to cart",
+        title: "Please log in",
+        description: "You need to be logged in to add items to cart.",
         variant: "destructive"
       })
       return
     }
 
     try {
-      const success = await addToCart(foodItemId, 1)
+      const success = await addToCart(item.id, 1)
+      
       if (success) {
         toast({
-          title: "Added to cart",
-          description: `${foodName} has been added to your cart`,
+          title: "Added to cart!",
+          description: `${item.name} has been added to your cart.`,
         })
       }
     } catch (error) {
@@ -99,79 +111,256 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
       })
     }
   }
-  
-  const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null)
-  const [favorites, setFavorites] = useState<FavoriteItem[]>([])
-  const [trending, setTrending] = useState<TrendingItem[]>([])
-  const [loading, setLoading] = useState(true)
+
+  const handleReorder = async (orderId: string) => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}/reorder`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (response.ok) {
+        toast({
+          title: "Items added to cart!",
+          description: "Previous order items have been added to your cart.",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reorder. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Function to fetch dynamic Unsplash images for recommended items
+  const fetchImageForItem = async (item: RecommendedItem) => {
+    try {
+      const response = await fetch(
+        `/api/images/food?name=${encodeURIComponent(item.name)}&category=${encodeURIComponent(item.category || '')}&id=${encodeURIComponent(item.id)}`
+      )
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.imageUrl) {
+          return data.imageUrl
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch image for item:', item.name, error)
+    }
+    
+    // Return fallback image if API fails
+    const fallbackImages = [
+      'https://images.unsplash.com/photo-1563379091339-03246963d638?w=400&h=300&fit=crop&crop=center', // biryani
+      'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop&crop=center', // pizza  
+      'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=300&fit=crop&crop=center', // ramen
+      'https://images.unsplash.com/photo-1571091655789-405eb7a3a3a8?w=400&h=300&fit=crop&crop=center', // burger
+      'https://images.unsplash.com/photo-1590736969955-71cc94901144?w=400&h=300&fit=crop&crop=center', // tacos
+      'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=300&fit=crop&crop=center', // salad
+    ]
+    
+    // Generate consistent fallback based on item ID
+    let hash = 0
+    const str = item.id + item.name
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash
+    }
+    const imageIndex = Math.abs(hash) % fallbackImages.length
+    return fallbackImages[imageIndex]
+  }
+
+  const fetchUserData = async () => {
+    try {
+      if (!user?.id) {
+        setLoading(false)
+        return
+      }
+
+      // Fetch real user orders
+      const timestamp = new Date().getTime()
+      const ordersResponse = await fetch(`/api/orders?userId=${user.id}&_t=${timestamp}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      })
+      
+      if (ordersResponse.ok) {
+        const ordersData = await ordersResponse.json()
+        const allOrders = ordersData.orders || []
+        
+        // Find active order (pending, confirmed, preparing, out_for_delivery)
+        const activeOrders = allOrders.filter((order: any) => 
+          order.status === 'pending' ||
+          order.status === 'confirmed' || 
+          order.status === 'preparing' || 
+          order.status === 'out_for_delivery'
+        )
+        
+        if (activeOrders.length > 0) {
+          const latestActiveOrder = activeOrders[0]
+          setActiveOrder({
+            id: latestActiveOrder.id,
+            items: latestActiveOrder.items?.map((item: any) => item.name) || [],
+            total: parseFloat(latestActiveOrder.total),
+            status: latestActiveOrder.status,
+            estimatedDelivery: latestActiveOrder.estimatedDeliveryTime || '30-45 min',
+            createdAt: latestActiveOrder.createdAt
+          })
+        } else {
+          setActiveOrder(null)
+        }
+
+        // Get recent orders (last 3)
+        const recentOrdersData = allOrders.slice(0, 3).map((order: any) => ({
+          id: order.id,
+          items: order.items?.map((item: any) => item.name) || [],
+          total: parseFloat(order.total),
+          status: order.status,
+          createdAt: order.createdAt
+        }))
+        setRecentOrders(recentOrdersData)
+      }
+
+      // Fetch user's favorite food items
+      const favoritesResponse = await fetch(`/api/favorites?userId=${user.id}&_t=${timestamp}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      })
+      if (favoritesResponse.ok) {
+        const favoritesData = await favoritesResponse.json()
+        setFavoriteCount(favoritesData.favorites?.length || 0)
+      }
+
+      // Fetch personalized recommendations
+      const authToken = localStorage.getItem('authToken') || user?.id
+      const recommendationsResponse = await fetch('/api/recommendations', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      })
+      
+      if (recommendationsResponse.ok) {
+        const recommendationsData = await recommendationsResponse.json()
+        if (recommendationsData.success && recommendationsData.recommendations?.length > 0) {
+          const formattedItems = recommendationsData.recommendations.slice(0, 4).map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            image: item.image || '',
+            price: parseFloat(item.price.replace('₹', '')),
+            rating: parseFloat(item.rating || '4.5'),
+            description: item.description || 'Delicious dish made with fresh ingredients.',
+            cookTime: item.cookTime || '15-20 min',
+            category: item.category || 'Popular',
+            imageUrl: '',
+            isLoadingImage: true
+          }))
+          setRecommendedItems(formattedItems)
+        } else {
+          // Default recommendations
+          setRecommendedItems([
+            {
+              id: 'default_1',
+              name: 'Chicken Biryani',
+              image: '',
+              price: 380,
+              rating: 4.8,
+              description: 'Fragrant basmati rice with tender chicken, saffron, and traditional spices',
+              cookTime: '35 min',
+              category: 'Indian',
+              imageUrl: '',
+              isLoadingImage: true
+            },
+            {
+              id: 'default_2',
+              name: 'Butter Chicken',
+              image: '',
+              price: 320,
+              rating: 4.7,
+              description: 'Tender chicken in rich tomato-cream sauce with aromatic spices',
+              cookTime: '25 min',
+              category: 'Indian',
+              imageUrl: '',
+              isLoadingImage: true
+            },
+            {
+              id: 'default_3',
+              name: 'Margherita Pizza',
+              image: '',
+              price: 350,
+              rating: 4.6,
+              description: 'Fresh mozzarella, tomatoes, and basil on wood-fired crust',
+              cookTime: '18 min',
+              category: 'Pizza',
+              imageUrl: '',
+              isLoadingImage: true
+            },
+            {
+              id: 'default_4',
+              name: 'Paneer Tikka',
+              image: '',
+              price: 240,
+              rating: 4.5,
+              description: 'Marinated cottage cheese cubes grilled to perfection with spices',
+              cookTime: '15 min',
+              category: 'Indian',
+              imageUrl: '',
+              isLoadingImage: true
+            }
+          ])
+        }
+      }
+
+    } catch (error) {
+      console.error('Error fetching user data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchHomepageData = async () => {
-      if (!user) return
+    fetchUserData()
+  }, [user?.id])
+
+  // Fetch images for recommended items when they are set
+  useEffect(() => {
+    const fetchImagesForItems = async () => {
+      if (recommendedItems.length === 0) return
+
+      const updatedItems = await Promise.all(
+        recommendedItems.map(async (item) => {
+          if (item.imageUrl || !item.isLoadingImage) return item
+          
+          const imageUrl = await fetchImageForItem(item)
+          return {
+            ...item,
+            imageUrl,
+            isLoadingImage: false
+          }
+        })
+      )
       
-      try {
-        setLoading(true)
-        
-        // Fetch active order
-        const activeOrderResponse = await fetch(`/api/orders/active?userId=${user.id}`)
-        if (activeOrderResponse.ok) {
-          const activeOrderData = await activeOrderResponse.json()
-          if (activeOrderData.success && activeOrderData.order) {
-            setActiveOrder(activeOrderData.order)
-          }
-        }
-        
-        // Fetch user favorites
-        const authToken = localStorage.getItem('authToken')
-        if (authToken) {
-          const favoritesResponse = await fetch(`/api/favorites`, {
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json',
-            }
-          })
-          if (favoritesResponse.ok) {
-            const favoritesData = await favoritesResponse.json()
-            if (favoritesData.success) {
-              setFavorites(favoritesData.favorites.slice(0, 3)) // Only show top 3
-            }
-          }
-        }
-        
-        // Fetch trending items
-        const trendingResponse = await fetch('/api/menu/trending')
-        if (trendingResponse.ok) {
-          const trendingData = await trendingResponse.json()
-          if (trendingData.success) {
-            setTrending(trendingData.items.slice(0, 6)) // Show 6 trending items
-          }
-        }
-        
-      } catch (error) {
-        console.error('Failed to fetch homepage data:', error)
-      } finally {
-        setLoading(false)
-      }
+      setRecommendedItems(updatedItems)
     }
 
-    fetchHomepageData()
-  }, [user])
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'delivered': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-      case 'preparing': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-      case 'on-the-way': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-    }
-  }
-
-  const getGreeting = () => {
-    const hour = new Date().getHours()
-    if (hour < 12) return 'Good morning'
-    if (hour < 17) return 'Good afternoon'
-    return 'Good evening'
-  }
+    fetchImagesForItems()
+  }, [recommendedItems.length])
 
   if (loading) {
     return (
@@ -180,8 +369,8 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
           <div className="animate-pulse space-y-8">
             <div className="h-8 bg-muted rounded w-1/3"></div>
             <div className="h-20 bg-muted rounded"></div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
                 <div key={i} className="h-64 bg-muted rounded-lg"></div>
               ))}
             </div>
@@ -205,45 +394,26 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
             <div>
               <h1 className="text-3xl font-bold mb-2">
                 {getGreeting()}, {user?.name?.split(' ')[0]}! 
-                {isDemoUser ? ' 🎯' : ' 👋'}
               </h1>
-              <p className="text-muted-foreground">
-                {isDemoUser 
-                  ? "Explore our demo menu and features (checkout is read-only)"
-                  : "Welcome to your personalized food experience!"
-                }
+              <p className="text-muted-foreground text-lg">
+                What would you like to eat today?
               </p>
-              {isDemoUser && (
-                <div className="mt-2">
-                  <Badge variant="secondary" className="text-xs">
-                    Demo Account - Limited Features
-                  </Badge>
-                </div>
-              )}
             </div>
             <div className="flex items-center gap-4">
               {cartItems.length > 0 && (
                 <Link href="/cart">
-                  <Button className="gap-2">
+                  <Button className="gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
                     <ShoppingCart className="w-4 h-4" />
                     Cart ({cartItems.length})
                   </Button>
                 </Link>
               )}
-              {!isDemoUser && (
-                <Link href="/dashboard">
-                  <Button variant="outline" className="gap-2">
-                    <Activity className="w-4 h-4" />
-                    My Dashboard
-                  </Button>
-                </Link>
-              )}
-              {isDemoUser && (
-                <Button variant="outline" className="gap-2" disabled>
-                  <Zap className="w-4 h-4" />
-                  Demo Mode
+              <Link href="/menu">
+                <Button variant="outline" className="gap-2">
+                  <Utensils className="w-4 h-4" />
+                  Browse Menu
                 </Button>
-              )}
+              </Link>
             </div>
           </div>
         </motion.div>
@@ -256,27 +426,26 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
             transition={{ duration: 0.6, delay: 0.1 }}
             className="mb-8"
           >
-            <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+            <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 dark:border-amber-800">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900 rounded-full flex items-center justify-center">
-                      <Package className="w-6 h-6 text-amber-600" />
+                      <Flame className="w-6 h-6 text-amber-600 animate-pulse" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-amber-800 dark:text-amber-200">
-                        Your Order is {activeOrder.status === 'preparing' ? 'Being Prepared' : 'On the Way'}
+                      <h3 className="font-semibold text-amber-800 dark:text-amber-200 text-lg">
+                        🍕 Your order is being prepared!
                       </h3>
                       <p className="text-sm text-amber-600 dark:text-amber-400">
-                        {activeOrder.items.join(', ')}
-                        {activeOrder.estimatedDelivery && ` • Est. ${activeOrder.estimatedDelivery}`}
+                        {activeOrder.items.join(', ')} • Est. {activeOrder.estimatedDelivery}
                       </p>
                     </div>
                   </div>
                   <Link href="/orders">
-                    <Button variant="outline" size="sm" className="gap-2">
+                    <Button variant="outline" size="sm" className="gap-2 border-amber-300">
+                      <Timer className="w-4 h-4" />
                       Track Order
-                      <ArrowRight className="w-4 h-4" />
                     </Button>
                   </Link>
                 </div>
@@ -285,192 +454,230 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
           </motion.div>
         )}
 
-        {/* Quick Actions */}
+        {/* Recommendations Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mb-8"
         >
-          <Card>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Link href="/menu">
-                  <Button variant="outline" className="w-full h-20 flex flex-col gap-2">
-                    <Utensils className="w-6 h-6" />
-                    <span className="text-sm">Browse Menu</span>
-                  </Button>
-                </Link>
-                <Link href="/menu?category=trending">
-                  <Button variant="outline" className="w-full h-20 flex flex-col gap-2">
-                    <Flame className="w-6 h-6" />
-                    <span className="text-sm">What's Hot</span>
-                  </Button>
-                </Link>
-                <Link href="/favorites">
-                  <Button variant="outline" className="w-full h-20 flex flex-col gap-2">
-                    <Heart className="w-6 h-6" />
-                    <span className="text-sm">My Favorites</span>
-                  </Button>
-                </Link>
-                <Link href="/orders">
-                  <Button variant="outline" className="w-full h-20 flex flex-col gap-2">
-                    <Package className="w-6 h-6" />
-                    <span className="text-sm">Order History</span>
-                  </Button>
-                </Link>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Recommended for You</h2>
+                  <p className="text-sm text-muted-foreground">Based on your preferences and order history</p>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <Link href="/menu">
+              <Button variant="outline" className="gap-2">
+                <Utensils className="w-4 h-4" />
+                View All
+                <ArrowRight className="w-3 h-3" />
+              </Button>
+            </Link>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {recommendedItems.map((item, index) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + index * 0.1 }}
+              >
+                <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group border border-gray-100 dark:border-gray-700 bg-gradient-to-br from-white via-white to-gray-50/50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 hover:scale-[1.02] hover:border-orange-200 dark:hover:border-orange-800">
+                  <div className="relative h-48">
+                    {item.isLoadingImage ? (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 animate-pulse flex items-center justify-center">
+                        <Utensils className="w-12 h-12 text-gray-400" />
+                      </div>
+                    ) : (
+                      <ProfessionalFoodImage
+                        src={item.imageUrl || item.image}
+                        alt={item.name}
+                        className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${item.isLoadingImage ? 'opacity-75' : 'opacity-100'}`}
+                        professionalCategories={[item.category]}
+                        priority={false}
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute top-2 right-2">
+                      <Badge className="bg-orange-500/90 text-white border-0 gap-1 text-sm px-2 py-1">
+                        <Star className="w-3 h-3 fill-white text-white" />
+                        {item.rating}
+                      </Badge>
+                    </div>
+                  </div>
+                  <CardContent className="p-4">
+                    <div className="mb-3">
+                      <h3 className="font-bold text-base leading-tight mb-2 group-hover:text-orange-600 transition-colors line-clamp-2">
+                        {item.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-3">
+                        {item.description}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>{item.cookTime}</span>
+                      </div>
+                      <p className="text-lg font-bold text-orange-600">₹{item.price}</p>
+                    </div>
+                    
+                    <Button 
+                      size="sm" 
+                      className="w-full gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 border-0 font-medium text-sm h-9"
+                      onClick={() => handleAddToCart(item)}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add to Cart
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
         </motion.div>
 
-        {/* Your Favorites */}
-        {favorites.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="mb-8"
-          >
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Heart className="w-5 h-5 text-red-500" />
-                  Your Favorites
-                </CardTitle>
-                <Link href="/favorites">
-                  <Button variant="outline" size="sm" className="gap-2">
-                    View All
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {favorites.map((item, index) => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.4, delay: index * 0.1 }}
-                      className="group cursor-pointer"
-                    >
-                      <Card className="overflow-hidden hover:shadow-lg transition-all">
-                        <div className="relative">
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        </div>
-                        <CardContent className="p-4">
-                          <h4 className="font-semibold mb-2">{item.name}</h4>
-                          <div className="flex items-center justify-between">
-                            <span className="text-lg font-bold">${item.price}</span>
-                            <Button 
-                              size="sm" 
-                              className="gap-2"
-                              onClick={() => handleAddToCart(item.id, item.name)}
-                            >
-                              <ShoppingCart className="w-4 h-4" />
-                              Add to Cart
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-
-        {/* Trending Now */}
+        {/* Recent Activity */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
+          className="mb-8"
         >
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-orange-500" />
-                Trending Now
-              </CardTitle>
-              <Link href="/menu?category=trending">
-                <Button variant="outline" size="sm" className="gap-2">
-                  View All
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {trending.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {trending.map((item, index) => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.4, delay: index * 0.1 }}
-                      className="group cursor-pointer"
-                    >
-                      <Card className="overflow-hidden hover:shadow-lg transition-all">
-                        <div className="relative">
-                          <ProfessionalFoodImage
-                            src={item.image}
-                            alt={item.name}
-                            width={300}
-                            height={200}
-                            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                            professionalCategories={[item.category]}
-                          />
-                          <div className="absolute top-3 right-3">
-                            <Badge className="bg-orange-500 text-white">
-                              <TrendingUp className="w-3 h-3 mr-1" />
-                              Trending
-                            </Badge>
-                          </div>
-                        </div>
-                        <CardContent className="p-4">
-                          <h4 className="font-semibold mb-1">{item.name}</h4>
-                          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                            {item.description}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg font-bold">${item.price}</span>
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                <span>{item.rating}</span>
-                              </div>
-                            </div>
-                            <Button 
-                              size="sm" 
-                              className="gap-2"
-                              onClick={() => handleAddToCart(item.id, item.name)}
-                            >
-                              <ShoppingCart className="w-4 h-4" />
-                              Add
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <TrendingUp className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No trending items available right now.</p>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                <Clock className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Recent Activity</h2>
+                <p className="text-sm text-muted-foreground">Your last few orders</p>
+              </div>
+            </div>
+            <Link href="/orders">
+              <Button variant="outline" className="gap-2">
+                <Package className="w-4 h-4" />
+                View All Orders
+                <ArrowRight className="w-3 h-3" />
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {recentOrders.length > 0 ? (
+              recentOrders.map((order, index) => (
+                <motion.div
+                  key={order.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 + index * 0.1 }}
+                >
+                  <Card className="hover:shadow-lg transition-all duration-300">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Badge variant={order.status === 'delivered' ? 'default' : 'secondary'}>
+                          {order.status}
+                        </Badge>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(order.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <p className="text-sm font-medium mb-2 line-clamp-2">
+                        {order.items.join(', ')}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="font-bold text-green-600">₹{order.total.toFixed(1)}</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 text-xs"
+                          onClick={() => handleReorder(order.id)}
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Reorder
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))
+            ) : (
+              <Card className="md:col-span-3 border-dashed border-2 border-gray-200 dark:border-gray-700">
+                <CardContent className="p-8 text-center">
+                  <Package className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-semibold mb-2 text-gray-600 dark:text-gray-400">No orders yet</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Start ordering to see your activity here!</p>
                   <Link href="/menu">
-                    <Button className="mt-4">Browse Menu</Button>
+                    <Button className="gap-2">
+                      <Utensils className="w-4 h-4" />
+                      Browse Menu
+                    </Button>
                   </Link>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Quick Actions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+        >
+          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+            <Zap className="w-5 h-5 text-blue-500" />
+            Quick Actions
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Link href="/menu">
+              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group">
+                <CardContent className="p-6 text-center">
+                  <Utensils className="w-8 h-8 mx-auto mb-3 text-orange-500 group-hover:scale-110 transition-transform" />
+                  <p className="font-medium">Browse Menu</p>
+                </CardContent>
+              </Card>
+            </Link>
+            
+            <Link href="/favorites">
+              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group">
+                <CardContent className="p-6 text-center">
+                  <Heart className="w-8 h-8 mx-auto mb-3 text-pink-500 group-hover:scale-110 transition-transform" />
+                  <p className="font-medium">Favorites</p>
+                  {favoriteCount > 0 && (
+                    <Badge variant="secondary" className="mt-1">{favoriteCount}</Badge>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
+            
+            <Link href="/orders">
+              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group">
+                <CardContent className="p-6 text-center">
+                  <Package className="w-8 h-8 mx-auto mb-3 text-green-500 group-hover:scale-110 transition-transform" />
+                  <p className="font-medium">Order History</p>
+                </CardContent>
+              </Card>
+            </Link>
+            
+            <Link href="/dashboard">
+              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group">
+                <CardContent className="p-6 text-center">
+                  <TrendingUp className="w-8 h-8 mx-auto mb-3 text-blue-500 group-hover:scale-110 transition-transform" />
+                  <p className="font-medium">Analytics</p>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
         </motion.div>
       </div>
     </div>

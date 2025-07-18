@@ -14,8 +14,8 @@ const todaysSpecials = [
     id: 'special-1',
     name: 'Truffle Mushroom Risotto',
     description: 'Creamy Arborio rice with black truffle, wild mushrooms, and aged Parmesan',
-    price: '28.99',
-    originalPrice: '34.99',
+    price: '₹420',
+    originalPrice: '₹520',
     discount: 18,
     rating: 4.9,
     reviews: 127,
@@ -29,8 +29,8 @@ const todaysSpecials = [
     id: 'special-2',
     name: 'Wagyu Beef Tenderloin',
     description: 'Grade A5 Wagyu with roasted vegetables and red wine jus',
-    price: '45.99',
-    originalPrice: '52.99',
+    price: '₹680',
+    originalPrice: '₹820',
     discount: 13,
     rating: 5.0,
     reviews: 89,
@@ -44,8 +44,8 @@ const todaysSpecials = [
     id: 'special-3',
     name: 'Lobster Thermidor',
     description: 'Fresh Maine lobster with cognac cream sauce and gruyere cheese',
-    price: '38.99',
-    originalPrice: '44.99',
+    price: '₹580',
+    originalPrice: '₹720',
     discount: 13,
     rating: 4.8,
     reviews: 95,
@@ -173,10 +173,10 @@ export function TodaysSpecialSection() {
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl font-bold text-primary">
-                        ${special.price}
+                        {special.price}
                       </span>
                       <span className="text-lg text-gray-500 dark:text-gray-400 line-through">
-                        ${special.originalPrice}
+                        {special.originalPrice}
                       </span>
                     </div>
                     <Badge variant="secondary" className="text-xs">

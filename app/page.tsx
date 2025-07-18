@@ -73,12 +73,12 @@ export default function Home() {
       )
     }
     
-    // Normal users get premium dashboard experience
+    // Normal users get activity feed experience
     return (
       <div className="min-h-screen bg-background smooth-scroll">
         <Navigation />
         <main className="gpu-accelerated">
-          <PremiumDashboard />
+          <AuthenticatedHomepage />
         </main>
         <PerformanceIndicator />
       </div>

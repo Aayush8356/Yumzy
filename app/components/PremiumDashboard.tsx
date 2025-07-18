@@ -258,52 +258,81 @@ export function PremiumDashboard() {
           setFavoriteCount(favoritesData.favorites?.length || 0)
         }
 
-        // Fetch recommended food items (real menu items) - fallback to regular menu if featured fails
-        let menuResponse = await fetch('/api/menu?limit=2&featured=true')
-        if (!menuResponse.ok) {
-          menuResponse = await fetch('/api/menu?limit=2')
-        }
+        // Fetch personalized recommendations
+        const authToken = localStorage.getItem('authToken') || user?.id
+        const recommendationsResponse = await fetch('/api/recommendations', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+          },
+        })
         
-        if (menuResponse.ok) {
-          const menuData = await menuResponse.json()
-          if (menuData.success && menuData.items?.length > 0) {
-            const formattedItems = menuData.items.map((item: any) => ({
+        if (recommendationsResponse.ok) {
+          const recommendationsData = await recommendationsResponse.json()
+          if (recommendationsData.success && recommendationsData.recommendations?.length > 0) {
+            const formattedItems = recommendationsData.recommendations.map((item: any) => ({
               id: item.id,
               name: item.name,
               image: item.image || '', // Will be replaced by dynamic image
-              price: parseFloat(item.price),
+              price: parseFloat(item.price.replace('₹', '')), // Remove ₹ symbol before parsing
               rating: parseFloat(item.rating || '4.5'),
               description: item.description || 'Delicious dish made with fresh ingredients.',
               cookTime: item.cookTime || '15-20 min',
-              category: item.category?.name || 'Popular',
+              category: item.category || 'Popular',
               imageUrl: '',
               isLoadingImage: true
             }))
             setRecommendedItems(formattedItems)
           } else {
-            // If no items from API, show some default recommendations
+            // If no items from API, show some default recommendations with realistic Indian pricing
             setRecommendedItems([
               {
                 id: 'default_1',
-                name: 'Chef\'s Special Pizza',
+                name: 'Chicken Biryani',
                 image: '',
-                price: 24.99,
+                price: 380,
                 rating: 4.8,
-                description: 'Wood-fired pizza with fresh mozzarella and basil',
-                cookTime: '15 min',
-                category: 'Pizza',
+                description: 'Fragrant basmati rice with tender chicken, saffron, and traditional spices',
+                cookTime: '35 min',
+                category: 'Indian',
                 imageUrl: '',
                 isLoadingImage: true
               },
               {
                 id: 'default_2',
-                name: 'Grilled Salmon',
+                name: 'Butter Chicken',
                 image: '',
-                price: 32.99,
-                rating: 4.9,
-                description: 'Fresh Atlantic salmon with seasonal vegetables',
-                cookTime: '20 min',
-                category: 'Seafood',
+                price: 320,
+                rating: 4.7,
+                description: 'Tender chicken in rich tomato-cream sauce with aromatic spices',
+                cookTime: '25 min',
+                category: 'Indian',
+                imageUrl: '',
+                isLoadingImage: true
+              },
+              {
+                id: 'default_3',
+                name: 'Margherita Pizza',
+                image: '',
+                price: 350,
+                rating: 4.6,
+                description: 'Fresh mozzarella, tomatoes, and basil on wood-fired crust',
+                cookTime: '18 min',
+                category: 'Pizza',
+                imageUrl: '',
+                isLoadingImage: true
+              },
+              {
+                id: 'default_4',
+                name: 'Paneer Tikka',
+                image: '',
+                price: 240,
+                rating: 4.5,
+                description: 'Marinated cottage cheese cubes grilled to perfection with spices',
+                cookTime: '15 min',
+                category: 'Indian',
                 imageUrl: '',
                 isLoadingImage: true
               }
@@ -546,7 +575,7 @@ export function PremiumDashboard() {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold">Recommended for You</h2>
-                  <p className="text-sm text-muted-foreground">Based on your taste preferences and order history</p>
+                  <p className="text-sm text-muted-foreground">Personalized recommendations based on your order history and preferences</p>
                 </div>
               </div>
             </div>

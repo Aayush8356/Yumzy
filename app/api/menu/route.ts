@@ -110,8 +110,8 @@ export async function GET(request: NextRequest) {
         name: item.name,
         description: item.description || '',
         shortDescription: item.shortDescription || item.description || '',
-        price: item.price,
-        originalPrice: item.originalPrice,
+        price: `₹${item.price}`,
+        originalPrice: item.originalPrice ? `₹${item.originalPrice}` : undefined,
         discount: item.discount,
         rating: item.rating,
         reviewCount: item.reviewCount,
@@ -197,10 +197,10 @@ export async function GET(request: NextRequest) {
     
     // Apply price range filter
     if (minPrice) {
-      filteredItems = filteredItems.filter(item => parseFloat(item.price) >= parseFloat(minPrice))
+      filteredItems = filteredItems.filter(item => parseFloat(item.price.replace('₹', '')) >= parseFloat(minPrice))
     }
     if (maxPrice) {
-      filteredItems = filteredItems.filter(item => parseFloat(item.price) <= parseFloat(maxPrice))
+      filteredItems = filteredItems.filter(item => parseFloat(item.price.replace('₹', '')) <= parseFloat(maxPrice))
     }
     
     // Apply sorting
@@ -209,8 +209,8 @@ export async function GET(request: NextRequest) {
       
       switch (sortBy) {
         case 'price':
-          aValue = parseFloat(a.price)
-          bValue = parseFloat(b.price)
+          aValue = parseFloat(a.price.replace('₹', ''))
+          bValue = parseFloat(b.price.replace('₹', ''))
           break
         case 'rating':
           aValue = parseFloat(a.rating || '0')

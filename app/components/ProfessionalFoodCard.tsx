@@ -395,19 +395,20 @@ export function ProfessionalFoodCard({ item, index = 0 }: ProfessionalFoodCardPr
             {item.shortDescription || item.description}
           </p>
 
-          {/* Price and Actions */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-green-600">
-                ${item.price}
+          {/* Price Section */}
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-2xl font-bold text-green-600">
+              {item.price}
+            </span>
+            {!!item.originalPrice && (
+              <span className="text-sm text-muted-foreground line-through">
+                {item.originalPrice}
               </span>
-              {!!item.originalPrice && (
-                <span className="text-sm text-muted-foreground line-through">
-                  ${item.originalPrice}
-                </span>
-              )}
-            </div>
+            )}
+          </div>
 
+          {/* Actions Section */}
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               {/* Info Dialog */}
               <Dialog>
@@ -490,48 +491,49 @@ export function ProfessionalFoodCard({ item, index = 0 }: ProfessionalFoodCardPr
                         disabled={isAdding}
                       >
                         <ShoppingCart className="w-4 h-4" />
-                        {isAdding ? "Adding..." : `Add to Cart - $${selectedItem.price}`}
+                        {isAdding ? "Adding..." : `Add to Cart - ${selectedItem.price}`}
                       </Button>
                     </div>
                   )}
                 </DialogContent>
               </Dialog>
               
-              {/* Quantity Controls or Add Button */}
-              {currentQuantity > 0 ? (
-                <div className="flex items-center gap-2 bg-primary/10 rounded-lg p-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleDecrement}
-                    className="h-8 w-8 p-0 hover:bg-primary/20"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </Button>
-                  <span className="min-w-[2rem] text-center font-medium text-primary">
-                    {currentQuantity}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleIncrement}
-                    className="h-8 w-8 p-0 hover:bg-primary/20"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <Button 
-                  size="sm" 
-                  className="gap-2 font-medium" 
-                  onClick={handleAddToCart}
-                  disabled={isAdding}
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  {isAdding ? "Adding..." : "Add"}
-                </Button>
-              )}
             </div>
+
+            {/* Quantity Controls or Add Button */}
+            {currentQuantity > 0 ? (
+              <div className="flex items-center gap-1 bg-primary/10 rounded-lg p-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDecrement}
+                  className="h-7 w-7 p-0 hover:bg-primary/20"
+                >
+                  <Minus className="w-3 h-3" />
+                </Button>
+                <span className="min-w-[1.5rem] text-center font-medium text-primary text-sm">
+                  {currentQuantity}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleIncrement}
+                  className="h-7 w-7 p-0 hover:bg-primary/20"
+                >
+                  <Plus className="w-3 h-3" />
+                </Button>
+              </div>
+            ) : (
+              <Button 
+                size="sm" 
+                className="gap-2 font-medium" 
+                onClick={handleAddToCart}
+                disabled={isAdding}
+              >
+                <ShoppingCart className="w-4 h-4" />
+                {isAdding ? "Adding..." : "Add"}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

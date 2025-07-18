@@ -162,7 +162,7 @@ export function Navigation() {
                       : 'text-foreground hover:text-primary'
                   }`}
                 >
-                  Dashboard
+                  Analytics
                   {(user?.role === 'admin' ? isActive('/admin') : isActive('/dashboard')) && (
                     <motion.div
                       layoutId="activeDesktop"
@@ -398,7 +398,7 @@ export function Navigation() {
                       : 'text-foreground hover:text-primary hover:bg-accent'
                   }`}
                 >
-                  Dashboard
+                  Analytics
                 </Link>
               )}
               
