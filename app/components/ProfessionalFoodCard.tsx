@@ -59,6 +59,8 @@ interface FoodItem {
 interface ProfessionalFoodCardProps {
   item: FoodItem
   index?: number
+  onFavoriteRemoved?: () => void
+  isFavorited?: boolean
 }
 
 // Fallback image pool for when API fails
@@ -90,9 +92,9 @@ const generateFallbackImage = (item: FoodItem): string => {
   return fallbackImagePool[imageIndex]
 }
 
-export function ProfessionalFoodCard({ item, index = 0 }: ProfessionalFoodCardProps) {
+export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFavorited = false }: ProfessionalFoodCardProps) {
   const [selectedItem, setSelectedItem] = useState<FoodItem | null>(null)
-  const [isLiked, setIsLiked] = useState(false);
+  const [isLiked, setIsLiked] = useState(isFavorited);
   const [imageUrl, setImageUrl] = useState<string>(generateFallbackImage(item));
   const [isLoadingImage, setIsLoadingImage] = useState(true);
   const { addToCart, getItemQuantity, updateCartItem, cart, removeFromCart } = useCart();
@@ -102,6 +104,13 @@ export function ProfessionalFoodCard({ item, index = 0 }: ProfessionalFoodCardPr
   const currentQuantity = getItemQuantity(item.id);
 
   useEffect(() => {
+    // If isFavorited prop is provided, use it (for favorites page)
+    if (isFavorited !== undefined) {
+      setIsLiked(isFavorited);
+      return;
+    }
+    
+    // Otherwise, check from API (for menu page)
     const checkIfFavorite = async () => {
       if (!user) return;
       try {
@@ -124,7 +133,7 @@ export function ProfessionalFoodCard({ item, index = 0 }: ProfessionalFoodCardPr
       }
     };
     checkIfFavorite();
-  }, [user, item.id]);
+  }, [user, item.id, isFavorited]);
 
   // Fetch contextual image from Unsplash API
   useEffect(() => {
@@ -176,10 +185,27 @@ export function ProfessionalFoodCard({ item, index = 0 }: ProfessionalFoodCardPr
         body: JSON.stringify({ foodItemId: item.id }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
         // Revert state if API call fails
         setIsLiked(!newLikedState);
-        toast({ title: "Error", description: "Could not update favorites.", variant: "destructive" });
+        toast({ 
+          title: "Error", 
+          description: data.error || "Could not update favorites.", 
+          variant: "destructive" 
+        });
+      } else {
+        // Success - show confirmation
+        toast({ 
+          title: newLikedState ? "Added to favorites" : "Removed from favorites",
+          description: newLikedState ? "Item added to your favorites." : "Item removed from your favorites."
+        });
+        
+        // If item was removed from favorites and we have a callback, call it
+        if (!newLikedState && onFavoriteRemoved) {
+          onFavoriteRemoved();
+        }
       }
     } catch (error) {
       setIsLiked(!newLikedState);

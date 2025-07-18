@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { foodItems, categories } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { foodItemsTable, categoriesTable } from '@/lib/db/schema'
+import { eq, and } from 'drizzle-orm'
 import { ImageManager, ImageUrls } from '@/lib/image-manager'
 import { getFallbackImageForItem } from '@/data/fallback-images'
 import { CacheManager, CacheKeys, CACHE_TTL } from '@/lib/cache'
@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     const isAuthenticated = !!authHeader
     
     // Query parameters
+    const id = searchParams.get('id')
     const search = searchParams.get('search')
     const category = searchParams.get('category')
     const primaryCategory = searchParams.get('primaryCategory') // veg/non-veg/vegan/trending
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
     const isPublicOnly = searchParams.get('public') === 'true'
 
     // Generate cache key based on all parameters
-    const filterString = [search, category, primaryCategory, cuisineCategory, sortBy, sortOrder, 
+    const filterString = [id, search, category, primaryCategory, cuisineCategory, sortBy, sortOrder, 
       isVegetarian, isNonVegetarian, isVegan, isGlutenFree, isSpicy, isPopular, 
       minPrice, maxPrice, page, limit, isAuthenticated].join(':')
     const cacheKey = CacheKeys.menuItems(filterString)
@@ -55,39 +56,41 @@ export async function GET(request: NextRequest) {
     
     // Build database query with filters for better performance
     let query = db.select({
-      id: foodItems.id,
-      name: foodItems.name,
-      description: foodItems.description,
-      shortDescription: foodItems.shortDescription,
-      price: foodItems.price,
-      originalPrice: foodItems.originalPrice,
-      discount: foodItems.discount,
-      rating: foodItems.rating,
-      reviewCount: foodItems.reviewCount,
-      cookTime: foodItems.cookTime,
-      difficulty: foodItems.difficulty,
-      spiceLevel: foodItems.spiceLevel,
-      servingSize: foodItems.servingSize,
-      calories: foodItems.calories,
-      image: foodItems.image,
-      images: foodItems.images,
-      ingredients: foodItems.ingredients,
-      allergens: foodItems.allergens,
-      nutritionInfo: foodItems.nutritionInfo,
-      tags: foodItems.tags,
-      isVegetarian: foodItems.isVegetarian,
-      isVegan: foodItems.isVegan,
-      isGlutenFree: foodItems.isGlutenFree,
-      isSpicy: foodItems.isSpicy,
-      isPopular: foodItems.isPopular,
-      isAvailable: foodItems.isAvailable,
-      categoryId: foodItems.categoryId,
-      createdAt: foodItems.createdAt,
-      updatedAt: foodItems.updatedAt,
-      categoryName: categories.name
-    }).from(foodItems)
-    .leftJoin(categories, eq(foodItems.categoryId, categories.id))
-    .where(eq(foodItems.isAvailable, true)) // Only available items
+      id: foodItemsTable.id,
+      name: foodItemsTable.name,
+      description: foodItemsTable.description,
+      shortDescription: foodItemsTable.shortDescription,
+      price: foodItemsTable.price,
+      originalPrice: foodItemsTable.originalPrice,
+      discount: foodItemsTable.discount,
+      rating: foodItemsTable.rating,
+      reviewCount: foodItemsTable.reviewCount,
+      cookTime: foodItemsTable.cookTime,
+      difficulty: foodItemsTable.difficulty,
+      spiceLevel: foodItemsTable.spiceLevel,
+      servingSize: foodItemsTable.servingSize,
+      calories: foodItemsTable.calories,
+      image: foodItemsTable.image,
+      images: foodItemsTable.images,
+      ingredients: foodItemsTable.ingredients,
+      allergens: foodItemsTable.allergens,
+      nutritionInfo: foodItemsTable.nutritionInfo,
+      tags: foodItemsTable.tags,
+      isVegetarian: foodItemsTable.isVegetarian,
+      isVegan: foodItemsTable.isVegan,
+      isGlutenFree: foodItemsTable.isGlutenFree,
+      isSpicy: foodItemsTable.isSpicy,
+      isPopular: foodItemsTable.isPopular,
+      isAvailable: foodItemsTable.isAvailable,
+      categoryId: foodItemsTable.categoryId,
+      createdAt: foodItemsTable.createdAt,
+      updatedAt: foodItemsTable.updatedAt,
+      categoryName: categoriesTable.name
+    }).from(foodItemsTable)
+    .leftJoin(categoriesTable, eq(foodItemsTable.categoryId, categoriesTable.id))
+    .where(
+      id ? and(eq(foodItemsTable.id, id), eq(foodItemsTable.isAvailable, true)) : eq(foodItemsTable.isAvailable, true)
+    )
     
     // Get food items from database
     const allFoodItems = await query

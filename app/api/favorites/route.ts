@@ -45,6 +45,8 @@ export async function GET(request: NextRequest) {
       .select()
       .from(favoritesTable)
       .where(eq(favoritesTable.userId, userId));
+    
+    console.log(`Found ${userFavorites.length} favorites for user ${userId}:`, userFavorites);
     return NextResponse.json({ success: true, favorites: userFavorites });
   } catch (error) {
     console.error('Failed to fetch favorites:', error);
@@ -109,7 +111,7 @@ export async function DELETE(request: NextRequest) {
       .delete(favoritesTable)
       .where(and(eq(favoritesTable.userId, userId), eq(favoritesTable.foodItemId, foodItemId)));
 
-    return NextResponse.json({ success: true }, { status: 204 });
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error('Failed to remove from favorites:', error);
     return NextResponse.json({ success: false, error: 'Failed to remove from favorites' }, { status: 500 });

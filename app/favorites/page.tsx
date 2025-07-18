@@ -4,7 +4,7 @@ import { Navigation } from '@/components/Navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Heart, ShoppingCart, Star, Clock, Info, Trash2, Search } from 'lucide-react'
+import { Heart, ShoppingCart, Star, Clock, Info, Search } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -292,17 +292,12 @@ export default function FavoritesPage() {
                   <ProfessionalFoodCard 
                     item={favorite.foodItem}
                     index={index}
+                    isFavorited={true}
+                    onFavoriteRemoved={() => {
+                      // Remove from local state when heart is clicked
+                      setFavorites(prev => prev.filter(f => f.id !== favorite.id))
+                    }}
                   />
-                  
-                  {/* Remove from favorites button */}
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
-                    onClick={() => removeFavorite(favorite.foodItemId)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </motion.div>
               )
             })}
