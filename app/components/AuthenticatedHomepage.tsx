@@ -77,6 +77,7 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
   const [recommendedItems, setRecommendedItems] = useState<RecommendedItem[]>([])
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([])
   const [favoriteCount, setFavoriteCount] = useState(0)
+  const [addingToCart, setAddingToCart] = useState<Set<string>>(new Set())
 
   const cartItems = cart?.items || []
 
@@ -97,6 +98,9 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
       return
     }
 
+    // Set loading state immediately
+    setAddingToCart(prev => new Set(prev).add(item.id))
+
     try {
       const success = await addToCart(item.id, 1)
       
@@ -105,6 +109,12 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
           title: "Added to cart!",
           description: `${item.name} has been added to your cart.`,
         })
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to add item to cart. Please try again.",
+          variant: "destructive"
+        })
       }
     } catch (error) {
       console.error('Error adding to cart:', error)
@@ -112,6 +122,13 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
         title: "Error",
         description: "Failed to add item to cart. Please try again.",
         variant: "destructive"
+      })
+    } finally {
+      // Remove loading state
+      setAddingToCart(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(item.id)
+        return newSet
       })
     }
   }
@@ -129,10 +146,11 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
     try {
       const success = await updateCartItem(itemId, newQuantity)
       if (success) {
-        toast({
-          title: "Cart updated",
-          description: `${itemName} quantity updated`,
-        })
+        // Don't show toast for every quantity change - it's annoying
+        // toast({
+        //   title: "Cart updated",
+        //   description: `${itemName} quantity updated`,
+        // })
       }
     } catch (error) {
       console.error('Error updating cart:', error)
@@ -619,24 +637,26 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
                         {/* Empty space for future actions like info button */}
                       </div>
                       
-                      {getItemQuantity(item.id) > 0 ? (
+                      {getItemQuantity(item.id) > 0 || addingToCart.has(item.id) ? (
                         <div className="flex items-center gap-1 bg-orange-500/10 rounded-lg p-1">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDecrement(item)}
                             className="h-7 w-7 p-0 hover:bg-orange-500/20 text-orange-600"
+                            disabled={addingToCart.has(item.id)}
                           >
                             <Minus className="w-3 h-3" />
                           </Button>
                           <span className="min-w-[1.5rem] text-center font-medium text-orange-600 text-sm">
-                            {getItemQuantity(item.id)}
+                            {getItemQuantity(item.id) || (addingToCart.has(item.id) ? 1 : 0)}
                           </span>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleIncrement(item)}
                             className="h-7 w-7 p-0 hover:bg-orange-500/20 text-orange-600"
+                            disabled={addingToCart.has(item.id)}
                           >
                             <Plus className="w-3 h-3" />
                           </Button>
@@ -646,9 +666,19 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
                           size="sm" 
                           className="gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 border-0 font-medium text-sm h-8"
                           onClick={() => handleAddToCart(item)}
+                          disabled={addingToCart.has(item.id)}
                         >
-                          <Plus className="w-4 h-4" />
-                          Add to Cart
+                          {addingToCart.has(item.id) ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              Adding...
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4" />
+                              Add to Cart
+                            </>
+                          )}
                         </Button>
                       )}
                     </div>

@@ -516,8 +516,17 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
                         onClick={handleAddToCart}
                         disabled={isAdding}
                       >
-                        <ShoppingCart className="w-4 h-4" />
-                        {isAdding ? "Adding..." : `Add to Cart - ${selectedItem.price}`}
+                        {isAdding ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Adding...
+                          </>
+                        ) : (
+                          <>
+                            <ShoppingCart className="w-4 h-4" />
+                            Add to Cart - ₹{selectedItem.price}
+                          </>
+                        )}
                       </Button>
                     </div>
                   )}
@@ -527,24 +536,26 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
             </div>
 
             {/* Quantity Controls or Add Button */}
-            {currentQuantity > 0 ? (
+            {currentQuantity > 0 || isAdding ? (
               <div className="flex items-center gap-1 bg-primary/10 rounded-lg p-1">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleDecrement}
                   className="h-7 w-7 p-0 hover:bg-primary/20"
+                  disabled={isAdding}
                 >
                   <Minus className="w-3 h-3" />
                 </Button>
                 <span className="min-w-[1.5rem] text-center font-medium text-primary text-sm">
-                  {currentQuantity}
+                  {currentQuantity || (isAdding ? 1 : 0)}
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleIncrement}
                   className="h-7 w-7 p-0 hover:bg-primary/20"
+                  disabled={isAdding}
                 >
                   <Plus className="w-3 h-3" />
                 </Button>
@@ -556,8 +567,17 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
                 onClick={handleAddToCart}
                 disabled={isAdding}
               >
-                <ShoppingCart className="w-4 h-4" />
-                {isAdding ? "Adding..." : "Add"}
+                {isAdding ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="w-4 h-4" />
+                    Add
+                  </>
+                )}
               </Button>
             )}
           </div>

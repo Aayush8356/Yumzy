@@ -104,13 +104,108 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [refreshCart])
 
   // Add item to cart
-  const addToCart = useCallback(async (
+  const addToCart: (foodItemId: string, quantity?: number, specialInstructions?: string) => Promise<boolean> = useCallback(async (
     foodItemId: string, 
     quantity: number = 1, 
     specialInstructions: string = ''
   ): Promise<boolean> => {
     if (!isAuthenticated || !user) {
       return false
+    }
+
+    // Check if item already exists in cart
+    const existingItem = cart?.items.find(item => item.foodItem.id === foodItemId)
+    
+    if (existingItem && cart) {
+      // If item exists, optimistically update its quantity
+      const updatedItems = cart.items.map(item => 
+        item.foodItem.id === foodItemId 
+          ? { ...item, quantity: item.quantity + quantity }
+          : item
+      )
+      
+      // Calculate new totals
+      const subtotal = updatedItems.reduce((sum, item) => sum + (Number(item.foodItem.price) * item.quantity), 0)
+      const deliveryFee = subtotal >= 25 ? 0 : 5
+      const tax = subtotal * 0.08
+      const total = subtotal + deliveryFee + tax
+      
+      setCart({
+        ...cart,
+        items: updatedItems,
+        summary: {
+          ...cart.summary,
+          subtotal: Number(subtotal.toFixed(2)),
+          deliveryFee,
+          tax: Number(tax.toFixed(2)),
+          total: Number(total.toFixed(2)),
+          totalQuantity: updatedItems.reduce((sum, item) => sum + item.quantity, 0)
+        }
+      })
+      
+      // Still call API to sync with server
+      try {
+        const response = await fetch('/api/cart', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            foodItemId,
+            quantity,
+            specialInstructions
+          })
+        })
+        
+        if (response.ok) {
+          await refreshCart() // Sync with server
+          return true
+        }
+      } catch (error) {
+        // Revert on error
+        setCart(cart)
+      }
+      return true
+    }
+
+    // Optimistic update - immediately update cart state before API call
+    let optimisticItemData: CartItem | null = null
+    
+    if (cart) {
+      // Create optimistic cart item with proper data structure
+      const optimisticItem: CartItem = {
+        id: `temp-${Date.now()}`, // Temporary ID
+        quantity,
+        specialInstructions,
+        foodItem: {
+          id: foodItemId,
+          name: 'Loading...', // Will be updated after API response
+          price: '0',
+          originalPrice: undefined,
+          image: '',
+          shortDescription: '',
+          isVegetarian: false,
+          isVegan: false,
+          isGlutenFree: false,
+          cookTime: ''
+        }
+      }
+      
+      optimisticItemData = optimisticItem
+      
+      // Update cart state immediately with the new item
+      const updatedItems = [...cart.items, optimisticItem]
+      
+      setCart({
+        ...cart,
+        items: updatedItems,
+        summary: {
+          ...cart.summary,
+          itemCount: cart.summary.itemCount + 1,
+          totalQuantity: cart.summary.totalQuantity + quantity
+        }
+      })
     }
 
     try {
@@ -130,18 +225,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
-          // Optimistic update - update cart state immediately
-          if (cart) {
-            const updatedCart = { ...cart }
-            updatedCart.summary.itemCount = (updatedCart.summary.itemCount || 0) + 1
-            updatedCart.summary.totalQuantity = (updatedCart.summary.totalQuantity || 0) + quantity
-            setCart(updatedCart)
-          }
-          
-          // Refresh cart in background for accuracy
-          setTimeout(() => refreshCart(), 100)
+          // Replace optimistic update with real data
+          await refreshCart()
           return true
         }
+      }
+      
+      // Revert optimistic update on failure
+      if (cart && optimisticItemData) {
+        const revertedItems = cart.items.filter(item => item.id !== optimisticItemData!.id)
+        setCart({
+          ...cart,
+          items: revertedItems,
+          summary: {
+            ...cart.summary,
+            itemCount: cart.summary.itemCount - 1,
+            totalQuantity: cart.summary.totalQuantity - quantity
+          }
+        })
       }
       
       // Handle errors silently - let the component handle user feedback
@@ -154,9 +255,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
       return false
     } catch (error) {
+      // Revert optimistic update on error
+      if (cart && optimisticItemData) {
+        const revertedItems = cart.items.filter(item => item.id !== optimisticItemData!.id)
+        setCart({
+          ...cart,
+          items: revertedItems,
+          summary: {
+            ...cart.summary,
+            itemCount: cart.summary.itemCount - 1,
+            totalQuantity: cart.summary.totalQuantity - quantity
+          }
+        })
+      }
       return false
     }
-  }, [isAuthenticated, user, refreshCart])
+  }, [isAuthenticated, user, cart, refreshCart])
 
   // Update cart item
   const updateCartItem = useCallback(async (
