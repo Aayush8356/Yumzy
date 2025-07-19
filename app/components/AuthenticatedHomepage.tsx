@@ -20,6 +20,7 @@ import {
   Flame,
   RefreshCw,
   Plus,
+  Minus,
   Sparkles,
   TrendingUp
 } from 'lucide-react'
@@ -65,7 +66,7 @@ interface AuthenticatedHomepageProps {
 
 export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomepageProps) {
   const { user } = useAuth()
-  const { cart, addToCart } = useCart()
+  const { cart, addToCart, updateCartItem, removeFromCart, getItemQuantity } = useCart()
   const { toast } = useToast()
   
   const [loading, setLoading] = useState(true)
@@ -107,6 +108,78 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
       toast({
         title: "Error",
         description: "Failed to add item to cart. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleQuantityChange = async (itemId: string, newQuantity: number, itemName: string) => {
+    if (!user?.id) {
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to modify cart.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      const success = await updateCartItem(itemId, newQuantity)
+      if (success) {
+        toast({
+          title: "Cart updated",
+          description: `${itemName} quantity updated`,
+        })
+      }
+    } catch (error) {
+      console.error('Error updating cart:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update cart. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleIncrement = (item: RecommendedItem) => {
+    const currentQuantity = getItemQuantity(item.id)
+    handleQuantityChange(item.id, currentQuantity + 1, item.name)
+  }
+
+  const handleDecrement = (item: RecommendedItem) => {
+    const currentQuantity = getItemQuantity(item.id)
+    if (currentQuantity > 1) {
+      handleQuantityChange(item.id, currentQuantity - 1, item.name)
+    } else if (currentQuantity === 1) {
+      // Remove item entirely when quantity would go below 1
+      handleRemoveFromCart(item)
+    }
+  }
+
+  const handleRemoveFromCart = async (item: RecommendedItem) => {
+    try {
+      // Find the cart item to get its cart ID
+      const cartItem = cart?.items.find(cartItem => cartItem.foodItem.id === item.id);
+      if (cartItem) {
+        const success = await removeFromCart(cartItem.id);
+        if (success) {
+          toast({
+            title: "Removed from cart",
+            description: `${item.name} has been removed from your cart`,
+          });
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Item not found in cart.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error removing from cart:', error)
+      toast({
+        title: "Error", 
+        description: "Failed to remove item from cart.",
         variant: "destructive"
       })
     }
@@ -531,14 +604,45 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
                       <p className="text-lg font-bold text-orange-600">₹{item.price}</p>
                     </div>
                     
-                    <Button 
-                      size="sm" 
-                      className="w-full gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 border-0 font-medium text-sm h-9"
-                      onClick={() => handleAddToCart(item)}
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add to Cart
-                    </Button>
+                    {/* Quantity Controls or Add Button */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {/* Empty space for future actions like info button */}
+                      </div>
+                      
+                      {getItemQuantity(item.id) > 0 ? (
+                        <div className="flex items-center gap-1 bg-orange-500/10 rounded-lg p-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDecrement(item)}
+                            className="h-7 w-7 p-0 hover:bg-orange-500/20 text-orange-600"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                          <span className="min-w-[1.5rem] text-center font-medium text-orange-600 text-sm">
+                            {getItemQuantity(item.id)}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleIncrement(item)}
+                            className="h-7 w-7 p-0 hover:bg-orange-500/20 text-orange-600"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button 
+                          size="sm" 
+                          className="gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 border-0 font-medium text-sm h-8"
+                          onClick={() => handleAddToCart(item)}
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add to Cart
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>

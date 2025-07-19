@@ -257,7 +257,7 @@ export async function GET(request: NextRequest) {
       rating: parseFloat(item.rating || '4.5'),
       reviewCount: item.reviewCount || 0,
       cookTime: item.cookTime,
-      image: item.image || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=300&fit=crop',
+      image: item.image || 'https://images.unsplash.com/photo-1559847844-d721426d6924?w=400&h=300&fit=crop',
       isVegetarian: item.isVegetarian,
       isSpicy: item.isSpicy,
       category: item.categoryName || 'General'

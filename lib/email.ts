@@ -577,6 +577,374 @@ Need help? Contact us at support@yumzy.com
       variables: { name }
     })
   }
+
+  // Order confirmation email
+  async sendOrderConfirmation(
+    email: string, 
+    name: string, 
+    orderData: {
+      orderId: string
+      items: Array<{ name: string; quantity: number; price: string }>
+      total: string
+      estimatedDelivery: string
+      address: string
+    }
+  ): Promise<boolean> {
+    const trackingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/track/${orderData.orderId}`
+    const itemsList = orderData.items.map(item => 
+      `${item.quantity}x ${item.name} - ${item.price}`
+    ).join('\n')
+    
+    const template: EmailTemplate = {
+      subject: `Order Confirmed #${orderData.orderId.slice(0, 8)} - Yumzy`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Order Confirmed</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f4f4f4;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #e11d48; margin: 0;">🍕 Yumzy</h1>
+              <p style="color: #666; margin: 5px 0;">Delicious Food Delivered</p>
+            </div>
+            
+            <div style="background-color: #dcfce7; border: 1px solid #16a34a; padding: 20px; border-radius: 8px; margin-bottom: 30px; text-align: center;">
+              <h2 style="color: #15803d; margin: 0 0 10px 0;">✅ Order Confirmed!</h2>
+              <p style="color: #15803d; margin: 0;">Your delicious meal is being prepared</p>
+            </div>
+            
+            <h3 style="color: #333; margin-bottom: 15px;">Hi {{name}},</h3>
+            
+            <p style="color: #555; margin-bottom: 25px;">
+              Thank you for your order! We've received your payment and our kitchen is already preparing your delicious meal.
+            </p>
+            
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0;">
+              <h3 style="color: #333; margin-top: 0;">Order Details</h3>
+              <p><strong>Order ID:</strong> #{{orderId}}</p>
+              <p><strong>Estimated Delivery:</strong> {{estimatedDelivery}}</p>
+              <p><strong>Delivery Address:</strong> {{address}}</p>
+              
+              <div style="margin: 20px 0;">
+                <h4 style="color: #333; margin-bottom: 10px;">Items Ordered:</h4>
+                <div style="background-color: white; padding: 15px; border-radius: 5px; font-family: monospace;">
+                  {{itemsList}}
+                </div>
+              </div>
+              
+              <p style="font-size: 18px; color: #e11d48; font-weight: bold; text-align: right; margin: 20px 0 0 0;">
+                Total: {{total}}
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="{{trackingUrl}}" style="background-color: #e11d48; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                Track Your Order
+              </a>
+            </div>
+            
+            <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; color: #666; font-size: 14px;">
+              <p><strong>What happens next?</strong></p>
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Our chefs are preparing your meal with fresh ingredients</li>
+                <li>You'll get an update when your order is out for delivery</li>
+                <li>Track your order in real-time using the link above</li>
+                <li>Enjoy your delicious meal!</li>
+              </ul>
+              
+              <p style="margin-top: 20px;">
+                Questions? Contact us at <a href="mailto:support@yumzy.com" style="color: #e11d48;">support@yumzy.com</a>
+              </p>
+              
+              <p style="margin-top: 20px; text-align: center; color: #999;">
+                © 2024 Yumzy. All rights reserved.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Order Confirmed #{{orderId}} - Yumzy
+
+Hi {{name}},
+
+Thank you for your order! We've received your payment and our kitchen is already preparing your delicious meal.
+
+Order Details:
+Order ID: #{{orderId}}
+Estimated Delivery: {{estimatedDelivery}}
+Delivery Address: {{address}}
+
+Items Ordered:
+{{itemsList}}
+
+Total: {{total}}
+
+Track your order: {{trackingUrl}}
+
+What happens next?
+- Our chefs are preparing your meal with fresh ingredients
+- You'll get an update when your order is out for delivery
+- Track your order in real-time using the link above
+- Enjoy your delicious meal!
+
+Questions? Contact us at support@yumzy.com
+
+© 2024 Yumzy. All rights reserved.
+      `.trim()
+    }
+
+    return this.sendEmail({
+      to: email,
+      template,
+      variables: { 
+        name, 
+        orderId: orderData.orderId.slice(0, 8),
+        estimatedDelivery: orderData.estimatedDelivery,
+        address: orderData.address,
+        itemsList,
+        total: orderData.total,
+        trackingUrl
+      }
+    })
+  }
+
+  // Out for delivery email
+  async sendOutForDelivery(
+    email: string, 
+    name: string, 
+    orderData: {
+      orderId: string
+      estimatedArrival: string
+      driverName?: string
+      driverPhone?: string
+    }
+  ): Promise<boolean> {
+    const trackingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/track/${orderData.orderId}`
+    
+    const template: EmailTemplate = {
+      subject: `Your order is on the way! #${orderData.orderId.slice(0, 8)} - Yumzy`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Order Out for Delivery</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f4f4f4;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #e11d48; margin: 0;">🍕 Yumzy</h1>
+              <p style="color: #666; margin: 5px 0;">Delicious Food Delivered</p>
+            </div>
+            
+            <div style="background-color: #dbeafe; border: 1px solid #3b82f6; padding: 20px; border-radius: 8px; margin-bottom: 30px; text-align: center;">
+              <h2 style="color: #1d4ed8; margin: 0 0 10px 0;">🚗 On the Way!</h2>
+              <p style="color: #1d4ed8; margin: 0;">Your order is out for delivery</p>
+            </div>
+            
+            <h3 style="color: #333; margin-bottom: 15px;">Hi {{name}},</h3>
+            
+            <p style="color: #555; margin-bottom: 25px;">
+              Great news! Your delicious meal has been prepared and is now on its way to you. Get ready to enjoy your food!
+            </p>
+            
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0;">
+              <h3 style="color: #333; margin-top: 0;">Delivery Information</h3>
+              <p><strong>Order ID:</strong> #{{orderId}}</p>
+              <p><strong>Estimated Arrival:</strong> {{estimatedArrival}}</p>
+              ${orderData.driverName ? `<p><strong>Driver:</strong> {{driverName}}</p>` : ''}
+              ${orderData.driverPhone ? `<p><strong>Driver Contact:</strong> {{driverPhone}}</p>` : ''}
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="{{trackingUrl}}" style="background-color: #3b82f6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                Track Live Location
+              </a>
+            </div>
+            
+            <div style="background-color: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin: 25px 0;">
+              <p style="margin: 0; color: #856404;"><strong>💡 Tip:</strong> Please keep your phone nearby in case the driver needs to contact you for delivery instructions.</p>
+            </div>
+            
+            <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; color: #666; font-size: 14px;">
+              <p style="margin-top: 20px;">
+                Questions about your delivery? Contact us at <a href="mailto:support@yumzy.com" style="color: #e11d48;">support@yumzy.com</a>
+              </p>
+              
+              <p style="margin-top: 20px; text-align: center; color: #999;">
+                © 2024 Yumzy. All rights reserved.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Your order is on the way! #{{orderId}} - Yumzy
+
+Hi {{name}},
+
+Great news! Your delicious meal has been prepared and is now on its way to you. Get ready to enjoy your food!
+
+Delivery Information:
+Order ID: #{{orderId}}
+Estimated Arrival: {{estimatedArrival}}
+${orderData.driverName ? 'Driver: {{driverName}}' : ''}
+${orderData.driverPhone ? 'Driver Contact: {{driverPhone}}' : ''}
+
+Track your order: {{trackingUrl}}
+
+💡 Tip: Please keep your phone nearby in case the driver needs to contact you for delivery instructions.
+
+Questions about your delivery? Contact us at support@yumzy.com
+
+© 2024 Yumzy. All rights reserved.
+      `.trim()
+    }
+
+    return this.sendEmail({
+      to: email,
+      template,
+      variables: { 
+        name, 
+        orderId: orderData.orderId.slice(0, 8),
+        estimatedArrival: orderData.estimatedArrival,
+        driverName: orderData.driverName || '',
+        driverPhone: orderData.driverPhone || '',
+        trackingUrl
+      }
+    })
+  }
+
+  // Order delivered email
+  async sendOrderDelivered(
+    email: string, 
+    name: string, 
+    orderData: {
+      orderId: string
+      total: string
+      items: Array<{ name: string; quantity: number }>
+    }
+  ): Promise<boolean> {
+    const reorderUrl = `${process.env.NEXT_PUBLIC_APP_URL}/orders/${orderData.orderId}`
+    const reviewUrl = `${process.env.NEXT_PUBLIC_APP_URL}/orders/${orderData.orderId}#review`
+    const menuUrl = `${process.env.NEXT_PUBLIC_APP_URL}/menu`
+    
+    const template: EmailTemplate = {
+      subject: `Order Delivered! 🎉 #${orderData.orderId.slice(0, 8)} - Yumzy`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Order Delivered</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f4f4f4;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #e11d48; margin: 0;">🍕 Yumzy</h1>
+              <p style="color: #666; margin: 5px 0;">Delicious Food Delivered</p>
+            </div>
+            
+            <div style="background-color: #dcfce7; border: 1px solid #16a34a; padding: 20px; border-radius: 8px; margin-bottom: 30px; text-align: center;">
+              <h2 style="color: #15803d; margin: 0 0 10px 0;">🎉 Order Delivered!</h2>
+              <p style="color: #15803d; margin: 0; font-size: 18px;">Enjoy your delicious meal!</p>
+            </div>
+            
+            <h3 style="color: #333; margin-bottom: 15px;">Hi {{name}},</h3>
+            
+            <p style="color: #555; margin-bottom: 25px;">
+              Your order has been successfully delivered! We hope you enjoy every bite of your delicious meal. Thank you for choosing Yumzy!
+            </p>
+            
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0;">
+              <h3 style="color: #333; margin-top: 0;">Order Summary</h3>
+              <p><strong>Order ID:</strong> #{{orderId}}</p>
+              <p><strong>Total:</strong> {{total}}</p>
+              <p><strong>Items:</strong> {{itemCount}} items delivered</p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="{{reorderUrl}}" style="background-color: #e11d48; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin: 0 10px 10px 0;">
+                Reorder This Meal
+              </a>
+              <a href="{{reviewUrl}}" style="background-color: #3b82f6; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin: 0 10px 10px 0;">
+                Rate Your Experience
+              </a>
+            </div>
+            
+            <div style="background-color: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 8px; margin: 25px 0; text-align: center;">
+              <p style="margin: 0; color: #92400e;"><strong>🌟 Love your meal?</strong> Help others discover great food by leaving a review!</p>
+            </div>
+            
+            <div style="text-align: center; margin: 25px 0;">
+              <a href="{{menuUrl}}" style="background-color: #10b981; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                Browse Menu for Next Order
+              </a>
+            </div>
+            
+            <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; color: #666; font-size: 14px;">
+              <p><strong>Thank you for choosing Yumzy!</strong></p>
+              <p>Your satisfaction is our priority. If you have any feedback or issues with your order, please don't hesitate to contact us.</p>
+              
+              <p style="margin-top: 20px;">
+                Contact us: <a href="mailto:support@yumzy.com" style="color: #e11d48;">support@yumzy.com</a>
+              </p>
+              
+              <p style="margin-top: 20px; text-align: center; color: #999;">
+                © 2024 Yumzy. All rights reserved.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Order Delivered! 🎉 #{{orderId}} - Yumzy
+
+Hi {{name}},
+
+Your order has been successfully delivered! We hope you enjoy every bite of your delicious meal. Thank you for choosing Yumzy!
+
+Order Summary:
+Order ID: #{{orderId}}
+Total: {{total}}
+Items: {{itemCount}} items delivered
+
+🌟 Love your meal? Help others discover great food by leaving a review!
+
+Reorder: {{reorderUrl}}
+Rate your experience: {{reviewUrl}}
+Browse menu: {{menuUrl}}
+
+Thank you for choosing Yumzy! Your satisfaction is our priority. If you have any feedback or issues with your order, please contact us at support@yumzy.com
+
+© 2024 Yumzy. All rights reserved.
+      `.trim()
+    }
+
+    return this.sendEmail({
+      to: email,
+      template,
+      variables: { 
+        name, 
+        orderId: orderData.orderId.slice(0, 8),
+        total: orderData.total,
+        itemCount: orderData.items.length.toString(),
+        reorderUrl,
+        reviewUrl,
+        menuUrl
+      }
+    })
+  }
 }
 
 // Global email service instance

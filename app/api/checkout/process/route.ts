@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm'
 import PaymentSimulator from '@/lib/payment-simulator'
 import { OrderStatusManager } from '@/lib/order-status-manager'
 import { ErrorHandler } from '@/lib/error-handler'
+import { emailService } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -136,6 +137,40 @@ export async function POST(request: NextRequest) {
       }))
 
       await db.insert(orderItemsTable).values(orderItemsData)
+
+      // Send order confirmation email to verified users
+      try {
+        const [user] = await db
+          .select()
+          .from(usersTable)
+          .where(eq(usersTable.id, userId))
+        
+        if (user && user.email && user.isVerified) {
+          const orderItems = cartItemsWithDetails.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: `₹${item.price.toFixed(1)}`
+          }))
+          
+          await emailService.sendOrderConfirmation(user.email, user.name, {
+            orderId: newOrder.id,
+            items: orderItems,
+            total: `₹${totalAmount.toFixed(1)}`,
+            estimatedDelivery: estimatedDeliveryTime.toLocaleString('en-US', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              month: 'short',
+              day: 'numeric'
+            }),
+            address: body.customerDetails.address
+          })
+          console.log(`📧 Order confirmation email sent to ${user.email}`)
+        } else {
+          console.log(`📧 Skipping order confirmation email: user email not verified or not found`)
+        }
+      } catch (emailError) {
+        console.error(`Error sending order confirmation email:`, emailError)
+      }
 
       // Send initial order confirmation notification
       setTimeout(async () => {

@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
-import { ordersTable, orderItemsTable } from '@/lib/db/schema'
+import { ordersTable, orderItemsTable, foodItemsTable, usersTable } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { emailService } from '@/lib/email'
 
 export interface OrderStatusTimeline {
   status: string
@@ -372,6 +373,62 @@ export class OrderStatusManager {
         } catch (fallbackError) {
           console.error('Failed to store fallback update:', fallbackError)
         }
+      }
+
+      // Send email notifications for specific status changes
+      try {
+        if (['out_for_delivery', 'delivered'].includes(newStatus)) {
+          // Get user details for email
+          const [user] = await db
+            .select()
+            .from(usersTable)
+            .where(eq(usersTable.id, order.userId))
+          
+          if (user && user.email && user.isVerified) {
+            if (newStatus === 'out_for_delivery') {
+              // Send out for delivery email
+              const estimatedArrival = new Date(Date.now() + 20 * 60 * 1000) // 20 minutes from now
+              await emailService.sendOutForDelivery(user.email, user.name, {
+                orderId,
+                estimatedArrival: estimatedArrival.toLocaleTimeString('en-US', { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })
+              })
+              console.log(`📧 Out for delivery email sent to ${user.email}`)
+              
+            } else if (newStatus === 'delivered') {
+              // Get order items for delivery email
+              const orderItems = await db
+                .select({
+                  foodItem: {
+                    name: foodItemsTable.name
+                  },
+                  quantity: orderItemsTable.quantity
+                })
+                .from(orderItemsTable)
+                .leftJoin(foodItemsTable, eq(orderItemsTable.foodItemId, foodItemsTable.id))
+                .where(eq(orderItemsTable.orderId, orderId))
+              
+              const items = orderItems.map(item => ({
+                name: item.foodItem?.name || 'Unknown Item',
+                quantity: item.quantity
+              }))
+              
+              // Send order delivered email
+              await emailService.sendOrderDelivered(user.email, user.name, {
+                orderId,
+                total: `₹${parseFloat(order.total).toFixed(1)}`,
+                items
+              })
+              console.log(`📧 Order delivered email sent to ${user.email}`)
+            }
+          } else {
+            console.log(`📧 Skipping email for order ${orderId}: user email not verified or not found`)
+          }
+        }
+      } catch (emailError) {
+        console.error(`Error sending email notification for order ${orderId}:`, emailError)
       }
 
       console.log(`🔔 Order ${orderId} status notification processing completed: ${newStatus}`)

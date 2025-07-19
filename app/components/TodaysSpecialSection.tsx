@@ -35,7 +35,7 @@ const todaysSpecials = [
     rating: 5.0,
     reviews: 89,
     cookTime: '35 min',
-    image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=300&fit=crop',
+    image: 'https://images.unsplash.com/photo-1559847844-d721426d6924?w=400&h=300&fit=crop',
     isVegetarian: false,
     isChefSpecial: true,
     difficulty: 'Premium'

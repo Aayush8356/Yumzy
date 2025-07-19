@@ -55,9 +55,13 @@ export async function POST(request: NextRequest) {
 // GET /api/realtime - Get pending updates (polling fallback)
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url || '')
+    // Use NextRequest's searchParams directly for better reliability
+    const { searchParams } = request.nextUrl
+    
     const userId = searchParams.get('userId')
     const since = searchParams.get('since') // ISO timestamp
+    
+    console.log(`Realtime GET: userId=${userId}, since=${since}`)
     
     if (!userId) {
       return NextResponse.json(
@@ -68,6 +72,8 @@ export async function GET(request: NextRequest) {
 
     // Get updates since timestamp
     const updates = await getUpdatesForUser(userId, since || undefined)
+    
+    console.log(`Realtime GET: Found ${updates.length} updates for user ${userId}`)
 
     return NextResponse.json({
       success: true,
@@ -76,6 +82,10 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Get updates error:', error)
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    })
     return NextResponse.json(
       { success: false, error: 'Failed to get updates' },
       { status: 500 }
@@ -112,19 +122,46 @@ async function broadcastUpdate(update: any) {
 }
 
 async function getUpdatesForUser(userId: string, since?: string) {
-  const key = `updates:${userId}`
-  
-  if (!(global as any).pendingUpdates || !(global as any).pendingUpdates.has(key)) {
+  try {
+    const key = `updates:${userId}`
+    
+    if (!(global as any).pendingUpdates || !(global as any).pendingUpdates.has(key)) {
+      console.log(`No pending updates found for user ${userId}`)
+      return []
+    }
+    
+    let updates = (global as any).pendingUpdates.get(key) || []
+    console.log(`Found ${updates.length} total updates for user ${userId}`)
+    
+    // Filter by timestamp if provided
+    if (since) {
+      try {
+        const sinceDate = new Date(since)
+        if (isNaN(sinceDate.getTime())) {
+          console.error(`Invalid date format: ${since}`)
+          // Return all updates if date is invalid
+          return updates
+        }
+        
+        const originalCount = updates.length
+        updates = updates.filter((update: any) => {
+          if (!update.timestamp) {
+            return true // Include updates without timestamp
+          }
+          const updateDate = new Date(update.timestamp)
+          return updateDate > sinceDate
+        })
+        console.log(`Filtered from ${originalCount} to ${updates.length} updates since ${since}`)
+      } catch (dateError) {
+        console.error(`Error filtering by date: ${dateError}`)
+        // Return all updates if filtering fails
+        return updates
+      }
+    }
+    
+    return updates
+  } catch (error) {
+    console.error(`Error in getUpdatesForUser: ${error}`)
     return []
   }
-  
-  let updates = (global as any).pendingUpdates.get(key) || []
-  
-  // Filter by timestamp if provided
-  if (since) {
-    const sinceDate = new Date(since)
-    updates = updates.filter((update: any) => new Date(update.timestamp) > sinceDate)
-  }
-  
-  return updates
 }
