@@ -266,12 +266,14 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
     if (newQuantity > 0) {
       try {
         const success = await updateCartItem(item.id, newQuantity)
-        if (success) {
+        if (!success) {
           toast({
-            title: "Cart updated",
-            description: `${item.name} quantity updated`,
-          })
+            title: "Error",
+            description: "Failed to update cart. Please try again.",
+            variant: "destructive"
+          });
         }
+        // Remove success toast - it's annoying for every quantity change
       } catch (error) {
         console.error('Error updating cart:', error);
         toast({
@@ -543,7 +545,6 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
                   size="sm"
                   onClick={handleDecrement}
                   className="h-7 w-7 p-0 hover:bg-primary/20"
-                  disabled={isAdding}
                 >
                   <Minus className="w-3 h-3" />
                 </Button>
@@ -555,7 +556,6 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
                   size="sm"
                   onClick={handleIncrement}
                   className="h-7 w-7 p-0 hover:bg-primary/20"
-                  disabled={isAdding}
                 >
                   <Plus className="w-3 h-3" />
                 </Button>

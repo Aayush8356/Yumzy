@@ -644,7 +644,6 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
                             size="sm"
                             onClick={() => handleDecrement(item)}
                             className="h-7 w-7 p-0 hover:bg-orange-500/20 text-orange-600"
-                            disabled={addingToCart.has(item.id)}
                           >
                             <Minus className="w-3 h-3" />
                           </Button>
@@ -656,7 +655,6 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
                             size="sm"
                             onClick={() => handleIncrement(item)}
                             className="h-7 w-7 p-0 hover:bg-orange-500/20 text-orange-600"
-                            disabled={addingToCart.has(item.id)}
                           >
                             <Plus className="w-3 h-3" />
                           </Button>

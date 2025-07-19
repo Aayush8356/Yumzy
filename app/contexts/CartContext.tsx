@@ -54,7 +54,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<Cart | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, extendSession } = useAuth()
   const { toast } = useToast()
 
   // Fetch cart data
@@ -225,6 +225,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
+          // Extend session on successful cart operation (shows active usage)
+          extendSession()
           // Replace optimistic update with real data
           await refreshCart()
           return true
@@ -339,6 +341,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json()
 
       if (response.ok) {
+        // Extend session on successful cart operation
+        extendSession()
         // Sync with server to ensure accuracy
         await refreshCart()
         return true

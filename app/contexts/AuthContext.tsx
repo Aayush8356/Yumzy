@@ -10,6 +10,7 @@ interface AuthContextType extends AuthState {
   updateProfile: (data: Partial<User>) => Promise<boolean>
   resetPassword: (email: string) => Promise<boolean>
   checkAdminStatus: (email: string) => Promise<boolean>
+  extendSession: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -58,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const authToken = localStorage.getItem('authToken')
         const authExpiry = localStorage.getItem('authExpiry')
         
-        // Check if session has expired
+        // Check if session has expired - be more generous with timing
         if (authExpiry && Date.now() > parseInt(authExpiry)) {
           console.log('🔒 Session expired, logging out')
           logout()
@@ -72,73 +73,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Immediately set user from localStorage to reduce flash
           dispatch({ type: 'SET_USER', payload: user })
           
-          // Then validate user still exists in database (with retry for admin users)
-          let validationAttempts = user.role === 'admin' ? 3 : 1
+          // Validate user still exists in database (with graceful handling for network issues)
           let validationSuccess = false
+          let shouldLogout = false
           
-          for (let attempt = 1; attempt <= validationAttempts; attempt++) {
-            try {
-              const response = await fetch('/api/auth/validate', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ userId: user.id }),
-                cache: 'no-cache'
-              })
-              
-              const data = await response.json()
-              
-              if (response.ok && data.success && data.userExists) {
-                // User is valid, update with fresh data from database
-                const updatedUser: User = {
-                  id: data.user.id,
-                  name: data.user.name,
-                  email: data.user.email,
-                  phone: data.user.phone || '+1-555-0000',
-                  avatar: data.user.avatar || user.avatar, // Keep generated avatar if no DB avatar
-                  role: data.user.role,
-                  verified: data.user.isVerified,
-                  createdAt: new Date(data.user.createdAt),
-                  preferences: data.user.preferences || {
-                    notifications: true,
-                    newsletter: true,
-                    dietaryRestrictions: []
-                  }
+          try {
+            const response = await fetch('/api/auth/validate', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ userId: user.id }),
+              cache: 'no-cache'
+            })
+            
+            const data = await response.json()
+            
+            if (response.ok && data.success && data.userExists) {
+              // User is valid, update with fresh data from database
+              const updatedUser: User = {
+                id: data.user.id,
+                name: data.user.name,
+                email: data.user.email,
+                phone: data.user.phone || '+1-555-0000',
+                avatar: data.user.avatar || user.avatar, // Keep generated avatar if no DB avatar
+                role: data.user.role,
+                verified: data.user.isVerified,
+                createdAt: new Date(data.user.createdAt),
+                preferences: data.user.preferences || {
+                  notifications: true,
+                  newsletter: true,
+                  dietaryRestrictions: []
                 }
-                
-                // Update localStorage with fresh data
-                localStorage.setItem('user', JSON.stringify(updatedUser))
-                dispatch({ type: 'SET_USER', payload: updatedUser })
-                validationSuccess = true
-                break
-              } else if (attempt < validationAttempts) {
-                // Retry for admin users after a short delay
-                console.log(`🔄 Auth validation attempt ${attempt} failed, retrying...`)
-                await new Promise(resolve => setTimeout(resolve, 500))
               }
-            } catch (fetchError) {
-              console.error(`Auth validation attempt ${attempt} error:`, fetchError)
-              if (attempt < validationAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 1000))
-              }
+              
+              // Update localStorage with fresh data
+              localStorage.setItem('user', JSON.stringify(updatedUser))
+              dispatch({ type: 'SET_USER', payload: updatedUser })
+              validationSuccess = true
+            } else if (response.ok && data.success && !data.userExists) {
+              // User explicitly doesn't exist in database - this is a real logout case
+              console.log('🚨 User no longer exists in database, logging out')
+              shouldLogout = true
+            } else {
+              // API returned error - could be server issue, treat as temporary problem
+              console.warn('⚠️ Auth validation API error, maintaining session (could be temporary server issue)')
+              dispatch({ type: 'SET_USER', payload: user })
+              validationSuccess = true
             }
+          } catch (fetchError) {
+            // Network error - very common, don't logout for this
+            console.warn('⚠️ Auth validation network error, maintaining session:', fetchError)
+            dispatch({ type: 'SET_USER', payload: user })
+            validationSuccess = true
           }
           
-          if (!validationSuccess) {
-            // For admin users, if validation fails multiple times, keep them logged in 
-            // but show a warning instead of logging out (network issues are common)
-            if (user.role === 'admin') {
-              console.warn('⚠️ Admin user validation failed multiple times, keeping session active')
-              dispatch({ type: 'SET_USER', payload: user })
-            } else {
-              // User no longer exists in database, clear local data
-              console.log('🚨 User validation failed, clearing local authentication data')
-              localStorage.removeItem('user')
-              localStorage.removeItem('authToken')
-              localStorage.removeItem('cart')
-              dispatch({ type: 'LOGOUT' })
-            }
+          if (shouldLogout) {
+            // Only logout if we explicitly confirmed user doesn't exist
+            console.log('🚨 Confirmed user validation failed, clearing local authentication data')
+            localStorage.removeItem('user')
+            localStorage.removeItem('authToken')
+            localStorage.removeItem('authExpiry')
+            localStorage.removeItem('cart')
+            dispatch({ type: 'LOGOUT' })
           }
         } else {
           dispatch({ type: 'SET_LOADING', payload: false })
@@ -146,24 +143,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('Error loading/validating user:', error)
         
-        // Check if we have a saved user - if it's an admin, be more lenient
+        // Check if we have a saved user and valid expiry - if so, keep session active
         const savedUser = localStorage.getItem('user')
-        if (savedUser) {
+        const authExpiry = localStorage.getItem('authExpiry')
+        
+        if (savedUser && authExpiry) {
           try {
             const user = JSON.parse(savedUser)
-            if (user.role === 'admin') {
-              console.warn('⚠️ Auth error for admin user, maintaining session due to potential network issues')
+            const expiryTime = parseInt(authExpiry)
+            
+            // If session hasn't expired, keep user logged in despite errors
+            if (Date.now() < expiryTime) {
+              console.warn('⚠️ Auth validation error, but session still valid - maintaining login')
               dispatch({ type: 'SET_USER', payload: user })
               return
             }
           } catch (parseError) {
-            console.error('Error parsing saved user:', parseError)
+            console.error('Error parsing saved user data:', parseError)
           }
         }
         
-        // On error for non-admin users, clear potentially corrupted auth data
+        // Only clear auth data if session is actually expired or data is corrupted
+        console.log('🚨 Session expired or corrupted, clearing auth data')
         localStorage.removeItem('user')
         localStorage.removeItem('authToken')
+        localStorage.removeItem('authExpiry')
         localStorage.removeItem('cart')
         dispatch({ type: 'LOGOUT' })
       }
@@ -238,8 +242,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
         
-        // Store user data and token with expiry (24 hours)
-        const expiryTime = Date.now() + (24 * 60 * 60 * 1000) // 24 hours from now
+        // Store user data and token with expiry (7 days for better UX)
+        const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days from now
         localStorage.setItem('user', JSON.stringify(user))
         localStorage.setItem('authToken', data.token || 'authenticated')
         localStorage.setItem('authExpiry', expiryTime.toString())
@@ -370,6 +374,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const extendSession = () => {
+    // Extend session by 7 days when user is actively using the app
+    const currentExpiry = localStorage.getItem('authExpiry')
+    if (currentExpiry && state.user) {
+      const newExpiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days from now
+      localStorage.setItem('authExpiry', newExpiryTime.toString())
+    }
+  }
+
   const value: AuthContextType = {
     ...state,
     login,
@@ -377,7 +390,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     updateProfile,
     resetPassword,
-    checkAdminStatus
+    checkAdminStatus,
+    extendSession
   }
 
   return (
