@@ -38,13 +38,37 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // Fetch fresh order data after status updates
+    // Fetch fresh order data after status updates with order items
     const updatedRecentOrders = await db
       .select()
       .from(ordersTable)
       .where(eq(ordersTable.userId, userId))
       .orderBy(desc(ordersTable.createdAt))
       .limit(3);
+
+    // Fetch order items for each recent order with food item details
+    const ordersWithItems = await Promise.all(
+      updatedRecentOrders.map(async (order) => {
+        const orderItems = await db
+          .select({
+            itemName: foodItemsTable.name,
+            quantity: orderItemsTable.quantity,
+            price: orderItemsTable.price
+          })
+          .from(orderItemsTable)
+          .leftJoin(foodItemsTable, eq(orderItemsTable.foodItemId, foodItemsTable.id))
+          .where(eq(orderItemsTable.orderId, order.id));
+
+        return {
+          ...order,
+          items: orderItems,
+          itemsCount: orderItems.length,
+          itemsSummary: orderItems.length > 2 
+            ? `${orderItems.slice(0, 2).map(item => item.itemName).join(', ')} + ${orderItems.length - 2} more`
+            : orderItems.map(item => item.itemName).join(', ')
+        };
+      })
+    );
 
     // Fetch favorite items
     const favorites = await db
@@ -71,7 +95,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         quickStats,
-        recentOrders: updatedRecentOrders,
+        recentOrders: ordersWithItems,
         favorites,
       },
     });

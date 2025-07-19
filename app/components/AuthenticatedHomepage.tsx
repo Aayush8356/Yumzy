@@ -54,10 +54,13 @@ interface RecommendedItem {
 
 interface RecentOrder {
   id: string
-  items: string[]
+  items: any[]
+  itemsSummary: string
+  itemsCount: number
   total: number
   status: string
   createdAt: string
+  deliveryAddress: string
 }
 
 interface AuthenticatedHomepageProps {
@@ -256,9 +259,9 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
         return
       }
 
-      // Fetch real user orders
+      // Fetch dashboard data with enhanced order details
       const timestamp = new Date().getTime()
-      const ordersResponse = await fetch(`/api/orders?userId=${user.id}&_t=${timestamp}`, {
+      const dashboardResponse = await fetch(`/api/dashboard?userId=${user.id}&_t=${timestamp}`, {
         cache: 'no-cache',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -267,9 +270,9 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
         },
       })
       
-      if (ordersResponse.ok) {
-        const ordersData = await ordersResponse.json()
-        const allOrders = ordersData.orders || []
+      if (dashboardResponse.ok) {
+        const dashboardData = await dashboardResponse.json()
+        const allOrders = dashboardData.data?.recentOrders || []
         
         // Find active order (pending, confirmed, preparing, out_for_delivery)
         const activeOrders = allOrders.filter((order: any) => 
@@ -283,7 +286,7 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
           const latestActiveOrder = activeOrders[0]
           setActiveOrder({
             id: latestActiveOrder.id,
-            items: latestActiveOrder.items?.map((item: any) => item.name) || [],
+            items: latestActiveOrder.items?.map((item: any) => item.itemName) || [],
             total: parseFloat(latestActiveOrder.total),
             status: latestActiveOrder.status,
             estimatedDelivery: latestActiveOrder.estimatedDeliveryTime || '30-45 min',
@@ -293,13 +296,16 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
           setActiveOrder(null)
         }
 
-        // Get recent orders (last 3)
-        const recentOrdersData = allOrders.slice(0, 3).map((order: any) => ({
+        // Use enhanced order data directly from dashboard API
+        const recentOrdersData = allOrders.map((order: any) => ({
           id: order.id,
-          items: order.items?.map((item: any) => item.name) || [],
+          items: order.items || [],
+          itemsSummary: order.itemsSummary || 'No items',
+          itemsCount: order.itemsCount || 0,
           total: parseFloat(order.total),
           status: order.status,
-          createdAt: order.createdAt
+          createdAt: order.createdAt,
+          deliveryAddress: order.deliveryAddress?.street || order.customerName || 'Home'
         }))
         setRecentOrders(recentOrdersData)
       }
@@ -508,7 +514,10 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
                     </div>
                     <div>
                       <h3 className="font-semibold text-amber-800 dark:text-amber-200 text-lg">
-                        🍕 Your order is being prepared!
+                        {activeOrder.status === 'pending' && '⏳ Your order is pending!'}
+                        {activeOrder.status === 'confirmed' && '✅ Your order is confirmed!'}
+                        {activeOrder.status === 'preparing' && '🍕 Your order is being prepared!'}
+                        {activeOrder.status === 'out_for_delivery' && '🚚 Your order is on the way!'}
                       </h3>
                       <p className="text-sm text-amber-600 dark:text-amber-400">
                         {activeOrder.items.join(', ')} • Est. {activeOrder.estimatedDelivery}
@@ -687,17 +696,40 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
                 >
                   <Card className="hover:shadow-lg transition-all duration-300">
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-3">
                         <Badge variant={order.status === 'delivered' ? 'default' : 'secondary'}>
                           {order.status}
                         </Badge>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(order.createdAt).toLocaleDateString()}
-                        </p>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(order.createdAt).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(order.createdAt).toLocaleTimeString('en-US', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm font-medium mb-2 line-clamp-2">
-                        {order.items.join(', ')}
-                      </p>
+                      
+                      <div className="mb-3">
+                        <p className="text-sm font-medium mb-1 line-clamp-2">
+                          {order.itemsSummary}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Package className="w-3 h-3" />
+                            {order.itemsCount} {order.itemsCount === 1 ? 'item' : 'items'}
+                          </span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Utensils className="w-3 h-3" />
+                            {order.deliveryAddress}
+                          </span>
+                        </div>
+                      </div>
+                      
                       <div className="flex items-center justify-between">
                         <p className="font-bold text-green-600">₹{order.total.toFixed(1)}</p>
                         <Button
