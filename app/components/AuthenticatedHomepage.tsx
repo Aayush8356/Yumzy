@@ -34,7 +34,7 @@ interface ActiveOrder {
   id: string
   items: string[]
   total: number
-  status: 'preparing' | 'on-the-way' | 'delivered'
+  status: 'pending' | 'confirmed' | 'preparing' | 'out_for_delivery' | 'on-the-way' | 'delivered' | 'cancelled'
   estimatedDelivery?: string
   createdAt: string
 }
