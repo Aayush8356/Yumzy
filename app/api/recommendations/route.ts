@@ -56,7 +56,23 @@ export async function GET(request: NextRequest) {
     console.log(`📊 Found ${userOrders.length} order entries for user ${userId}`);
     console.log(`📊 Sample orders:`, userOrders.slice(0, 3).map(o => ({ orderId: o.orderId?.slice(0, 8), foodItemId: o.foodItemId?.slice(0, 8) })));
 
-    let recommendedItems = [];
+    let recommendedItems: Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      shortDescription: string | null;
+      price: string;
+      originalPrice: string | null;
+      discount: number | null;
+      rating: string | null;
+      reviewCount: number | null;
+      cookTime: string | null;
+      image: string | null;
+      isVegetarian: boolean | null;
+      isSpicy: boolean | null;
+      isPopular: boolean | null;
+      categoryName: string | null;
+    }> = [];
 
     if (userOrders.length > 0) {
       // Extract food item IDs from order history
@@ -84,7 +100,7 @@ export async function GET(request: NextRequest) {
           .where(inArray(foodItemsTable.id, orderedItemIds));
 
         // Extract user preferences
-        const categoryIds = [...new Set(orderedItems.map(item => item.categoryId))].filter(id => id !== null) as string[];
+        const categoryIds = Array.from(new Set(orderedItems.map(item => item.categoryId))).filter(id => id !== null) as string[];
         const isVegetarianPreferred = orderedItems.filter(item => item.isVegetarian).length > orderedItems.length * 0.6;
         const isSpicyPreferred = orderedItems.filter(item => item.isSpicy).length > orderedItems.length * 0.4;
 

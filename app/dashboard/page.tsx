@@ -375,7 +375,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-green-600">₹{parseFloat(order.total).toFixed(1)}</p>
+                      <p className="font-bold text-green-600">₹{order.total.toFixed(1)}</p>
                     </div>
                   </motion.div>
                 ))}
