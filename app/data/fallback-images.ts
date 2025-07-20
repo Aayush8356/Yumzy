@@ -50,6 +50,13 @@ export const generatePlaceholderImage = (category: string, width: number = 300, 
     burger: '#2563eb',
     pasta: '#16a34a',
     salad: '#65a30d',
+    truffle: '#8b5cf6',
+    wagyu: '#dc2626',
+    lobster: '#06b6d4',
+    risotto: '#16a34a',
+    tenderloin: '#dc2626',
+    premium: '#f59e0b',
+    special: '#ec4899',
     default: '#6b7280'
   }
   
@@ -79,7 +86,7 @@ export const validateImageUrl = async (url: string): Promise<boolean> => {
 export const getFallbackImageForItem = (professionalCategories: string[]): string => {
   // Priority order: specific food > cuisine > primary dietary > course > default
   const specificFoodCategory = professionalCategories.find(cat => 
-    ['pizza', 'chicken', 'biryani', 'beef', 'seafood', 'burger', 'pasta', 'salad'].includes(cat)
+    ['pizza', 'chicken', 'biryani', 'beef', 'seafood', 'burger', 'pasta', 'salad', 'truffle', 'wagyu', 'lobster', 'risotto', 'tenderloin'].includes(cat)
   )
   
   if (specificFoodCategory) {

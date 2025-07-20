@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Star, Clock, ChefHat, Sparkles, ArrowRight, Lock } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProfessionalFoodImage } from '@/components/ProfessionalFoodImage'
 
@@ -21,7 +22,7 @@ const todaysSpecials = [
     rating: 4.9,
     reviews: 127,
     cookTime: '25 min',
-    image: 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?w=400&h=300&fit=crop',
+    image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop&crop=center',
     isVegetarian: true,
     isChefSpecial: true,
     difficulty: 'Premium'
@@ -36,7 +37,7 @@ const todaysSpecials = [
     rating: 5.0,
     reviews: 89,
     cookTime: '35 min',
-    image: 'https://images.unsplash.com/photo-1559847844-d721426d6924?w=400&h=300&fit=crop',
+    image: 'https://images.unsplash.com/photo-1571091655789-405eb7a3a3a8?w=400&h=300&fit=crop&crop=center',
     isVegetarian: false,
     isChefSpecial: true,
     difficulty: 'Premium'
@@ -51,7 +52,7 @@ const todaysSpecials = [
     rating: 4.8,
     reviews: 95,
     cookTime: '30 min',
-    image: 'https://images.unsplash.com/photo-1559737558-2f5a35546024?w=400&h=300&fit=crop',
+    image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=300&fit=crop&crop=center',
     isVegetarian: false,
     isChefSpecial: true,
     difficulty: 'Premium'
@@ -130,13 +131,28 @@ export function TodaysSpecialSection() {
 
                 {/* Image */}
                 <div className="relative h-64 overflow-hidden">
-                  <ProfessionalFoodImage
+                  <Image
                     src={special.image}
                     alt={special.name}
-                    fill={true}
+                    fill
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    professionalCategories={[special.name.toLowerCase().split(' ')[0], 'premium', 'special']}
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     priority={index === 0}
+                    unoptimized={true}
+                    onLoad={() => console.log('Image loaded successfully:', special.image)}
+                    onError={(e) => {
+                      console.error('Image failed to load:', special.image)
+                      // Set a fallback background color
+                      e.currentTarget.style.display = 'none'
+                      const parent = e.currentTarget.parentElement
+                      if (parent) {
+                        parent.style.backgroundColor = 
+                          special.name.toLowerCase().includes('truffle') ? '#8b5cf6' :
+                          special.name.toLowerCase().includes('wagyu') || special.name.toLowerCase().includes('beef') ? '#dc2626' :
+                          special.name.toLowerCase().includes('lobster') ? '#06b6d4' : '#f59e0b'
+                        parent.innerHTML = `<div class="flex items-center justify-center h-full text-white text-xl font-bold">${special.name.split(' ')[0]}</div>`
+                      }
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
                   

@@ -42,7 +42,7 @@ export function ProfessionalFoodImage({
     if (!src || src.trim() === '') {
       setCurrentSrc(fallbackSrc)
       setHasError(false)
-      setIsLoading(true)
+      setIsLoading(false) // Don't show loading for immediate fallback
     } else {
       setCurrentSrc(src)
       setHasError(false)
@@ -91,12 +91,14 @@ export function ProfessionalFoodImage({
           {...imageProps}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          unoptimized={currentSrc.startsWith('data:')} // For SVG placeholders
         />
       ) : (
         <Image 
           {...imageProps}
           width={width}
           height={height}
+          unoptimized={currentSrc.startsWith('data:')} // For SVG placeholders
         />
       )}
       

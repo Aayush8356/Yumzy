@@ -65,7 +65,7 @@ export function CartView() {
                     alt={item.foodItem.name}
                     fill={true}
                     className="object-cover"
-                    professionalCategories={[item.foodItem.name?.toLowerCase().split(' ')[0] || item.foodItem.category?.toLowerCase() || 'food']}
+                    professionalCategories={[item.foodItem.name?.toLowerCase().split(' ')[0] || 'food']}
                     priority={false}
                   />
                 </div>
