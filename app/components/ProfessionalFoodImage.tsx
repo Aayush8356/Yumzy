@@ -38,10 +38,17 @@ export function ProfessionalFoodImage({
   const fallbackSrc = getFallbackImageForItem(professionalCategories)
   
   useEffect(() => {
-    setCurrentSrc(src)
-    setHasError(false)
-    setIsLoading(true)
-  }, [src])
+    // If src is empty or invalid, immediately use fallback
+    if (!src || src.trim() === '') {
+      setCurrentSrc(fallbackSrc)
+      setHasError(false)
+      setIsLoading(true)
+    } else {
+      setCurrentSrc(src)
+      setHasError(false)
+      setIsLoading(true)
+    }
+  }, [src, fallbackSrc])
   
   const handleError = () => {
     setHasError(true)

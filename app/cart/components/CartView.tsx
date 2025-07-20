@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { QuantityStepper } from '@/app/components/QuantityStepper';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ProfessionalFoodImage } from '@/components/ProfessionalFoodImage';
 
 export function CartView() {
   const { cart, isLoading, removeFromCart, updateCartItem } = useCart();
@@ -19,9 +20,9 @@ export function CartView() {
           <span className="text-base sm:text-lg">Loading cart...</span>
         </div>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full max-w-xs sm:max-w-none">
-          <Button variant="outline" onClick={() => router.back()} className="w-full sm:w-auto">
+          <Button variant="outline" onClick={() => router.push('/menu')} className="w-full sm:w-auto">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Back
+            Back to Menu
           </Button>
           <Button onClick={() => router.push('/menu')} className="w-full sm:w-auto">
             Continue Shopping
@@ -39,9 +40,9 @@ export function CartView() {
           <p className="text-gray-600">Add some delicious items to get started!</p>
         </div>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full max-w-xs sm:max-w-none">
-          <Button variant="outline" onClick={() => router.back()} className="w-full sm:w-auto">
+          <Button variant="outline" onClick={() => router.push('/menu')} className="w-full sm:w-auto">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Back
+            Back to Menu
           </Button>
           <Button onClick={() => router.push('/menu')} className="w-full sm:w-auto">
             Browse Menu
@@ -58,7 +59,16 @@ export function CartView() {
           {cart.items.map((item) => (
             <div key={item.id} className="bg-card rounded-lg border p-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <img src={item.foodItem.image} alt={item.foodItem.name} className="w-full sm:w-20 h-32 sm:h-20 object-cover rounded-md" />
+                <div className="w-full sm:w-20 h-32 sm:h-20 rounded-md overflow-hidden relative">
+                  <ProfessionalFoodImage
+                    src={item.foodItem.image || ''}
+                    alt={item.foodItem.name}
+                    fill={true}
+                    className="object-cover"
+                    professionalCategories={[item.foodItem.name?.toLowerCase().split(' ')[0] || item.foodItem.category?.toLowerCase() || 'food']}
+                    priority={false}
+                  />
+                </div>
                 <div className="flex-grow">
                   <h3 className="font-bold text-sm sm:text-base">{item.foodItem.name}</h3>
                   <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{item.foodItem.shortDescription}</p>

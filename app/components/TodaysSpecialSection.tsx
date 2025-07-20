@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Star, Clock, ChefHat, Sparkles, ArrowRight, Lock } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { ProfessionalFoodImage } from '@/components/ProfessionalFoodImage'
 
 const todaysSpecials = [
   {
@@ -129,10 +130,13 @@ export function TodaysSpecialSection() {
 
                 {/* Image */}
                 <div className="relative h-64 overflow-hidden">
-                  <img
+                  <ProfessionalFoodImage
                     src={special.image}
                     alt={special.name}
+                    fill={true}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    professionalCategories={[special.name.toLowerCase().split(' ')[0], 'premium', 'special']}
+                    priority={index === 0}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
                   

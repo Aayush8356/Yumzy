@@ -26,6 +26,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import WebSocketNotificationManager from '@/lib/websocket-notification-manager'
 import Link from 'next/link'
+import { ProfessionalFoodImage } from '@/components/ProfessionalFoodImage'
 
 interface OrderDetails {
   id: string
@@ -604,14 +605,16 @@ export default function OrderTrackingPage() {
                 <div className="space-y-3">
                   {orderDetails.items?.length > 0 ? orderDetails.items.map((item, index) => (
                     <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border">
-                      <img
-                        src={item.itemImage || '/placeholder-food.jpg'}
-                        alt={item.itemName || 'Food Item'}
-                        className="w-14 h-14 rounded-lg object-cover border"
-                        onError={(e) => {
-                          e.currentTarget.src = '/placeholder-food.jpg'
-                        }}
-                      />
+                      <div className="w-14 h-14 rounded-lg overflow-hidden border">
+                        <ProfessionalFoodImage
+                          src={item.itemImage || ''}
+                          alt={item.itemName || 'Food Item'}
+                          width={56}
+                          height={56}
+                          className="w-full h-full object-cover"
+                          professionalCategories={[item.itemName?.toLowerCase() || 'food']}
+                        />
+                      </div>
                       <div className="flex-1">
                         <p className="font-medium text-sm text-gray-900">{item.itemName || 'Unknown Item'}</p>
                         <p className="text-xs text-gray-600">Quantity: {item.quantity || 1}</p>

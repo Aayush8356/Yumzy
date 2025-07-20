@@ -42,6 +42,14 @@ export const generatePlaceholderImage = (category: string, width: number = 300, 
     'healthy-fresh': '#65a30d',
     'desserts-sweets': '#ec4899',
     beverages: '#06b6d4',
+    pizza: '#dc2626',
+    chicken: '#f59e0b',
+    biryani: '#f59e0b',
+    beef: '#dc2626',
+    seafood: '#06b6d4',
+    burger: '#2563eb',
+    pasta: '#16a34a',
+    salad: '#65a30d',
     default: '#6b7280'
   }
   
@@ -69,7 +77,15 @@ export const validateImageUrl = async (url: string): Promise<boolean> => {
 
 // Get appropriate fallback image based on food item categories
 export const getFallbackImageForItem = (professionalCategories: string[]): string => {
-  // Priority order: cuisine > primary dietary > course > default
+  // Priority order: specific food > cuisine > primary dietary > course > default
+  const specificFoodCategory = professionalCategories.find(cat => 
+    ['pizza', 'chicken', 'biryani', 'beef', 'seafood', 'burger', 'pasta', 'salad'].includes(cat)
+  )
+  
+  if (specificFoodCategory) {
+    return generatePlaceholderImage(specificFoodCategory, 400, 300)
+  }
+  
   const cuisineCategory = professionalCategories.find(cat => 
     ['indian-cuisine', 'italian', 'asian', 'mexican', 'american', 'healthy-fresh', 'desserts-sweets', 'beverages'].includes(cat)
   )

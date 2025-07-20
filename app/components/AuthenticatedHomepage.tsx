@@ -290,12 +290,37 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
         
         if (activeOrders.length > 0) {
           const latestActiveOrder = activeOrders[0]
+          // Format estimated delivery time
+          let formattedDeliveryTime = '30-45 min'
+          if (latestActiveOrder.estimatedDeliveryTime) {
+            try {
+              const deliveryTime = new Date(latestActiveOrder.estimatedDeliveryTime)
+              const now = new Date()
+              const timeLeft = Math.max(0, Math.floor((deliveryTime.getTime() - now.getTime()) / (1000 * 60)))
+              
+              if (timeLeft > 0) {
+                if (timeLeft > 60) {
+                  const hours = Math.floor(timeLeft / 60)
+                  const minutes = timeLeft % 60
+                  formattedDeliveryTime = minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
+                } else {
+                  formattedDeliveryTime = `${timeLeft} min`
+                }
+              } else {
+                formattedDeliveryTime = 'Any moment now'
+              }
+            } catch (error) {
+              console.error('Error formatting delivery time:', error)
+              formattedDeliveryTime = '30-45 min'
+            }
+          }
+
           setActiveOrder({
             id: latestActiveOrder.id,
             items: latestActiveOrder.items?.map((item: any) => item.itemName) || [],
             total: parseFloat(latestActiveOrder.total),
             status: latestActiveOrder.status,
-            estimatedDelivery: latestActiveOrder.estimatedDeliveryTime || '30-45 min',
+            estimatedDelivery: formattedDeliveryTime,
             createdAt: latestActiveOrder.createdAt
           })
         } else {

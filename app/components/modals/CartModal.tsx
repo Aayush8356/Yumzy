@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { X, Plus, Minus, ShoppingCart, Trash2 } from 'lucide-react'
 import { useCart } from '@/contexts/CartContext'
 import { useRouter } from 'next/navigation'
+import { ProfessionalFoodImage } from '@/components/ProfessionalFoodImage'
 
 interface CartModalProps {
   isOpen: boolean
@@ -124,11 +125,16 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                       <Card className="bg-gradient-card border-0">
                         <CardContent className="p-4">
                           <div className="flex items-center space-x-3">
-                            <img 
-                              src={item.foodItem.image} 
-                              alt={item.foodItem.name}
-                              className="w-12 h-12 rounded-lg object-cover"
-                            />
+                            <div className="w-12 h-12 rounded-lg overflow-hidden">
+                              <ProfessionalFoodImage
+                                src={item.foodItem.image || ''}
+                                alt={item.foodItem.name}
+                                width={48}
+                                height={48}
+                                className="w-full h-full object-cover"
+                                professionalCategories={[item.foodItem.category?.toLowerCase() || 'food']}
+                              />
+                            </div>
                             <div className="flex-1">
                               <h4 className="font-semibold text-sm">{item.foodItem.name}</h4>
                               <p className="text-xs text-muted-foreground">{item.foodItem.shortDescription}</p>

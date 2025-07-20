@@ -13,6 +13,7 @@ import Link from 'next/link'
 import { Navigation } from '@/components/Navigation'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { OrderTracker } from '@/components/OrderTracker'
+import { ProfessionalFoodImage } from '@/components/ProfessionalFoodImage'
 
 interface OrderItem {
   id: string
@@ -188,11 +189,16 @@ export default function OrderDetailsPage() {
                 <div className="space-y-4">
                   {order.orderItems.map((item) => (
                     <div key={item.id} className="flex items-center gap-4">
-                      <img 
-                        src={item.foodItem.image} 
-                        alt={item.foodItem.name} 
-                        className="w-16 h-16 object-cover rounded-md" 
-                      />
+                      <div className="w-16 h-16 rounded-md overflow-hidden">
+                        <ProfessionalFoodImage
+                          src={item.foodItem.image || ''}
+                          alt={item.foodItem.name}
+                          width={64}
+                          height={64}
+                          className="w-full h-full object-cover"
+                          professionalCategories={[item.foodItem.name?.toLowerCase() || 'food']}
+                        />
+                      </div>
                       <div className="flex-1">
                         <p className="font-medium">{item.foodItem.name}</p>
                         <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>

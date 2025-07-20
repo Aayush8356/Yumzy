@@ -32,6 +32,7 @@ import {
   Loader2
 } from 'lucide-react'
 import Link from 'next/link'
+import { ProfessionalFoodImage } from '@/components/ProfessionalFoodImage'
 
 export default function CheckoutPage() {
   const { cart, clearCart, refreshCart } = useCart()
@@ -371,11 +372,16 @@ export default function CheckoutPage() {
                 <div className="space-y-3">
                   {cart.items.map((item) => (
                     <div key={item.id} className="flex items-center gap-3">
-                      <img
-                        src={item.foodItem.image}
-                        alt={item.foodItem.name}
-                        className="w-12 h-12 rounded-lg object-cover"
-                      />
+                      <div className="w-12 h-12 rounded-lg overflow-hidden">
+                        <ProfessionalFoodImage
+                          src={item.foodItem.image || ''}
+                          alt={item.foodItem.name}
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-cover"
+                          professionalCategories={[item.foodItem.category?.toLowerCase() || 'food']}
+                        />
+                      </div>
                       <div className="flex-1">
                         <p className="font-medium text-sm">{item.foodItem.name}</p>
                         <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
