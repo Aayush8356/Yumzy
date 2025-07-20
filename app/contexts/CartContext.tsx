@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { useAuth } from './AuthContext'
 import { useToast } from '@/hooks/use-toast'
 
@@ -56,6 +56,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false)
   const { user, isAuthenticated, extendSession } = useAuth()
   const { toast } = useToast()
+  
+  // Track pending operations to prevent race conditions
+  const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set())
+  const pendingUpdates = useRef<Map<string, { quantity: number, timeoutId: NodeJS.Timeout }>>(new Map())
 
   // Fetch cart data
   const refreshCart = useCallback(async () => {
@@ -197,13 +201,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // Update cart state immediately with the new item
       const updatedItems = [...cart.items, optimisticItem]
       
+      // Calculate proper totals
+      const subtotal = updatedItems.reduce((sum, item) => sum + (Number(item.foodItem.price) * item.quantity), 0)
+      const deliveryFee = subtotal >= 25 ? 0 : 5
+      const tax = subtotal * 0.08
+      const total = subtotal + deliveryFee + tax
+      
       setCart({
         ...cart,
         items: updatedItems,
         summary: {
           ...cart.summary,
-          itemCount: cart.summary.itemCount + 1,
-          totalQuantity: cart.summary.totalQuantity + quantity
+          itemCount: updatedItems.length,
+          subtotal: Number(subtotal.toFixed(2)),
+          deliveryFee,
+          tax: Number(tax.toFixed(2)),
+          total: Number(total.toFixed(2)),
+          totalQuantity: updatedItems.reduce((sum, item) => sum + item.quantity, 0)
         }
       })
     }
@@ -227,7 +241,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         if (data.success) {
           // Extend session on successful cart operation (shows active usage)
           extendSession()
-          // Replace optimistic update with real data
+          // Refresh cart to get actual IDs and sync with server
           await refreshCart()
           return true
         }
@@ -274,7 +288,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, user, cart, refreshCart])
 
-  // Update cart item
+  // Debounced update cart item to prevent race conditions
   const updateCartItem = useCallback(async (
     foodItemId: string,
     quantity: number,
@@ -291,12 +305,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return true; // No item to remove
     }
 
-    // If quantity is 0, remove the item instead of updating
+    // If quantity is 0, handle removal by setting quantity to minimum 1
+    // The UI layer should handle removal differently
     if (quantity === 0) {
-      return await removeFromCart(itemInCart.id);
+      quantity = 1; // Keep minimum quantity, let UI handle removal
     }
 
-    // Optimistic UI update - update cart state immediately
+    // Immediate optimistic UI update
     const previousQuantity = itemInCart.quantity;
     if (cart) {
       const updatedItems = cart.items.map(item => 
@@ -325,84 +340,171 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
-    try {
-      const response = await fetch(`/api/cart/${itemInCart.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          quantity,
-          specialInstructions
-        })
-      })
+    // Clear any existing timeout for this item
+    const existingUpdate = pendingUpdates.current.get(foodItemId);
+    if (existingUpdate) {
+      clearTimeout(existingUpdate.timeoutId);
+    }
 
-      const data = await response.json()
-
-      if (response.ok) {
-        // Extend session on successful cart operation
-        extendSession()
-        // Sync with server to ensure accuracy
-        await refreshCart()
-        return true
-      } else {
-        // Revert optimistic update on failure
-        if (cart) {
-          const revertedItems = cart.items.map(item => 
-            item.foodItem.id === foodItemId 
-              ? { ...item, quantity: previousQuantity }
-              : item
-          );
-
-          const subtotal = revertedItems.reduce((sum, item) => sum + (Number(item.foodItem.price) * item.quantity), 0);
-          const deliveryFee = subtotal >= 25 ? 0 : 5;
-          const tax = subtotal * 0.08;
-          const total = subtotal + deliveryFee + tax;
-
-          setCart({
-            ...cart,
-            items: revertedItems,
-            summary: {
-              ...cart.summary,
-              subtotal: Number(subtotal.toFixed(2)),
-              deliveryFee,
-              tax: Number(tax.toFixed(2)),
-              total: Number(total.toFixed(2)),
-              totalQuantity: revertedItems.reduce((sum, item) => sum + item.quantity, 0)
-            }
-          });
+    // Debounce API calls - wait 500ms before sending to server
+    return new Promise((resolve) => {
+      const timeoutId = setTimeout(async () => {
+        // Remove from pending updates
+        pendingUpdates.current.delete(foodItemId);
+        
+        // Check if this operation is already in progress
+        if (pendingOperations.has(foodItemId)) {
+          resolve(true);
+          return;
         }
 
-        toast({
-          title: "Failed to update cart",
-          description: data.error,
-          variant: "destructive"
-        })
-        return false
-      }
-    } catch (error) {
-      console.error('Update cart error:', error)
-      toast({
-        title: "Error",
-        description: "Failed to update cart item",
-        variant: "destructive"
-      })
-      return false
-    } finally {
-      setIsLoading(false)
-    }
-  }, [isAuthenticated, user, toast, refreshCart, cart, addToCart]);
+        // Mark operation as in progress
+        setPendingOperations(prev => new Set(prev).add(foodItemId));
+
+        try {
+          const response = await fetch(`/api/cart/${itemInCart.id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: user.id,
+              quantity,
+              specialInstructions
+            })
+          })
+
+          const data = await response.json()
+
+          if (response.ok) {
+            // Extend session on successful cart operation
+            extendSession()
+            resolve(true)
+          } else {
+            // Revert optimistic update on failure
+            if (cart) {
+              const revertedItems = cart.items.map(item => 
+                item.foodItem.id === foodItemId 
+                  ? { ...item, quantity: previousQuantity }
+                  : item
+              );
+
+              const subtotal = revertedItems.reduce((sum, item) => sum + (Number(item.foodItem.price) * item.quantity), 0);
+              const deliveryFee = subtotal >= 25 ? 0 : 5;
+              const tax = subtotal * 0.08;
+              const total = subtotal + deliveryFee + tax;
+
+              setCart({
+                ...cart,
+                items: revertedItems,
+                summary: {
+                  ...cart.summary,
+                  subtotal: Number(subtotal.toFixed(2)),
+                  deliveryFee,
+                  tax: Number(tax.toFixed(2)),
+                  total: Number(total.toFixed(2)),
+                  totalQuantity: revertedItems.reduce((sum, item) => sum + item.quantity, 0)
+                }
+              });
+            }
+
+            toast({
+              title: "Failed to update cart",
+              description: data.error,
+              variant: "destructive"
+            })
+            resolve(false)
+          }
+        } catch (error) {
+          console.error('Update cart error:', error)
+          toast({
+            title: "Error",
+            description: "Failed to update cart item",
+            variant: "destructive"
+          })
+          resolve(false)
+        } finally {
+          // Remove from pending operations
+          setPendingOperations(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(foodItemId);
+            return newSet;
+          });
+        }
+      }, 300); // 300ms debounce - reduced for better responsiveness
+
+      // Store the timeout and quantity
+      pendingUpdates.current.set(foodItemId, { quantity, timeoutId });
+      resolve(true); // Immediately resolve for optimistic UI
+    });
+  }, [isAuthenticated, user, toast, extendSession, cart, addToCart, pendingOperations]);
 
   // Remove item from cart
   const removeFromCart = useCallback(async (cartItemId: string): Promise<boolean> => {
     if (!isAuthenticated || !user) return false
 
+    console.log('🗑️ Attempting to remove cart item:', cartItemId)
+
+    // Check if this operation is already in progress
+    if (pendingOperations.has(cartItemId)) {
+      console.log('⏳ Remove operation already in progress for:', cartItemId)
+      return true // Return true to avoid showing error
+    }
+
+    // Mark operation as in progress
+    setPendingOperations(prev => new Set(prev).add(cartItemId))
+
     // Store the item being removed for potential rollback
     const itemToRemove = cart?.items.find(item => item.id === cartItemId);
     
+    if (!itemToRemove) {
+      console.log('Item not found in cart:', cartItemId)
+      setPendingOperations(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(cartItemId)
+        return newSet
+      })
+      return true // Item already removed, return true
+    }
+    
+    // Check if this is a temporary item from optimistic updates
+    if (cartItemId.startsWith('temp-')) {
+      console.log('Removing temporary cart item:', cartItemId)
+      // Just remove from UI, no API call needed
+      if (cart) {
+        const updatedItems = cart.items.filter(item => item.id !== cartItemId);
+        
+        // Recalculate totals
+        const subtotal = updatedItems.reduce((sum, item) => sum + (Number(item.foodItem.price) * item.quantity), 0);
+        const deliveryFee = subtotal >= 25 ? 0 : 5;
+        const tax = subtotal * 0.08;
+        const total = subtotal + deliveryFee + tax;
+
+        setCart({
+          ...cart,
+          items: updatedItems,
+          summary: {
+            ...cart.summary,
+            itemCount: updatedItems.length,
+            subtotal: Number(subtotal.toFixed(2)),
+            deliveryFee,
+            tax: Number(tax.toFixed(2)),
+            total: Number(total.toFixed(2)),
+            totalQuantity: updatedItems.reduce((sum, item) => sum + item.quantity, 0)
+          }
+        });
+      }
+      
+      setPendingOperations(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(cartItemId)
+        return newSet
+      })
+      return true
+    }
+    
     // Optimistic UI update - remove item immediately
-    if (cart && itemToRemove) {
+    if (cart) {
       const updatedItems = cart.items.filter(item => item.id !== cartItemId);
       
       // Recalculate totals
@@ -416,6 +518,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         items: updatedItems,
         summary: {
           ...cart.summary,
+          itemCount: updatedItems.length,
           subtotal: Number(subtotal.toFixed(2)),
           deliveryFee,
           tax: Number(tax.toFixed(2)),
@@ -438,12 +541,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json()
 
       if (response.ok) {
-        // Sync with server to ensure accuracy
-        await refreshCart()
-        toast({
-          title: "Item removed",
-          description: data.message,
-        })
+        // Success - don't show toast for successful operations
+        console.log('Item successfully removed from cart')
         return true
       } else {
         // Revert optimistic update on failure
@@ -460,6 +559,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             items: revertedItems,
             summary: {
               ...cart.summary,
+              itemCount: revertedItems.length,
               subtotal: Number(subtotal.toFixed(2)),
               deliveryFee,
               tax: Number(tax.toFixed(2)),
@@ -469,25 +569,46 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           });
         }
 
-        toast({
-          title: "Failed to remove item",
-          description: data.error,
-          variant: "destructive"
-        })
+        console.error('Failed to remove item:', data.error)
         return false
       }
     } catch (error) {
       console.error('Remove from cart error:', error)
-      toast({
-        title: "Error",
-        description: "Failed to remove item from cart",
-        variant: "destructive"
-      })
+      
+      // Revert optimistic update on error
+      if (cart && itemToRemove) {
+        const revertedItems = [...cart.items, itemToRemove];
+        
+        const subtotal = revertedItems.reduce((sum, item) => sum + (Number(item.foodItem.price) * item.quantity), 0);
+        const deliveryFee = subtotal >= 25 ? 0 : 5;
+        const tax = subtotal * 0.08;
+        const total = subtotal + deliveryFee + tax;
+
+        setCart({
+          ...cart,
+          items: revertedItems,
+          summary: {
+            ...cart.summary,
+            itemCount: revertedItems.length,
+            subtotal: Number(subtotal.toFixed(2)),
+            deliveryFee,
+            tax: Number(tax.toFixed(2)),
+            total: Number(total.toFixed(2)),
+            totalQuantity: revertedItems.reduce((sum, item) => sum + item.quantity, 0)
+          }
+        });
+      }
+      
       return false
     } finally {
-      setIsLoading(false)
+      // Remove from pending operations
+      setPendingOperations(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(cartItemId)
+        return newSet
+      })
     }
-  }, [isAuthenticated, user, toast, refreshCart])
+  }, [isAuthenticated, user, cart, pendingOperations])
 
   // Clear entire cart
   const clearCart = useCallback(async (): Promise<boolean> => {
@@ -502,6 +623,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json()
 
       if (response.ok) {
+        // Refresh cart for complete clear operation
         await refreshCart()
         toast({
           title: "Cart cleared",

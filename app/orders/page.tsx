@@ -266,13 +266,13 @@ export default function OrdersPage() {
                           <div className="flex items-center gap-1">
                             <DollarSign className="w-4 h-4 text-green-600" />
                             <span className="text-xl sm:text-2xl font-bold text-green-600">
-                              ${parseFloat(order.total).toFixed(2)}
+                              ₹{parseFloat(order.total).toFixed(2)}
                             </span>
                           </div>
                           <div className="text-xs sm:text-sm text-muted-foreground">
-                            Subtotal: ${parseFloat(order.subtotal).toFixed(2)} + 
-                            Delivery: ${parseFloat(order.deliveryFee).toFixed(2)} + 
-                            Tax: ${parseFloat(order.tax).toFixed(2)}
+                            Subtotal: ₹{parseFloat(order.subtotal).toFixed(2)} + 
+                            Delivery: ₹{parseFloat(order.deliveryFee).toFixed(2)} + 
+                            Tax: ₹{parseFloat(order.tax).toFixed(2)}
                           </div>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2">

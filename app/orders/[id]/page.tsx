@@ -200,7 +200,7 @@ export default function OrderDetailsPage() {
                           <p className="text-sm text-muted-foreground">Note: {item.specialInstructions}</p>
                         )}
                       </div>
-                      <p className="font-medium">${(parseFloat(item.price) * item.quantity).toFixed(2)}</p>
+                      <p className="font-medium">₹{(parseFloat(item.price) * item.quantity).toFixed(2)}</p>
                     </div>
                   ))}
                 </div>
@@ -239,20 +239,20 @@ export default function OrderDetailsPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>${parseFloat(order.subtotal).toFixed(2)}</span>
+                    <span>₹{parseFloat(order.subtotal).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Delivery Fee</span>
-                    <span>${parseFloat(order.deliveryFee).toFixed(2)}</span>
+                    <span>₹{parseFloat(order.deliveryFee).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Tax</span>
-                    <span>${parseFloat(order.tax).toFixed(2)}</span>
+                    <span>₹{parseFloat(order.tax).toFixed(2)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span>${parseFloat(order.total).toFixed(2)}</span>
+                    <span>₹{parseFloat(order.total).toFixed(2)}</span>
                   </div>
                 </div>
 

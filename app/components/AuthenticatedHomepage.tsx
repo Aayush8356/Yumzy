@@ -143,37 +143,23 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
       return
     }
 
-    try {
-      const success = await updateCartItem(itemId, newQuantity)
-      if (success) {
-        // Don't show toast for every quantity change - it's annoying
-        // toast({
-        //   title: "Cart updated",
-        //   description: `${itemName} quantity updated`,
-        // })
-      }
-    } catch (error) {
-      console.error('Error updating cart:', error)
-      toast({
-        title: "Error",
-        description: "Failed to update cart. Please try again.",
-        variant: "destructive"
-      })
-    }
+    // Just call updateCartItem - it handles optimistic updates and debouncing
+    await updateCartItem(itemId, newQuantity)
+    // Don't handle errors here - let cart context handle everything
   }
 
-  const handleIncrement = (item: RecommendedItem) => {
+  const handleIncrement = async (item: RecommendedItem) => {
     const currentQuantity = getItemQuantity(item.id)
-    handleQuantityChange(item.id, currentQuantity + 1, item.name)
+    await handleQuantityChange(item.id, currentQuantity + 1, item.name)
   }
 
-  const handleDecrement = (item: RecommendedItem) => {
+  const handleDecrement = async (item: RecommendedItem) => {
     const currentQuantity = getItemQuantity(item.id)
     if (currentQuantity > 1) {
-      handleQuantityChange(item.id, currentQuantity - 1, item.name)
+      await handleQuantityChange(item.id, currentQuantity - 1, item.name)
     } else if (currentQuantity === 1) {
       // Remove item entirely when quantity would go below 1
-      handleRemoveFromCart(item)
+      await handleRemoveFromCart(item)
     }
   }
 
@@ -184,17 +170,19 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
       if (cartItem) {
         const success = await removeFromCart(cartItem.id);
         if (success) {
+          // Don't show success toast - cart context handles feedback
+          console.log(`${item.name} removed from cart`);
+        } else {
+          // Only show error if removal actually failed
           toast({
-            title: "Removed from cart",
-            description: `${item.name} has been removed from your cart`,
+            title: "Failed to remove item",
+            description: "Please try again.",
+            variant: "destructive"
           });
         }
       } else {
-        toast({
-          title: "Error",
-          description: "Item not found in cart.",
-          variant: "destructive"
-        });
+        // Item not in cart - this is actually fine, just log it
+        console.log('Item not found in cart, probably already removed');
       }
     } catch (error) {
       console.error('Error removing from cart:', error)
@@ -644,6 +632,7 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
                             size="sm"
                             onClick={() => handleDecrement(item)}
                             className="h-7 w-7 p-0 hover:bg-orange-500/20 text-orange-600"
+                            disabled={addingToCart.has(item.id)}
                           >
                             <Minus className="w-3 h-3" />
                           </Button>
@@ -655,6 +644,7 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
                             size="sm"
                             onClick={() => handleIncrement(item)}
                             className="h-7 w-7 p-0 hover:bg-orange-500/20 text-orange-600"
+                            disabled={addingToCart.has(item.id)}
                           >
                             <Plus className="w-3 h-3" />
                           </Button>

@@ -264,24 +264,9 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
     }
 
     if (newQuantity > 0) {
-      try {
-        const success = await updateCartItem(item.id, newQuantity)
-        if (!success) {
-          toast({
-            title: "Error",
-            description: "Failed to update cart. Please try again.",
-            variant: "destructive"
-          });
-        }
-        // Remove success toast - it's annoying for every quantity change
-      } catch (error) {
-        console.error('Error updating cart:', error);
-        toast({
-          title: "Error",
-          description: "Failed to update cart. Please try again.",
-          variant: "destructive"
-        });
-      }
+      // Just call updateCartItem - it handles optimistic updates and debouncing
+      await updateCartItem(item.id, newQuantity)
+      // Don't show any success toasts or handle errors here - let cart context handle it
     }
   }
 
@@ -301,11 +286,19 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
       if (cartItem) {
         const success = await removeFromCart(cartItem.id);
         if (success) {
+          // Don't show success toast - cart context handles feedback
+          console.log(`${item.name} removed from cart`);
+        } else {
+          // Only show error if removal actually failed
           toast({
-            title: "Removed from cart",
-            description: `${item.name} has been removed from your cart`,
+            title: "Failed to remove item",
+            description: "Please try again.",
+            variant: "destructive"
           });
         }
+      } else {
+        // Item not in cart - this is actually fine, just log it
+        console.log('Item not found in cart, probably already removed');
       }
     } catch (error) {
       console.error('Error removing from cart:', error);
@@ -317,16 +310,16 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
     }
   }
 
-  const handleIncrement = () => {
-    handleQuantityChange(currentQuantity + 1)
+  const handleIncrement = async () => {
+    await handleQuantityChange(currentQuantity + 1)
   }
 
-  const handleDecrement = () => {
+  const handleDecrement = async () => {
     if (currentQuantity > 1) {
-      handleQuantityChange(currentQuantity - 1)
+      await handleQuantityChange(currentQuantity - 1)
     } else if (currentQuantity === 1) {
       // Remove item entirely when quantity would go below 1
-      handleRemoveFromCart()
+      await handleRemoveFromCart()
     }
   }
 
@@ -545,6 +538,7 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
                   size="sm"
                   onClick={handleDecrement}
                   className="h-7 w-7 p-0 hover:bg-primary/20"
+                  disabled={isAdding}
                 >
                   <Minus className="w-3 h-3" />
                 </Button>
@@ -556,6 +550,7 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
                   size="sm"
                   onClick={handleIncrement}
                   className="h-7 w-7 p-0 hover:bg-primary/20"
+                  disabled={isAdding}
                 >
                   <Plus className="w-3 h-3" />
                 </Button>

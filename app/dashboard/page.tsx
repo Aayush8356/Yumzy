@@ -29,6 +29,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 
 interface OrderStats {
   thisMonth: number
@@ -58,9 +59,9 @@ export default function DashboardPage() {
   const [favoriteCount, setFavoriteCount] = useState(0)
 
   useEffect(() => {
+    // Authentication is handled by ProtectedRoute wrapper
     if (!isAuthenticated) {
-      router.push('/auth/login')
-      return
+      return // ProtectedRoute will handle redirect
     }
 
     // Redirect demo users
@@ -184,7 +185,8 @@ export default function DashboardPage() {
     : 0
 
   return (
-    <div className="min-h-screen bg-background pt-20">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-background pt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <motion.div
@@ -423,5 +425,6 @@ export default function DashboardPage() {
         </motion.div>
       </div>
     </div>
+    </ProtectedRoute>
   )
 }

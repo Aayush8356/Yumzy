@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import ProfessionalFoodCard from '@/components/ProfessionalFoodCard'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 
 interface FoodItem {
   id: string
@@ -85,18 +86,7 @@ export default function MenuPage() {
   const { isAuthenticated } = useAuth()
   const { toast } = useToast()
 
-  // Redirect non-authenticated users
-  useEffect(() => {
-    if (!isAuthenticated) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to access our premium menu",
-        variant: "destructive"
-      })
-      window.location.href = '/auth/login'
-      return
-    }
-  }, [isAuthenticated, toast])
+  // Authentication is handled by ProtectedRoute wrapper - no need for duplicate checks
 
   // Fetch menu items with pagination and filters
   useEffect(() => {
@@ -212,12 +202,11 @@ export default function MenuPage() {
     ratingFilter !== 'all' ? ratingFilter : null
   ].filter(Boolean).length
 
-  if (!isAuthenticated) {
-    return null // Will redirect
-  }
+  // Authentication is handled by ProtectedRoute wrapper
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <Navigation />
       
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-8 sm:pb-12">
@@ -536,5 +525,6 @@ export default function MenuPage() {
         )}
       </div>
     </div>
+    </ProtectedRoute>
   )
 }
