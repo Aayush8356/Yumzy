@@ -245,7 +245,7 @@ export function OrderManagement() {
                         <div className="text-sm text-gray-500">{(order as any).userEmail || order.customerEmail}</div>
                       </div>
                     </TableCell>
-                    <TableCell className="font-medium">${order.total}</TableCell>
+                    <TableCell className="font-medium">₹{order.total}</TableCell>
                     <TableCell>
                       <Badge className={getStatusBadge(order.status)}>
                         {getStatusText(order.status)}
@@ -302,7 +302,7 @@ export function OrderManagement() {
                                           <span className="font-medium">{item.name}</span>
                                           <span className="text-sm text-gray-500 ml-2">×{item.quantity}</span>
                                         </div>
-                                        <span>${(item.price * item.quantity).toFixed(2)}</span>
+                                        <span>₹{(item.price * item.quantity).toFixed(2)}</span>
                                       </div>
                                     ))}
                                   </div>
@@ -310,7 +310,7 @@ export function OrderManagement() {
                                 <div className="border-t pt-4">
                                   <div className="flex justify-between items-center font-medium">
                                     <span>Total:</span>
-                                    <span>${selectedOrder.total}</span>
+                                    <span>₹{selectedOrder.total}</span>
                                   </div>
                                 </div>
                               </div>

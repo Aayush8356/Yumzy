@@ -714,7 +714,7 @@ Questions? Contact us at support@yumzy.com
     })
   }
 
-  // Out for delivery email
+  // Out for delivery email (HIGH PRIORITY)
   async sendOutForDelivery(
     email: string, 
     name: string, 
@@ -725,6 +725,7 @@ Questions? Contact us at support@yumzy.com
       driverPhone?: string
     }
   ): Promise<boolean> {
+    console.log(`🚀 PRIORITY EMAIL: Sending out-for-delivery notification to ${email}`)
     const trackingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/track/${orderData.orderId}`
     
     const template: EmailTemplate = {
@@ -823,7 +824,7 @@ Questions about your delivery? Contact us at support@yumzy.com
     })
   }
 
-  // Order delivered email
+  // Order delivered email (HIGHEST PRIORITY)
   async sendOrderDelivered(
     email: string, 
     name: string, 
@@ -833,6 +834,7 @@ Questions about your delivery? Contact us at support@yumzy.com
       items: Array<{ name: string; quantity: number }>
     }
   ): Promise<boolean> {
+    console.log(`🎯 CRITICAL EMAIL: Sending delivery confirmation to ${email} for order ${orderData.orderId}`)
     const reorderUrl = `${process.env.NEXT_PUBLIC_APP_URL}/orders/${orderData.orderId}`
     const reviewUrl = `${process.env.NEXT_PUBLIC_APP_URL}/orders/${orderData.orderId}#review`
     const menuUrl = `${process.env.NEXT_PUBLIC_APP_URL}/menu`

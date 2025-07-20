@@ -146,6 +146,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const markAsRead = useCallback(async (notificationId: string) => {
     try {
+      console.log('👀 Marking notification as read:', notificationId)
       const response = await fetch(`/api/notifications/${notificationId}/read`, {
         method: 'PATCH',
         headers: {
@@ -154,14 +155,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       })
 
       if (response.ok) {
+        console.log('✅ Successfully marked as read on server')
         setNotifications(prev =>
           prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
         )
+        // Refresh to ensure sync
+        setTimeout(() => refreshNotifications(), 100)
+      } else {
+        console.error('❌ Failed to mark as read:', response.status, response.statusText)
       }
     } catch (error) {
       console.error('Failed to mark notification as read:', error)
     }
-  }, [user])
+  }, [user, refreshNotifications])
 
   const markAllAsRead = useCallback(async () => {
     try {
@@ -184,7 +190,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const deleteNotification = useCallback(async (notificationId: string) => {
     try {
-      const response = await fetch(`/api/notifications/${notificationId}`, {
+      console.log('🗑️ Deleting notification:', notificationId)
+      const response = await fetch(`/api/notifications/${notificationId}/read`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${user?.id}`,
@@ -192,12 +199,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       })
 
       if (response.ok) {
+        console.log('✅ Successfully deleted on server')
         setNotifications(prev => prev.filter(n => n.id !== notificationId))
+        // Refresh to ensure sync
+        setTimeout(() => refreshNotifications(), 100)
+      } else {
+        console.error('❌ Failed to delete notification:', response.status, response.statusText)
       }
     } catch (error) {
       console.error('Failed to delete notification:', error)
     }
-  }, [user])
+  }, [user, refreshNotifications])
 
   const clearAllNotifications = useCallback(async () => {
     try {

@@ -17,7 +17,7 @@ export async function PATCH(
     }
 
     // Mark notification as read (with persistence)
-    const success = professionalNotificationSystem.markAsRead(notificationId)
+    const success = professionalNotificationSystem.markAsRead(notificationId, userId)
 
     if (!success) {
       return NextResponse.json(
@@ -53,7 +53,7 @@ export async function DELETE(
     }
 
     // Dismiss notification permanently
-    const success = professionalNotificationSystem.dismissNotification(notificationId)
+    const success = professionalNotificationSystem.dismissNotification(notificationId, userId)
 
     if (!success) {
       return NextResponse.json(

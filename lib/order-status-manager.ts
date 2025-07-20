@@ -77,7 +77,7 @@ export class OrderStatusManager {
     return Math.floor(Math.random() * (50 - 25 + 1)) + 25;
   }
   
-  // Get time-based status timeline for display
+  // Get time-based status timeline for display (UPDATED FOR FASTER DELIVERY)
   static getOrderTimeline(orderCreatedAt: Date): OrderStatusTimeline[] {
     return [
       {
@@ -88,16 +88,16 @@ export class OrderStatusManager {
       {
         status: 'preparing',
         timestamp: new Date(orderCreatedAt.getTime() + 2 * 60 * 1000),
-        estimatedDuration: 23
+        estimatedDuration: 13  // Reduced from 23
       },
       {
         status: 'out_for_delivery',
-        timestamp: new Date(orderCreatedAt.getTime() + 25 * 60 * 1000),
-        estimatedDuration: 30
+        timestamp: new Date(orderCreatedAt.getTime() + 15 * 60 * 1000), // Reduced from 25
+        estimatedDuration: 15  // Reduced from 30
       },
       {
         status: 'delivered',
-        timestamp: new Date(orderCreatedAt.getTime() + 55 * 60 * 1000),
+        timestamp: new Date(orderCreatedAt.getTime() + 30 * 60 * 1000), // Reduced from 55
         estimatedDuration: 0
       }
     ];
@@ -134,7 +134,7 @@ export class OrderStatusManager {
     }
   }
   
-  // Simple helper to get remaining time for a status
+  // Simple helper to get remaining time for a status (UPDATED FOR FASTER DELIVERY)
   static getTimeRemainingForStatus(orderCreatedAt: Date, currentStatus: string): number {
     const now = new Date();
     const minutesSinceOrder = Math.floor((now.getTime() - orderCreatedAt.getTime()) / (1000 * 60));
@@ -143,32 +143,32 @@ export class OrderStatusManager {
       case 'confirmed':
         return Math.max(0, 2 - minutesSinceOrder);
       case 'preparing':
-        return Math.max(0, 25 - minutesSinceOrder);
+        return Math.max(0, 15 - minutesSinceOrder);  // Reduced from 25
       case 'out_for_delivery':
-        return Math.max(0, 55 - minutesSinceOrder);
+        return Math.max(0, 30 - minutesSinceOrder);  // Reduced from 55
       default:
         return 0;
     }
   }
   
-  // Simple time-based order status calculation
+  // Simple time-based order status calculation (REALISTIC TIMELINE)
   static calculateOrderStatus(orderCreatedAt: Date): string {
     const now = new Date();
     const minutesSinceOrder = Math.floor((now.getTime() - orderCreatedAt.getTime()) / (1000 * 60));
     
     console.log(`📅 Order created ${minutesSinceOrder} minutes ago`);
     
-    // Simple time-based progression:
+    // FIXED: Realistic delivery timeline for faster notifications:
     // 0-2 minutes: confirmed
-    // 2-25 minutes: preparing  
-    // 25-55 minutes: out_for_delivery
-    // 55+ minutes: delivered
+    // 2-15 minutes: preparing (reduced from 25)
+    // 15-30 minutes: out_for_delivery (reduced from 55)
+    // 30+ minutes: delivered (reduced from 55+ to 30+)
     
     if (minutesSinceOrder < 2) {
       return 'confirmed';
-    } else if (minutesSinceOrder < 25) {
+    } else if (minutesSinceOrder < 15) {
       return 'preparing';
-    } else if (minutesSinceOrder < 55) {
+    } else if (minutesSinceOrder < 30) {
       return 'out_for_delivery';
     } else {
       return 'delivered';
@@ -375,8 +375,9 @@ export class OrderStatusManager {
         }
       }
 
-      // Send email notifications for specific status changes
+      // Send email notifications for specific status changes (HIGH PRIORITY)
       try {
+        console.log(`📧 Processing email notification for status: ${newStatus}`)
         if (['out_for_delivery', 'delivered'].includes(newStatus)) {
           // Get user details for email
           const [user] = await db
@@ -386,8 +387,9 @@ export class OrderStatusManager {
           
           if (user && user.email && user.isVerified) {
             if (newStatus === 'out_for_delivery') {
-              // Send out for delivery email
-              const estimatedArrival = new Date(Date.now() + 20 * 60 * 1000) // 20 minutes from now
+              // Send out for delivery email with realistic timing
+              const estimatedArrival = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes from now (reduced)
+              const emailStart = Date.now()
               await emailService.sendOutForDelivery(user.email, user.name, {
                 orderId,
                 estimatedArrival: estimatedArrival.toLocaleTimeString('en-US', { 
@@ -395,9 +397,13 @@ export class OrderStatusManager {
                   minute: '2-digit' 
                 })
               })
-              console.log(`📧 Out for delivery email sent to ${user.email}`)
+              const emailDuration = Date.now() - emailStart
+              console.log(`✅ OUT FOR DELIVERY EMAIL SENT to ${user.email} in ${emailDuration}ms`)
               
             } else if (newStatus === 'delivered') {
+              // IMMEDIATE delivery email - no delays
+              console.log(`🚀 PRIORITY: Sending delivery confirmation email immediately for order ${orderId}`)
+              
               // Get order items for delivery email
               const orderItems = await db
                 .select({
@@ -415,20 +421,24 @@ export class OrderStatusManager {
                 quantity: item.quantity
               }))
               
-              // Send order delivered email
+              // Send order delivered email with high priority
+              const emailStart = Date.now()
               await emailService.sendOrderDelivered(user.email, user.name, {
                 orderId,
                 total: `₹${parseFloat(order.total).toFixed(1)}`,
                 items
               })
-              console.log(`📧 Order delivered email sent to ${user.email}`)
+              const emailDuration = Date.now() - emailStart
+              console.log(`✅ DELIVERY EMAIL SENT to ${user.email} in ${emailDuration}ms`)
             }
           } else {
             console.log(`📧 Skipping email for order ${orderId}: user email not verified or not found`)
           }
         }
       } catch (emailError) {
-        console.error(`Error sending email notification for order ${orderId}:`, emailError)
+        console.error(`❌ CRITICAL: Email notification failed for order ${orderId} (${newStatus}):`, emailError)
+        // Log email failures for monitoring
+        console.error(`Email failure details: User ${order.userId}, Email: ${order.customerEmail}, Status: ${newStatus}`)
       }
 
       console.log(`🔔 Order ${orderId} status notification processing completed: ${newStatus}`)
@@ -475,15 +485,15 @@ export class OrderStatusManager {
     return statusProgress[status] || 0;
   }
   
-  // Get estimated delivery time for an order (simple: 55 minutes from creation)
+  // Get estimated delivery time for an order (REALISTIC: 30 minutes from creation)
   static getEstimatedDeliveryTime(orderCreatedAt?: Date): Date {
     const creationTime = orderCreatedAt || new Date();
-    const deliveryTime = new Date(creationTime.getTime() + 55 * 60 * 1000); // 55 minutes from creation
+    const deliveryTime = new Date(creationTime.getTime() + 30 * 60 * 1000); // 30 minutes from creation (FIXED)
     
-    console.log(`🍕 Simple Delivery Time Calculation:
+    console.log(`🍕 Realistic Delivery Time Calculation:
       - Order Created: ${creationTime.toLocaleTimeString()}
       - Estimated Delivery: ${deliveryTime.toLocaleTimeString()}
-      - Total Time: 55 minutes`);
+      - Total Time: 30 minutes (IMPROVED)`);
     
     return deliveryTime;
   }

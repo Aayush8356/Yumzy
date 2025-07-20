@@ -14,15 +14,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check and update order status based on timeline
+    console.log(`🔍 USER-TRIGGERED: Checking status for order ${orderId}`)
+    
+    // Check and update order status based on timeline (user-triggered = priority)
     const updated = await OrderStatusManager.checkAndUpdateOrderStatus(orderId)
+    
+    if (updated) {
+      console.log(`✅ Order ${orderId} status updated due to user check`)
+    } else {
+      console.log(`🔄 Order ${orderId} status unchanged`)
+    }
     
     return NextResponse.json({
       success: true,
-      updated
+      updated,
+      message: updated ? 'Order status updated' : 'Order status unchanged'
     })
   } catch (error) {
-    console.error('Error checking order status:', error)
+    console.error('❌ Error checking order status:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to check order status' },
       { status: 500 }

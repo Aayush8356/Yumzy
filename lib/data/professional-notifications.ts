@@ -50,6 +50,13 @@ interface NotificationState {
   lastHotDealDate: string | null
 }
 
+// Server-side state storage (in-memory but persisted per user)
+const serverState = new Map<string, {
+  readNotifications: Set<string>
+  dismissedNotifications: Set<string>
+  lastHotDealDate: string | null
+}>()
+
 class ProfessionalNotificationSystem {
   private state: NotificationState = {
     notifications: [],
@@ -59,13 +66,33 @@ class ProfessionalNotificationSystem {
   }
 
   constructor() {
+    // Initial load without userId for client-side
     this.loadState()
   }
 
-  // Load state from localStorage
-  private loadState() {
-    if (typeof window === 'undefined') return
+  // Load state from localStorage (client) or server state (server)
+  private loadState(userId?: string) {
+    if (typeof window === 'undefined') {
+      // Server-side: load from server state
+      if (userId && serverState.has(userId)) {
+        const saved = serverState.get(userId)!
+        this.state = {
+          ...this.state,
+          readNotifications: new Set(saved.readNotifications),
+          dismissedNotifications: new Set(saved.dismissedNotifications),
+          lastHotDealDate: saved.lastHotDealDate
+        }
+        console.log(`📋 Server state loaded for user ${userId}:`, {
+          read: Array.from(this.state.readNotifications),
+          dismissed: Array.from(this.state.dismissedNotifications)
+        })
+      } else if (userId) {
+        console.log(`🆕 No server state found for user ${userId}, starting fresh`)
+      }
+      return
+    }
 
+    // Client-side: load from localStorage
     try {
       const saved = localStorage.getItem('notification_state')
       if (saved) {
@@ -76,16 +103,35 @@ class ProfessionalNotificationSystem {
           dismissedNotifications: new Set(parsed.dismissedNotifications || []),
           lastHotDealDate: parsed.lastHotDealDate || null
         }
+        console.log('📋 Client state loaded from localStorage:', {
+          read: Array.from(this.state.readNotifications),
+          dismissed: Array.from(this.state.dismissedNotifications)
+        })
       }
     } catch (error) {
       console.error('Failed to load notification state:', error)
     }
   }
 
-  // Save state to localStorage
-  private saveState() {
-    if (typeof window === 'undefined') return
+  // Save state to localStorage (client) or server state (server)
+  private saveState(userId?: string) {
+    if (typeof window === 'undefined') {
+      // Server-side: save to server state
+      if (userId) {
+        serverState.set(userId, {
+          readNotifications: new Set(this.state.readNotifications),
+          dismissedNotifications: new Set(this.state.dismissedNotifications),
+          lastHotDealDate: this.state.lastHotDealDate
+        })
+        console.log(`💾 Server state saved for user ${userId}:`, {
+          read: Array.from(this.state.readNotifications),
+          dismissed: Array.from(this.state.dismissedNotifications)
+        })
+      }
+      return
+    }
 
+    // Client-side: save to localStorage
     try {
       const toSave = {
         readNotifications: Array.from(this.state.readNotifications),
@@ -93,6 +139,7 @@ class ProfessionalNotificationSystem {
         lastHotDealDate: this.state.lastHotDealDate
       }
       localStorage.setItem('notification_state', JSON.stringify(toSave))
+      console.log('💾 Client state saved to localStorage:', toSave)
     } catch (error) {
       console.error('Failed to save notification state:', error)
     }
@@ -118,7 +165,7 @@ class ProfessionalNotificationSystem {
     const discountPercent = hotDeal.discount || 25
 
     this.state.lastHotDealDate = todayStr
-    this.saveState()
+    this.saveState(userId)
 
     return {
       id: `hot-deal-${todayStr}`,
@@ -146,8 +193,16 @@ class ProfessionalNotificationSystem {
     const now = new Date()
     const notifications: ProfessionalNotification[] = []
 
-    // Welcome notification (only once per user - only on first login after signup)
-    if (!this.state.dismissedNotifications.has(`welcome-${userId}`) && !this.state.readNotifications.has(`welcome-${userId}`)) {
+    // Welcome notification (only once per user - check if user has ever received it)
+    const welcomeKey = `welcome_shown_${userId}`
+    const hasShownWelcome = typeof window !== 'undefined' ? localStorage.getItem(welcomeKey) : null
+    
+    if (!hasShownWelcome && !this.state.dismissedNotifications.has(`welcome-${userId}`) && !this.state.readNotifications.has(`welcome-${userId}`)) {
+      // Mark as shown so it never appears again
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(welcomeKey, 'true')
+      }
+      
       notifications.push({
         id: `welcome-${userId}`,
         type: 'system',
@@ -184,6 +239,9 @@ class ProfessionalNotificationSystem {
 
   // Get notifications for a user
   getUserNotifications(userId: string): ProfessionalNotification[] {
+    // Load state for this specific user (important for server-side)
+    this.loadState(userId)
+    
     const notifications: ProfessionalNotification[] = []
 
     // Add persistent notifications from localStorage
@@ -222,9 +280,12 @@ class ProfessionalNotificationSystem {
   }
 
   // Mark notification as read
-  markAsRead(notificationId: string): boolean {
+  markAsRead(notificationId: string, userId?: string): boolean {
+    // Load current state for this user
+    if (userId) this.loadState(userId)
+    
     this.state.readNotifications.add(notificationId)
-    this.saveState()
+    this.saveState(userId)
     
     // Update local state
     this.state.notifications = this.state.notifications.map(n => 
@@ -236,20 +297,26 @@ class ProfessionalNotificationSystem {
 
   // Mark all as read
   markAllAsRead(userId: string): void {
+    // Load current state for this user
+    this.loadState(userId)
+    
     this.state.notifications
       .filter(n => n.userId === userId)
       .forEach(n => this.state.readNotifications.add(n.id))
     
-    this.saveState()
+    this.saveState(userId)
     
     // Update local state
     this.state.notifications = this.state.notifications.map(n => ({ ...n, isRead: true }))
   }
 
   // Dismiss notification (won't show again)
-  dismissNotification(notificationId: string): boolean {
+  dismissNotification(notificationId: string, userId?: string): boolean {
+    // Load current state for this user
+    if (userId) this.loadState(userId)
+    
     this.state.dismissedNotifications.add(notificationId)
-    this.saveState()
+    this.saveState(userId)
     
     // Remove from current state
     this.state.notifications = this.state.notifications.filter(n => n.id !== notificationId)
@@ -268,7 +335,7 @@ class ProfessionalNotificationSystem {
       .filter(n => n.userId === userId && !n.isPersistent)
       .forEach(n => this.state.dismissedNotifications.add(n.id))
 
-    this.saveState()
+    this.saveState(userId)
 
     // Keep only persistent notifications
     this.state.notifications = this.state.notifications.filter(n => 
@@ -285,8 +352,9 @@ class ProfessionalNotificationSystem {
 
   // Force refresh hot deal (for testing)
   forceRefreshHotDeal(userId: string): void {
+    this.loadState(userId)
     this.state.lastHotDealDate = null
-    this.saveState()
+    this.saveState(userId)
     this.getUserNotifications(userId) // This will create new hot deal
   }
 
