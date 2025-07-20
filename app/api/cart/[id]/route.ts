@@ -36,6 +36,7 @@ export async function PATCH(
     }
 
     // Verify cart item belongs to user
+    console.log('Looking for cart item:', { cartItemId, userId })
     const existingItem = await db
       .select()
       .from(cart)
@@ -45,9 +46,11 @@ export async function PATCH(
       ))
       .limit(1)
 
+    console.log('Found cart items:', existingItem.length)
     if (existingItem.length === 0) {
+      console.error('Cart item not found:', { cartItemId, userId })
       return NextResponse.json(
-        { success: false, error: 'Cart item not found or unauthorized' },
+        { success: false, error: 'Cart item not found or unauthorized', details: { cartItemId, userId } },
         { status: 404 }
       )
     }

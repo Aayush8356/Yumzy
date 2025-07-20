@@ -346,7 +346,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(existingUpdate.timeoutId);
     }
 
-    // Debounce API calls - wait 500ms before sending to server
+    // Debounce API calls - wait 300ms before sending to server (reduced from 500ms)
     return new Promise((resolve) => {
       const timeoutId = setTimeout(async () => {
         // Remove from pending updates
@@ -361,8 +361,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // Mark operation as in progress
         setPendingOperations(prev => new Set(prev).add(foodItemId));
 
+        // Get fresh cart item reference to avoid stale ID issues
+        const currentCart = cart;
+        const currentItemInCart = currentCart?.items.find(item => item.foodItem.id === foodItemId);
+        
+        if (!currentItemInCart) {
+          console.error('Cart item no longer exists for update');
+          setPendingOperations(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(foodItemId);
+            return newSet;
+          });
+          resolve(false);
+          return;
+        }
+
         try {
-          const response = await fetch(`/api/cart/${itemInCart.id}`, {
+          console.log('Updating cart item:', { itemId: currentItemInCart.id, userId: user.id, quantity })
+          const response = await fetch(`/api/cart/${currentItemInCart.id}`, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
@@ -381,6 +397,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             extendSession()
             resolve(true)
           } else {
+            console.error('Failed to update cart:', data)
+            toast({
+              title: "Cart Update Failed",
+              description: data.error || "Unable to update cart. Please try again.",
+              variant: "destructive",
+            })
+            
             // Revert optimistic update on failure
             if (cart) {
               const revertedItems = cart.items.map(item => 
