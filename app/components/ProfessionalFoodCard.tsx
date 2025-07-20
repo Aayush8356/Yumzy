@@ -214,6 +214,7 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
   };
 
   const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleAddToCart = async () => {
     if (!user) {
@@ -267,9 +268,15 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
     }
 
     if (newQuantity > 0) {
-      // Just call updateCartItem - it handles optimistic updates and debouncing
-      await updateCartItem(item.id, newQuantity)
-      // Don't show any success toasts or handle errors here - let cart context handle it
+      setIsUpdating(true);
+      try {
+        await updateCartItem(item.id, newQuantity);
+      } catch (error) {
+        // Error handling is done in cart context
+      } finally {
+        // Clear loading state after a brief delay to show feedback
+        setTimeout(() => setIsUpdating(false), 200);
+      }
     }
   }
 
@@ -283,6 +290,7 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
       return;
     }
 
+    setIsUpdating(true);
     try {
       // Find the cart item to get its cart ID
       const cartItem = cart?.items.find(cartItem => cartItem.foodItem.id === item.id);
@@ -310,6 +318,9 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
         description: "Failed to remove item from cart. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      // Clear loading state after a brief delay to show feedback
+      setTimeout(() => setIsUpdating(false), 200);
     }
   }
 
@@ -441,14 +452,27 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
                     <Info className="w-4 h-4" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="w-full max-w-[380px] sm:max-w-md lg:max-w-2xl h-[95vh] sm:h-auto sm:max-h-[85vh] overflow-hidden m-0 sm:m-4 rounded-none sm:rounded-lg border-0 sm:border p-0">
+                <DialogContent className="w-full max-w-[350px] sm:max-w-md lg:max-w-2xl h-[92vh] sm:h-auto sm:max-h-[85vh] overflow-hidden m-0 sm:m-4 rounded-none sm:rounded-lg border-0 sm:border p-0">
                   <DialogHeader className="flex-shrink-0 p-3 pb-2 border-b bg-background">
-                    <DialogTitle className="text-base font-semibold pr-8 line-clamp-1 leading-tight">{item.name}</DialogTitle>
+                    <DialogTitle className="text-sm font-semibold pr-8 line-clamp-1 leading-tight">{item.name}</DialogTitle>
                   </DialogHeader>
                   {selectedItem && (
                     <div className="flex flex-col h-full bg-background">
-                      {/* Compact Image Section */}
-                      <div className="flex-shrink-0 relative w-full h-32 sm:h-48">
+                      {/* Hot Deal Banner */}
+                      {selectedItem.discount && (
+                        <div className="flex-shrink-0 bg-gradient-to-r from-orange-500 to-red-500 p-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🔥</span>
+                            <div>
+                              <div className="text-white text-xs font-semibold">Today's Hot Deal!</div>
+                              <div className="text-white/90 text-[10px]">{selectedItem.name} is {selectedItem.discount}% off today only! Limited time offer.</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Optimized Image Section */}
+                      <div className="flex-shrink-0 relative w-full h-40 sm:h-48">
                         <ProfessionalFoodImage
                           src={imageUrl}
                           alt={selectedItem.name}
@@ -458,50 +482,124 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
                           professionalCategories={selectedItem.professionalCategories || []}
                           priority={true}
                         />
+                        {/* Overlay nutrition quick stats */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                          <div className="grid grid-cols-4 gap-2 text-center text-white text-xs">
+                            <div>
+                              <div className="font-bold">{selectedItem.nutritionInfo.calories}</div>
+                              <div className="text-[10px] opacity-80">cal</div>
+                            </div>
+                            <div>
+                              <div className="font-bold">{selectedItem.nutritionInfo.protein}g</div>
+                              <div className="text-[10px] opacity-80">protein</div>
+                            </div>
+                            <div>
+                              <div className="font-bold">{selectedItem.cookTime}</div>
+                              <div className="text-[10px] opacity-80">time</div>
+                            </div>
+                            <div>
+                              <div className="font-bold">{selectedItem.servingSize}</div>
+                              <div className="text-[10px] opacity-80">serving</div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                       
-                      {/* Main Content - All Visible */}
+                      {/* Detailed Content */}
                       <div className="flex-1 p-3 space-y-3 overflow-y-auto scrollbar-hide">
                         {/* Description */}
-                        <p className="text-muted-foreground text-xs leading-relaxed">
-                          {selectedItem.description}
-                        </p>
+                        <div>
+                          <p className="text-muted-foreground text-sm leading-relaxed">
+                            {selectedItem.description}
+                          </p>
+                        </div>
                         
-                        {/* Ultra Compact Combined Info */}
-                        <div className="bg-muted/20 p-2.5 rounded-lg">
-                          <div className="grid grid-cols-4 gap-2 text-center text-xs mb-2">
-                            <div>
-                              <div className="font-medium text-primary">{selectedItem.nutritionInfo.calories}</div>
-                              <div className="text-muted-foreground text-[10px]">cal</div>
+                        {/* Complete Nutrition Info */}
+                        <div className="bg-muted/20 p-3 rounded-lg">
+                          <h4 className="font-semibold mb-2 text-sm">Complete Nutrition Facts</h4>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Calories:</span>
+                              <span className="font-medium">{selectedItem.nutritionInfo.calories}</span>
                             </div>
-                            <div>
-                              <div className="font-medium text-primary">{selectedItem.nutritionInfo.protein}g</div>
-                              <div className="text-muted-foreground text-[10px]">protein</div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Protein:</span>
+                              <span className="font-medium">{selectedItem.nutritionInfo.protein}g</span>
                             </div>
-                            <div>
-                              <div className="font-medium text-primary">{selectedItem.cookTime}</div>
-                              <div className="text-muted-foreground text-[10px]">time</div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Carbs:</span>
+                              <span className="font-medium">{selectedItem.nutritionInfo.carbs}g</span>
                             </div>
-                            <div>
-                              <div className="font-medium text-primary">{selectedItem.servingSize}</div>
-                              <div className="text-muted-foreground text-[10px]">serving</div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Fat:</span>
+                              <span className="font-medium">{selectedItem.nutritionInfo.fat}g</span>
                             </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Fiber:</span>
+                              <span className="font-medium">{selectedItem.nutritionInfo.fiber}g</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Sugar:</span>
+                              <span className="font-medium">{selectedItem.nutritionInfo.sugar}g</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Details */}
+                        <div className="bg-muted/20 p-3 rounded-lg">
+                          <h4 className="font-semibold mb-2 text-sm">Details & Info</h4>
+                          <div className="grid grid-cols-1 gap-1.5 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Serving Size:</span>
+                              <span className="font-medium">{selectedItem.servingSize}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Cook Time:</span>
+                              <span className="font-medium">{selectedItem.cookTime}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Difficulty:</span>
+                              <span className="font-medium">{selectedItem.difficulty}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Rating:</span>
+                              <span className="font-medium">⭐ {selectedItem.rating} ({selectedItem.reviewCount} reviews)</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Dietary Info */}
+                        <div className="bg-muted/20 p-3 rounded-lg">
+                          <h4 className="font-semibold mb-2 text-sm">Dietary Information</h4>
+                          <div className="flex flex-wrap gap-1">
+                            {selectedItem.isVegetarian && (
+                              <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">🌱 Vegetarian</span>
+                            )}
+                            {selectedItem.isVegan && (
+                              <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">🌿 Vegan</span>
+                            )}
+                            {selectedItem.isGlutenFree && (
+                              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">🌾 Gluten-Free</span>
+                            )}
+                            {selectedItem.isSpicy && (
+                              <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">🌶️ Spicy</span>
+                            )}
                           </div>
                         </div>
 
                         {/* Ingredients */}
                         {!!(selectedItem.ingredients.length > 0) && (
-                          <div className="bg-muted/20 p-2.5 rounded-lg">
-                            <h4 className="font-semibold mb-1.5 text-xs">Ingredients</h4>
-                            <p className="text-[10px] text-muted-foreground leading-relaxed">
+                          <div className="bg-muted/20 p-3 rounded-lg">
+                            <h4 className="font-semibold mb-2 text-sm">Ingredients</h4>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
                               {selectedItem.ingredients.join(', ')}
                             </p>
                           </div>
                         )}
                       </div>
 
-                      {/* Compact Action Bar */}
-                      <div className="flex-shrink-0 bg-background border-t p-2.5">
+                      {/* Enhanced Action Bar */}
+                      <div className="flex-shrink-0 bg-background border-t p-3">
                         <div className="flex items-center gap-2">
                           <div className="flex flex-col">
                             <div className="text-lg font-bold text-primary">{selectedItem.price}</div>
@@ -537,15 +635,20 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
 
             {/* Quantity Controls or Add Button */}
             {currentQuantity > 0 ? (
-              <div className="flex items-center gap-1 bg-primary/10 rounded-lg p-1">
+              <div className="flex items-center gap-1 bg-primary/10 rounded-lg p-1 relative">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleDecrement}
                   className="h-7 w-7 p-0 hover:bg-primary/20 transition-none"
                   suppressHydrationWarning
+                  disabled={isUpdating}
                 >
-                  <Minus className="w-3 h-3" />
+                  {isUpdating ? (
+                    <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Minus className="w-3 h-3" />
+                  )}
                 </Button>
                 <span className="min-w-[1.5rem] text-center font-medium text-primary text-sm">
                   {currentQuantity}
@@ -556,8 +659,13 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
                   onClick={handleIncrement}
                   className="h-7 w-7 p-0 hover:bg-primary/20 transition-none"
                   suppressHydrationWarning
+                  disabled={isUpdating}
                 >
-                  <Plus className="w-3 h-3" />
+                  {isUpdating ? (
+                    <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Plus className="w-3 h-3" />
+                  )}
                 </Button>
               </div>
             ) : (

@@ -60,6 +60,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Track pending operations to prevent race conditions
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set())
   const pendingUpdates = useRef<Map<string, { quantity: number, timeoutId: NodeJS.Timeout }>>(new Map())
+  // Sequential request queue to prevent API race conditions
+  const requestQueue = useRef<Map<string, Promise<boolean>>>(new Map())
 
   // Fetch cart data
   const refreshCart = useCallback(async () => {
