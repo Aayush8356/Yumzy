@@ -264,7 +264,7 @@ export function OrderManagement() {
                               <Eye className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
+                          <DialogContent className="w-[95vw] max-w-lg sm:max-w-xl lg:max-w-2xl mx-2 sm:mx-0 max-h-[85vh] sm:max-h-[80vh] overflow-y-auto">
                             <DialogHeader>
                               <DialogTitle>Order Details</DialogTitle>
                             </DialogHeader>

@@ -57,9 +57,9 @@ export function CartView() {
       <div className="lg:col-span-2">
         <div className="space-y-4">
           {cart.items.map((item) => (
-            <div key={item.id} className="bg-card rounded-lg border p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="w-full sm:w-20 h-32 sm:h-20 rounded-md overflow-hidden relative">
+            <div key={item.id} className="bg-card rounded-lg border p-3 sm:p-4 hover:shadow-md transition-shadow">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <div className="w-full sm:w-20 h-40 sm:h-20 rounded-md overflow-hidden relative flex-shrink-0">
                   <ProfessionalFoodImage
                     src={item.foodItem.image || ''}
                     alt={item.foodItem.name}
@@ -69,12 +69,12 @@ export function CartView() {
                     priority={false}
                   />
                 </div>
-                <div className="flex-grow">
-                  <h3 className="font-bold text-sm sm:text-base">{item.foodItem.name}</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{item.foodItem.shortDescription}</p>
-                  <p className="font-bold text-lg sm:text-base mt-1">₹{item.foodItem.price}</p>
+                <div className="flex-grow min-w-0">
+                  <h3 className="font-bold text-base sm:text-lg truncate">{item.foodItem.name}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{item.foodItem.shortDescription}</p>
+                  <p className="font-bold text-lg text-primary mt-2">₹{item.foodItem.price}</p>
                 </div>
-                <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-2">
+                <div className="flex flex-row sm:flex-col items-center sm:items-end gap-3 sm:gap-2 w-full sm:w-auto justify-between sm:justify-center">
                   <QuantityStepper
                     quantity={item.quantity}
                     onQuantityChange={(newQuantity) => {

@@ -90,47 +90,59 @@ export function CheckoutForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="address">Address</Label>
-          <Input id="address" {...register('address')} />
-          {errors.address && <p className="text-red-500 text-sm">{errors.address.message}</p>}
-        </div>
-        <div>
-          <Label htmlFor="city">City</Label>
-          <Input id="city" {...register('city')} />
-          {errors.city && <p className="text-red-500 text-sm">{errors.city.message}</p>}
-        </div>
-        <div>
-          <Label htmlFor="state">State</Label>
-          <Input id="state" {...register('state')} />
-          {errors.state && <p className="text-red-500 text-sm">{errors.state.message}</p>}
-        </div>
-        <div>
-          <Label htmlFor="zip">Zip Code</Label>
-          <Input id="zip" {...register('zip')} />
-          {errors.zip && <p className="text-red-500 text-sm">{errors.zip.message}</p>}
-        </div>
-      </div>
-      <div className="grid md:grid-cols-3 gap-4">
-        <div>
-          <Label htmlFor="cardNumber">Card Number</Label>
-          <Input id="cardNumber" {...register('cardNumber')} />
-          {errors.cardNumber && <p className="text-red-500 text-sm">{errors.cardNumber.message}</p>}
-        </div>
-        <div>
-          <Label htmlFor="expiryDate">Expiry Date</Label>
-          <Input id="expiryDate" placeholder="MM/YY" {...register('expiryDate')} />
-          {errors.expiryDate && <p className="text-red-500 text-sm">{errors.expiryDate.message}</p>}
-        </div>
-        <div>
-          <Label htmlFor="cvv">CVV</Label>
-          <Input id="cvv" {...register('cvv')} />
-          {errors.cvv && <p className="text-red-500 text-sm">{errors.cvv.message}</p>}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+      {/* Address Section */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Delivery Address</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <Label htmlFor="address" className="text-sm font-medium">Street Address</Label>
+            <Input id="address" {...register('address')} className="mt-1" placeholder="Enter your street address" />
+            {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="city" className="text-sm font-medium">City</Label>
+            <Input id="city" {...register('city')} className="mt-1" placeholder="City" />
+            {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="state" className="text-sm font-medium">State</Label>
+            <Input id="state" {...register('state')} className="mt-1" placeholder="State" />
+            {errors.state && <p className="text-red-500 text-sm mt-1">{errors.state.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="zip" className="text-sm font-medium">Zip Code</Label>
+            <Input id="zip" {...register('zip')} className="mt-1" placeholder="12345" />
+            {errors.zip && <p className="text-red-500 text-sm mt-1">{errors.zip.message}</p>}
+          </div>
         </div>
       </div>
-      <Button type="submit" className="w-full">Place Order</Button>
+      
+      {/* Payment Section */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Payment Information</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="sm:col-span-2 lg:col-span-3">
+            <Label htmlFor="cardNumber" className="text-sm font-medium">Card Number</Label>
+            <Input id="cardNumber" {...register('cardNumber')} className="mt-1" placeholder="1234 5678 9012 3456" />
+            {errors.cardNumber && <p className="text-red-500 text-sm mt-1">{errors.cardNumber.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="expiryDate" className="text-sm font-medium">Expiry Date</Label>
+            <Input id="expiryDate" placeholder="MM/YY" {...register('expiryDate')} className="mt-1" />
+            {errors.expiryDate && <p className="text-red-500 text-sm mt-1">{errors.expiryDate.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="cvv" className="text-sm font-medium">CVV</Label>
+            <Input id="cvv" {...register('cvv')} className="mt-1" placeholder="123" />
+            {errors.cvv && <p className="text-red-500 text-sm mt-1">{errors.cvv.message}</p>}
+          </div>
+        </div>
+      </div>
+      
+      <Button type="submit" className="w-full mt-6 h-12 text-base font-medium">
+        Place Order
+      </Button>
     </form>
   );
 }

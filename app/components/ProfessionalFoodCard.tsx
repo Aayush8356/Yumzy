@@ -230,6 +230,10 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
     try {
       setIsAdding(true);
       const success = await addToCart(item.id, 1);
+      
+      // Clear isAdding quickly for better UX
+      setIsAdding(false);
+      
       if (success) {
         toast({
           title: "Added to cart",
@@ -243,13 +247,12 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
         });
       }
     } catch (error) {
+      setIsAdding(false);
       toast({
         title: "Error", 
         description: "Failed to add item to cart. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setIsAdding(false);
     }
   };
 
@@ -438,91 +441,93 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
                     <Info className="w-4 h-4" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>{item.name}</DialogTitle>
+                <DialogContent className="w-full max-w-[380px] sm:max-w-md lg:max-w-2xl h-[95vh] sm:h-auto sm:max-h-[85vh] overflow-hidden m-0 sm:m-4 rounded-none sm:rounded-lg border-0 sm:border p-0">
+                  <DialogHeader className="flex-shrink-0 p-3 pb-2 border-b bg-background">
+                    <DialogTitle className="text-base font-semibold pr-8 line-clamp-1 leading-tight">{item.name}</DialogTitle>
                   </DialogHeader>
                   {selectedItem && (
-                    <div className="space-y-4">
-                      <ProfessionalFoodImage
-                        src={imageUrl}
-                        alt={selectedItem.name}
-                        width={600}
-                        height={300}
-                        className="w-full h-64 object-cover rounded-lg"
-                        professionalCategories={selectedItem.professionalCategories || []}
-                        priority={true}
-                      />
-                      <p className="text-muted-foreground">{selectedItem.description}</p>
+                    <div className="flex flex-col h-full bg-background">
+                      {/* Compact Image Section */}
+                      <div className="flex-shrink-0 relative w-full h-32 sm:h-48">
+                        <ProfessionalFoodImage
+                          src={imageUrl}
+                          alt={selectedItem.name}
+                          width={400}
+                          height={200}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          professionalCategories={selectedItem.professionalCategories || []}
+                          priority={true}
+                        />
+                      </div>
                       
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="font-semibold mb-2">Nutrition (per serving)</h4>
-                          <div className="space-y-1 text-sm">
-                            <div className="flex justify-between">
-                              <span>Calories:</span>
-                              <span>{selectedItem.nutritionInfo.calories}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Protein:</span>
-                              <span>{selectedItem.nutritionInfo.protein}g</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Carbs:</span>
-                              <span>{selectedItem.nutritionInfo.carbs}g</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Fat:</span>
-                              <span>{selectedItem.nutritionInfo.fat}g</span>
-                            </div>
-                          </div>
-                        </div>
+                      {/* Main Content - All Visible */}
+                      <div className="flex-1 p-3 space-y-3 overflow-y-auto scrollbar-hide">
+                        {/* Description */}
+                        <p className="text-muted-foreground text-xs leading-relaxed">
+                          {selectedItem.description}
+                        </p>
                         
-                        <div>
-                          <h4 className="font-semibold mb-2">Details</h4>
-                          <div className="space-y-1 text-sm">
-                            <div className="flex justify-between">
-                              <span>Serving:</span>
-                              <span>{selectedItem.servingSize}</span>
+                        {/* Ultra Compact Combined Info */}
+                        <div className="bg-muted/20 p-2.5 rounded-lg">
+                          <div className="grid grid-cols-4 gap-2 text-center text-xs mb-2">
+                            <div>
+                              <div className="font-medium text-primary">{selectedItem.nutritionInfo.calories}</div>
+                              <div className="text-muted-foreground text-[10px]">cal</div>
                             </div>
-                            <div className="flex justify-between">
-                              <span>Cook Time:</span>
-                              <span>{selectedItem.cookTime}</span>
+                            <div>
+                              <div className="font-medium text-primary">{selectedItem.nutritionInfo.protein}g</div>
+                              <div className="text-muted-foreground text-[10px]">protein</div>
                             </div>
-                            <div className="flex justify-between">
-                              <span>Difficulty:</span>
-                              <span>{selectedItem.difficulty}</span>
+                            <div>
+                              <div className="font-medium text-primary">{selectedItem.cookTime}</div>
+                              <div className="text-muted-foreground text-[10px]">time</div>
+                            </div>
+                            <div>
+                              <div className="font-medium text-primary">{selectedItem.servingSize}</div>
+                              <div className="text-muted-foreground text-[10px]">serving</div>
                             </div>
                           </div>
                         </div>
+
+                        {/* Ingredients */}
+                        {!!(selectedItem.ingredients.length > 0) && (
+                          <div className="bg-muted/20 p-2.5 rounded-lg">
+                            <h4 className="font-semibold mb-1.5 text-xs">Ingredients</h4>
+                            <p className="text-[10px] text-muted-foreground leading-relaxed">
+                              {selectedItem.ingredients.join(', ')}
+                            </p>
+                          </div>
+                        )}
                       </div>
 
-                      {!!(selectedItem.ingredients.length > 0) && (
-                        <div>
-                          <h4 className="font-semibold mb-2">Ingredients</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {selectedItem.ingredients.join(', ')}
-                          </p>
+                      {/* Compact Action Bar */}
+                      <div className="flex-shrink-0 bg-background border-t p-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="flex flex-col">
+                            <div className="text-lg font-bold text-primary">{selectedItem.price}</div>
+                            {selectedItem.originalPrice && (
+                              <div className="text-xs text-muted-foreground line-through">{selectedItem.originalPrice}</div>
+                            )}
+                          </div>
+                          <Button 
+                            className="flex-1 h-10 gap-2 font-medium text-sm" 
+                            onClick={handleAddToCart}
+                            disabled={isAdding}
+                          >
+                            {isAdding ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                Adding...
+                              </>
+                            ) : (
+                              <>
+                                <ShoppingCart className="w-4 h-4" />
+                                Add to Cart
+                              </>
+                            )}
+                          </Button>
                         </div>
-                      )}
-
-                      <Button 
-                        className="w-full gap-2" 
-                        onClick={handleAddToCart}
-                        disabled={isAdding}
-                      >
-                        {isAdding ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            Adding...
-                          </>
-                        ) : (
-                          <>
-                            <ShoppingCart className="w-4 h-4" />
-                            Add to Cart - ₹{selectedItem.price}
-                          </>
-                        )}
-                      </Button>
+                      </div>
                     </div>
                   )}
                 </DialogContent>
@@ -531,26 +536,26 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
             </div>
 
             {/* Quantity Controls or Add Button */}
-            {currentQuantity > 0 || isAdding ? (
+            {currentQuantity > 0 ? (
               <div className="flex items-center gap-1 bg-primary/10 rounded-lg p-1">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleDecrement}
-                  className="h-7 w-7 p-0 hover:bg-primary/20"
-                  disabled={isAdding}
+                  className="h-7 w-7 p-0 hover:bg-primary/20 transition-none"
+                  suppressHydrationWarning
                 >
                   <Minus className="w-3 h-3" />
                 </Button>
                 <span className="min-w-[1.5rem] text-center font-medium text-primary text-sm">
-                  {currentQuantity || (isAdding ? 1 : 0)}
+                  {currentQuantity}
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleIncrement}
-                  className="h-7 w-7 p-0 hover:bg-primary/20"
-                  disabled={isAdding}
+                  className="h-7 w-7 p-0 hover:bg-primary/20 transition-none"
+                  suppressHydrationWarning
                 >
                   <Plus className="w-3 h-3" />
                 </Button>

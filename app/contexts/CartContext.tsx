@@ -346,18 +346,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(existingUpdate.timeoutId);
     }
 
-    // Debounce API calls - wait 300ms before sending to server (reduced from 500ms)
+    // Debounce API calls - wait 150ms before sending to server (optimized for production)
     return new Promise((resolve) => {
       const timeoutId = setTimeout(async () => {
         // Remove from pending updates
         pendingUpdates.current.delete(foodItemId);
         
-        // Check if this operation is already in progress
-        if (pendingOperations.has(foodItemId)) {
-          resolve(true);
-          return;
-        }
-
+        // Allow multiple operations for better responsiveness
         // Mark operation as in progress
         setPendingOperations(prev => new Set(prev).add(foodItemId));
 
@@ -454,7 +449,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             return newSet;
           });
         }
-      }, 300); // 300ms debounce - reduced for better responsiveness
+      }, 150); // 150ms debounce - optimized for production - reduced for better responsiveness
 
       // Store the timeout and quantity
       pendingUpdates.current.set(foodItemId, { quantity, timeoutId });

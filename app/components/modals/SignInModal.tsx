@@ -34,7 +34,7 @@ export function SignInModal({ isOpen, onClose }: SignInModalProps) {
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.2 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-md"
+          className="w-full max-w-sm sm:max-w-md lg:max-w-lg mx-4 sm:mx-0"
         >
           <Card className="bg-background shadow-elegant border-0">
             <CardHeader className="relative text-center pb-6">

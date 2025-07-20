@@ -312,10 +312,10 @@ export function Navigation() {
                   }
                 }}
               >
-                <ShoppingCart className="h-4 w-4" />
+                <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
                 {!isLoading && isAuthenticated && cart && cart.summary.totalQuantity > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
-                    {cart.summary.totalQuantity}
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[10px] sm:text-xs min-w-[20px] sm:min-w-[24px] touch-target">
+                    {cart.summary.totalQuantity > 99 ? '99+' : cart.summary.totalQuantity}
                   </span>
                 )}
               </Button>

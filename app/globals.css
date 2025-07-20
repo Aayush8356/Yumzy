@@ -99,6 +99,9 @@ All colors MUST be HSL.
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --bounce-soft: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    
+    /* Touch Targets */
+    --touch-target-min: 44px;
 
     --radius: 0.5rem;
 
@@ -216,4 +219,46 @@ All colors MUST be HSL.
       transition-duration: 0.01ms !important;
     }
   }
+}
+
+/* Utility Classes for Better Responsiveness */
+.touch-target {
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Better mobile focus states */
+@media (hover: none) and (pointer: coarse) {
+  .focus-visible:focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+  }
+}
+
+/* Scrollbar improvements for mobile */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Better text selection on mobile */
+.select-none {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }

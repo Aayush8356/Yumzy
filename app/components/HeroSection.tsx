@@ -80,13 +80,13 @@ export function HeroSection() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
-                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold leading-[0.9] tracking-tight"
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[0.9] tracking-tight max-w-4xl"
               >
                 <span className="block">Delicious</span>
                 <span className="block bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
                   Food Delivered
                 </span>
-                <span className="block text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-medium text-muted-foreground/80">
+                <span className="block text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-medium text-muted-foreground/80">
                   in minutes
                 </span>
               </motion.h1>

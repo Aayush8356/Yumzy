@@ -350,7 +350,7 @@ export function AddressManagement({ userId }: { userId: string }) {
                 Add Address
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="w-[95vw] max-w-sm sm:max-w-md mx-2 sm:mx-0">
               <DialogHeader>
                 <DialogTitle>Add New Address</DialogTitle>
               </DialogHeader>
@@ -409,7 +409,7 @@ export function AddressManagement({ userId }: { userId: string }) {
                           <Edit className="h-4 w-4" />
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-md">
+                      <DialogContent className="w-[95vw] max-w-sm sm:max-w-md mx-2 sm:mx-0">
                         <DialogHeader>
                           <DialogTitle>Edit Address</DialogTitle>
                         </DialogHeader>

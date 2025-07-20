@@ -84,7 +84,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.2 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-md max-h-[90vh] overflow-hidden"
+          className="w-full max-w-sm sm:max-w-md lg:max-w-lg max-h-[90vh] overflow-hidden mx-4 sm:mx-0"
         >
           <Card className="bg-background shadow-elegant border-0">
             <div className="sticky top-0 bg-background border-b p-6 flex items-center justify-between">
