@@ -379,7 +379,7 @@ export default function CheckoutPage() {
                           width={48}
                           height={48}
                           className="w-full h-full object-cover"
-                          professionalCategories={[item.foodItem.category?.toLowerCase() || 'food']}
+                          professionalCategories={[item.foodItem.name?.toLowerCase().split(' ')[0] || 'food']}
                         />
                       </div>
                       <div className="flex-1">
