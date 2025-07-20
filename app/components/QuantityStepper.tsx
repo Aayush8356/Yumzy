@@ -35,11 +35,12 @@ export function QuantityStepper({
         size="sm"
         onClick={handleDecrement}
         disabled={quantity <= minQuantity}
-        className="h-8 w-8 p-0 hover:bg-primary/20"
+        className="h-8 w-8 p-0 hover:bg-primary/20 transition-none"
+        suppressHydrationWarning
       >
         <Minus className="w-4 h-4" />
       </Button>
-      <span className="min-w-[2rem] text-center font-medium text-primary">
+      <span className="min-w-[2rem] text-center font-medium text-primary" suppressHydrationWarning>
         {quantity}
       </span>
       <Button
@@ -47,7 +48,8 @@ export function QuantityStepper({
         size="sm"
         onClick={handleIncrement}
         disabled={quantity >= maxQuantity}
-        className="h-8 w-8 p-0 hover:bg-primary/20"
+        className="h-8 w-8 p-0 hover:bg-primary/20 transition-none"
+        suppressHydrationWarning
       >
         <Plus className="w-4 h-4" />
       </Button>
