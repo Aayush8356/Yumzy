@@ -97,7 +97,7 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
   const [isLiked, setIsLiked] = useState(isFavorited);
   const [imageUrl, setImageUrl] = useState<string>(generateFallbackImage(item));
   const [isLoadingImage, setIsLoadingImage] = useState(true);
-  const { addToCart, getItemQuantity, updateCartItem, cart, removeFromCart } = useCart();
+  const { addToCart, getItemQuantity, updateCartItem, cart, removeFromCart, isUpdating } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
   
@@ -214,7 +214,6 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
   };
 
   const [isAdding, setIsAdding] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleAddToCart = async () => {
     if (!user) {
@@ -257,89 +256,40 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
     }
   };
 
-  const handleQuantityChange = async (newQuantity: number) => {
-    if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to be logged in to modify cart",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (isUpdating) return; // Prevent multiple operations
-
-    if (newQuantity > 0) {
-      setIsUpdating(true);
-      try {
-        await updateCartItem(item.id, newQuantity);
-      } catch (error) {
-        // Error handling is done in cart context
-      } finally {
-        // Clear loading state after a brief delay to show feedback
-        setTimeout(() => setIsUpdating(false), 150);
-      }
-    }
-  }
-
-  const handleRemoveFromCart = async () => {
-    if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to be logged in to modify cart",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (isUpdating) return; // Prevent multiple operations
-
-    setIsUpdating(true);
-    try {
-      // Find the cart item to get its cart ID
-      const cartItem = cart?.items.find(cartItem => cartItem.foodItem.id === item.id);
-      if (cartItem) {
-        const success = await removeFromCart(cartItem.id);
-        if (success) {
-          // Don't show success toast - cart context handles feedback
-          console.log(`${item.name} removed from cart`);
-        } else {
-          // Only show error if removal actually failed
-          toast({
-            title: "Failed to remove item",
-            description: "Please try again.",
-            variant: "destructive"
-          });
-        }
-      } else {
-        // Item not in cart - this is actually fine, just log it
-        console.log('Item not found in cart, probably already removed');
-      }
-    } catch (error) {
-      console.error('Error removing from cart:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove item from cart. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      // Clear loading state after a brief delay to show feedback
-      setTimeout(() => setIsUpdating(false), 150);
-    }
-  }
-
   const handleIncrement = async () => {
-    if (isUpdating) return; // Prevent multiple operations
-    await handleQuantityChange(currentQuantity + 1)
+    if (!user) {
+      toast({
+        title: "Please sign in",
+        description: "You need to be logged in to modify cart",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (isUpdating(item.id)) return; // Prevent multiple operations
+    await updateCartItem(item.id, currentQuantity + 1);
   }
 
   const handleDecrement = async () => {
-    if (isUpdating) return; // Prevent multiple operations
+    if (!user) {
+      toast({
+        title: "Please sign in",
+        description: "You need to be logged in to modify cart",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (isUpdating(item.id)) return; // Prevent multiple operations
+    
     if (currentQuantity > 1) {
-      await handleQuantityChange(currentQuantity - 1)
+      await updateCartItem(item.id, currentQuantity - 1);
     } else if (currentQuantity === 1) {
       // Remove item entirely when quantity would go below 1
-      await handleRemoveFromCart()
+      const cartItem = cart?.items.find(cartItem => cartItem.foodItem.id === item.id);
+      if (cartItem) {
+        await removeFromCart(cartItem.id);
+      }
     }
   }
 
@@ -616,9 +566,9 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
                           <Button 
                             className="flex-1 h-10 gap-2 font-medium text-sm" 
                             onClick={handleAddToCart}
-                            disabled={isAdding}
+                            disabled={isAdding || isUpdating(item.id)}
                           >
-                            {isAdding ? (
+                            {isAdding || isUpdating(item.id) ? (
                               <>
                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                 Adding...
@@ -648,9 +598,9 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
                   onClick={handleDecrement}
                   className="h-7 w-7 p-0 hover:bg-primary/20 transition-none"
                   suppressHydrationWarning
-                  disabled={isUpdating}
+                  disabled={isUpdating(item.id)}
                 >
-                  {isUpdating ? (
+                  {isUpdating(item.id) ? (
                     <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <Minus className="w-3 h-3" />
@@ -665,9 +615,9 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
                   onClick={handleIncrement}
                   className="h-7 w-7 p-0 hover:bg-primary/20 transition-none"
                   suppressHydrationWarning
-                  disabled={isUpdating}
+                  disabled={isUpdating(item.id)}
                 >
-                  {isUpdating ? (
+                  {isUpdating(item.id) ? (
                     <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <Plus className="w-3 h-3" />
@@ -679,9 +629,9 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
                 size="sm" 
                 className="gap-2 font-medium" 
                 onClick={handleAddToCart}
-                disabled={isAdding}
+                disabled={isAdding || isUpdating(item.id)}
               >
-                {isAdding ? (
+                {isAdding || isUpdating(item.id) ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Adding...
