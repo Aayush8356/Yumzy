@@ -84,6 +84,7 @@ export function CartView() {
                         removeFromCart(item.id);
                       }
                     }}
+                    isUpdating={isUpdating(item.foodItem.id)}
                   />
                   <Button variant="ghost" size="sm" onClick={() => removeFromCart(item.id)} className="text-red-500 hover:text-red-700">
                     Remove

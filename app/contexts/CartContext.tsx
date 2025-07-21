@@ -1,3 +1,4 @@
+// yumzy/app/contexts/CartContext.tsx
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
@@ -59,10 +60,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, extendSession } = useAuth()
   const { toast } = useToast()
   
-  // Single request queue per food item to prevent race conditions
-  const requestQueue = useRef<Map<string, Promise<boolean>>>(new Map())
+  const requestQueue = useRef<Map<string, Promise<any>>>(new Map())
 
-  // Calculate cart totals
   const calculateTotals = (items: CartItem[]): CartSummary => {
     const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
     const subtotal = items.reduce((sum, item) => sum + (Number(item.foodItem.price) * item.quantity), 0)
@@ -82,7 +81,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Update cart state with new items
   const updateCartState = (items: CartItem[]) => {
     setCart({
       items,
@@ -90,7 +88,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     })
   }
 
-  // Fetch cart data from server
   const refreshCart = useCallback(async () => {
     if (!isAuthenticated || !user) {
       setCart(null)
@@ -115,253 +112,175 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, user])
 
-  // Load cart on mount and when user changes
   useEffect(() => {
     refreshCart()
   }, [refreshCart])
 
-  // Queue operations per food item to prevent race conditions
-  const queueOperation = async (foodItemId: string, operation: () => Promise<boolean>): Promise<boolean> => {
-    // If there's already an operation in progress for this item, wait for it
+  const queueOperation = async <T,>(foodItemId: string, operation: () => Promise<T>): Promise<T> => {
     const existingOperation = requestQueue.current.get(foodItemId)
     if (existingOperation) {
-      await existingOperation
+      await existingOperation.catch(() => {})
     }
 
-    // Start new operation
     const newOperation = operation()
     requestQueue.current.set(foodItemId, newOperation)
     
     try {
-      const result = await newOperation
-      return result
+      return await newOperation
     } finally {
-      // Clear from queue after completion
-      requestQueue.current.delete(foodItemId)
+      if (requestQueue.current.get(foodItemId) === newOperation) {
+        requestQueue.current.delete(foodItemId)
+      }
     }
   }
 
-  // Add or update item in cart
+  const performCartUpdate = async (
+    foodItemId: string,
+    apiCall: () => Promise<Response>,
+    optimisticUpdate: () => CartItem[],
+    revertState: () => CartItem[]
+  ) => {
+    return queueOperation(foodItemId, async () => {
+      setUpdatingItems(prev => new Set(prev).add(foodItemId));
+      
+      const originalItems = cart?.items ?? [];
+      updateCartState(optimisticUpdate());
+
+      try {
+        const response = await apiCall();
+
+        if (response.ok) {
+          extendSession();
+          await refreshCart(); // Always refresh the cart from the server
+          return true;
+        } else {
+          updateCartState(revertState());
+          const data = await response.json();
+          console.error('Cart operation failed:', data.error);
+          toast({ title: "Error", description: data.error, variant: "destructive" });
+          return false;
+        }
+      } catch (error) {
+        updateCartState(revertState());
+        console.error('Cart operation error:', error);
+        toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
+        return false;
+      } finally {
+        setUpdatingItems(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(foodItemId);
+          return newSet;
+        });
+      }
+    });
+  };
+
   const addToCart = useCallback(async (
     foodItemId: string, 
     quantity: number = 1, 
     specialInstructions: string = ''
   ): Promise<boolean> => {
-    if (!isAuthenticated || !user || !cart) {
-      return false
+    if (!isAuthenticated || !user || !cart) return false
+
+    const existingItem = cart.items.find(item => item.foodItem.id === foodItemId)
+
+    if (existingItem) {
+      return updateCartItem(foodItemId, existingItem.quantity + quantity, specialInstructions)
     }
 
-    return queueOperation(foodItemId, async () => {
-      setUpdatingItems(prev => new Set(prev).add(foodItemId))
-
-      try {
-        // Optimistic update - immediately show the change
-        const existingItem = cart.items.find(item => item.foodItem.id === foodItemId)
-        
-        let newItems: CartItem[]
-        if (existingItem) {
-          // Update existing item quantity
-          newItems = cart.items.map(item => 
-            item.foodItem.id === foodItemId 
-              ? { ...item, quantity: item.quantity + quantity, specialInstructions: specialInstructions || item.specialInstructions }
-              : item
-          )
-        } else {
-          // Add new item (create temporary item for optimistic update)
-          const tempItem: CartItem = {
-            id: `temp-${Date.now()}`,
-            quantity,
-            specialInstructions,
-            foodItem: {
-              id: foodItemId,
-              name: 'Loading...',
-              price: '0',
-              image: '',
-              shortDescription: '',
-              isVegetarian: false,
-              isVegan: false,
-              isGlutenFree: false,
-              cookTime: ''
-            }
-          }
-          newItems = [...cart.items, tempItem]
+    const optimisticUpdate = () => {
+      const tempItem: CartItem = {
+        id: `temp-${Date.now()}`,
+        quantity,
+        specialInstructions,
+        foodItem: {
+          id: foodItemId,
+          name: 'Adding...',
+          price: '0',
+          image: '',
+          shortDescription: '',
+          isVegetarian: false, isVegan: false, isGlutenFree: false, cookTime: ''
         }
-
-        // Apply optimistic update
-        updateCartState(newItems)
-
-        // Make API call
-        const response = await fetch('/api/cart', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.id,
-            foodItemId,
-            quantity,
-            specialInstructions
-          })
-        })
-
-        if (response.ok) {
-          extendSession()
-          // Sync with server after successful operation (but don't override optimistic update immediately)
-          setTimeout(() => refreshCart(), 500) // Gentle sync after a delay
-          return true
-        } else {
-          // Revert optimistic update on failure
-          updateCartState(cart.items)
-          const data = await response.json()
-          console.error('Add to cart failed:', data.error)
-          return false
-        }
-      } catch (error) {
-        // Revert optimistic update on error
-        updateCartState(cart.items)
-        console.error('Add to cart error:', error)
-        return false
-      } finally {
-        setUpdatingItems(prev => {
-          const newSet = new Set(prev)
-          newSet.delete(foodItemId)
-          return newSet
-        })
       }
-    })
-  }, [isAuthenticated, user, cart, refreshCart, extendSession])
+      return [...cart.items, tempItem]
+    }
 
-  // Update item quantity (set to specific quantity, not add)
+    return performCartUpdate(
+      foodItemId,
+      () => fetch('/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, foodItemId, quantity, specialInstructions })
+      }),
+      optimisticUpdate,
+      () => cart.items
+    )
+  }, [isAuthenticated, user, cart, extendSession, toast])
+
   const updateCartItem = useCallback(async (
     foodItemId: string,
     quantity: number,
     specialInstructions?: string
   ): Promise<boolean> => {
-    if (!isAuthenticated || !user || !cart) {
-      return false
+    if (!isAuthenticated || !user || !cart) return false
+
+    const existingItem = cart.items.find(item => item.foodItem.id === foodItemId)
+    if (!existingItem) return false
+
+    if (quantity <= 0) {
+      return removeFromCart(existingItem.id)
     }
 
-    return queueOperation(foodItemId, async () => {
-      setUpdatingItems(prev => new Set(prev).add(foodItemId))
+    const optimisticUpdate = () => cart.items.map(item => 
+      item.foodItem.id === foodItemId 
+        ? { ...item, quantity, ...(specialInstructions && { specialInstructions }) }
+        : item
+    )
 
-      try {
-        const existingItem = cart.items.find(item => item.foodItem.id === foodItemId)
-        
-        if (!existingItem) {
-          // Item doesn't exist, add it
-          return await addToCart(foodItemId, quantity, specialInstructions)
-        }
+    return performCartUpdate(
+      foodItemId,
+      () => fetch(`/api/cart/${existingItem.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, quantity, specialInstructions })
+      }),
+      optimisticUpdate,
+      () => cart.items
+    )
+  }, [isAuthenticated, user, cart, extendSession, toast])
 
-        // Optimistic update - set to new quantity
-        const newItems = cart.items.map(item => 
-          item.foodItem.id === foodItemId 
-            ? { ...item, quantity, specialInstructions: specialInstructions || item.specialInstructions }
-            : item
-        )
-
-        // Store original state for potential rollback
-        const originalItems = cart.items
-
-        // Apply optimistic update
-        updateCartState(newItems)
-
-        // Make API call
-        const response = await fetch(`/api/cart/${existingItem.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.id,
-            quantity,
-            specialInstructions
-          })
-        })
-
-        if (response.ok) {
-          extendSession()
-          return true
-        } else {
-          // Revert optimistic update on failure
-          updateCartState(originalItems)
-          const data = await response.json()
-          console.error('Update cart failed:', data.error)
-          return false
-        }
-      } catch (error) {
-        console.error('Update cart error:', error)
-        return false
-      } finally {
-        setUpdatingItems(prev => {
-          const newSet = new Set(prev)
-          newSet.delete(foodItemId)
-          return newSet
-        })
-      }
-    })
-  }, [isAuthenticated, user, cart, addToCart, extendSession])
-
-  // Remove item from cart
   const removeFromCart = useCallback(async (cartItemId: string): Promise<boolean> => {
-    if (!isAuthenticated || !user || !cart) {
-      return false
-    }
+    if (!isAuthenticated || !user || !cart) return false;
 
-    const itemToRemove = cart.items.find(item => item.id === cartItemId)
-    if (!itemToRemove) {
-      return true // Already removed
-    }
+    const itemToRemove = cart.items.find(item => item.id === cartItemId);
+    if (!itemToRemove) return true;
 
-    const foodItemId = itemToRemove.foodItem.id
+    const foodItemId = itemToRemove.foodItem.id;
 
-    return queueOperation(foodItemId, async () => {
-      setUpdatingItems(prev => new Set(prev).add(foodItemId))
+    const optimisticUpdate = () =>
+      cart.items.map(item =>
+        item.id === cartItemId
+          ? { ...item, foodItem: { ...item.foodItem, name: 'Removing...' } }
+          : item
+      );
 
-      try {
-        // Optimistic update - remove item immediately
-        const newItems = cart.items.filter(item => item.id !== cartItemId)
-        const originalItems = cart.items
+    return performCartUpdate(
+      foodItemId,
+      () => fetch(`/api/cart/${cartItemId}?userId=${user.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      }),
+      optimisticUpdate,
+      () => cart.items
+    );
+  }, [isAuthenticated, user, cart, toast]);
 
-        updateCartState(newItems)
-
-        // Handle temporary items (no API call needed)
-        if (cartItemId.startsWith('temp-')) {
-          return true
-        }
-
-        // Make API call
-        const response = await fetch(`/api/cart/${cartItemId}?userId=${user.id}`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' }
-        })
-
-        if (response.ok) {
-          return true
-        } else {
-          // Revert optimistic update on failure
-          updateCartState(originalItems)
-          console.error('Remove from cart failed')
-          return false
-        }
-      } catch (error) {
-        console.error('Remove from cart error:', error)
-        return false
-      } finally {
-        setUpdatingItems(prev => {
-          const newSet = new Set(prev)
-          newSet.delete(foodItemId)
-          return newSet
-        })
-      }
-    })
-  }, [isAuthenticated, user, cart])
-
-  // Clear entire cart
   const clearCart = useCallback(async (): Promise<boolean> => {
     if (!isAuthenticated || !user) return false
 
+    setIsLoading(true)
     try {
-      setIsLoading(true)
-      const response = await fetch(`/api/cart?userId=${user.id}`, {
-        method: 'DELETE'
-      })
-
+      const response = await fetch(`/api/cart?userId=${user.id}`, { method: 'DELETE' })
       if (response.ok) {
         updateCartState([])
         toast({ title: "Cart cleared" })
@@ -379,14 +298,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, user, toast])
 
-  // Get quantity of specific item in cart
   const getItemQuantity = useCallback((foodItemId: string): number => {
     if (!cart) return 0
     const item = cart.items.find(item => item.foodItem.id === foodItemId)
     return item?.quantity || 0
   }, [cart])
 
-  // Check if item is being updated
   const isUpdating = useCallback((foodItemId: string): boolean => {
     return updatingItems.has(foodItemId)
   }, [updatingItems])
