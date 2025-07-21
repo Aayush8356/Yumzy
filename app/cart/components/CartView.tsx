@@ -9,7 +9,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { ProfessionalFoodImage } from '@/components/ProfessionalFoodImage';
 
 export function CartView() {
-  const { cart, isLoading, removeFromCart, updateCartItem } = useCart();
+  const { cart, isLoading, removeFromCart, updateCartItem, isUpdating } = useCart();
   const router = useRouter();
 
   if (isLoading) {
