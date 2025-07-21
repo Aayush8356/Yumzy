@@ -5,11 +5,11 @@ import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  ShoppingCart, 
-  Clock, 
-  Star, 
-  Package, 
+import {
+  ShoppingCart,
+  Clock,
+  Star,
+  Package,
   Heart,
   ArrowRight,
   Zap,
@@ -22,7 +22,8 @@ import {
   Plus,
   Minus,
   Sparkles,
-  TrendingUp
+  TrendingUp,
+  Loader2
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCart } from '@/contexts/CartContext'
@@ -69,7 +70,7 @@ interface AuthenticatedHomepageProps {
 
 export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomepageProps) {
   const { user } = useAuth()
-  const { cart, addToCart, updateCartItem, removeFromCart, getItemQuantity } = useCart()
+  const { cart, addToCart, updateCartItem, removeFromCart, getItemQuantity, isUpdating } = useCart()
   const { toast } = useToast()
   
   const [loading, setLoading] = useState(true)
@@ -99,7 +100,7 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
     }
 
     // Set loading state immediately
-    setAddingToCart(prev => new Set(prev).add(item.id))
+    // setAddingToCart(prev => new Set(prev).add(item.id))
 
     try {
       const success = await addToCart(item.id, 1)
@@ -650,26 +651,30 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
                         {/* Empty space for future actions like info button */}
                       </div>
                       
-                      {getItemQuantity(item.id) > 0 || addingToCart.has(item.id) ? (
+                      {getItemQuantity(item.id) > 0 || isUpdating(item.id) ? (
                         <div className="flex items-center gap-1 bg-orange-500/10 rounded-lg p-1">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDecrement(item)}
                             className="h-7 w-7 p-0 hover:bg-orange-500/20 text-orange-600"
-                            disabled={addingToCart.has(item.id)}
+                            disabled={isUpdating(item.id)}
                           >
                             <Minus className="w-3 h-3" />
                           </Button>
                           <span className="min-w-[1.5rem] text-center font-medium text-orange-600 text-sm">
-                            {getItemQuantity(item.id) || (addingToCart.has(item.id) ? 1 : 0)}
+                            {isUpdating(item.id) ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              getItemQuantity(item.id)
+                            )}
                           </span>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleIncrement(item)}
                             className="h-7 w-7 p-0 hover:bg-orange-500/20 text-orange-600"
-                            disabled={addingToCart.has(item.id)}
+                            disabled={isUpdating(item.id)}
                           >
                             <Plus className="w-3 h-3" />
                           </Button>
@@ -679,11 +684,11 @@ export function AuthenticatedHomepage({ isDemoUser = false }: AuthenticatedHomep
                           size="sm" 
                           className="gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 border-0 font-medium text-sm h-8"
                           onClick={() => handleAddToCart(item)}
-                          disabled={addingToCart.has(item.id)}
+                          disabled={isUpdating(item.id)}
                         >
-                          {addingToCart.has(item.id) ? (
+                          {isUpdating(item.id) ? (
                             <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <Loader2 className="h-4 w-4 animate-spin" />
                               Adding...
                             </>
                           ) : (
