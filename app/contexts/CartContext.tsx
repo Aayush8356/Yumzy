@@ -395,11 +395,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             resolve(true)
           } else {
             console.error('Failed to update cart:', data)
-            toast({
-              title: "Cart Update Failed",
-              description: data.error || "Unable to update cart. Please try again.",
-              variant: "destructive",
-            })
+            // Suppress toast errors - let the component handle user feedback
+            console.error("Cart Update Failed:", data.error || "Unable to update cart")
             
             // Revert optimistic update on failure
             if (cart) {
@@ -428,20 +425,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               });
             }
 
-            toast({
-              title: "Failed to update cart",
-              description: data.error,
-              variant: "destructive"
-            })
+            // Suppress duplicate error toast
+            console.error("Failed to update cart:", data.error)
             resolve(false)
           }
         } catch (error) {
           console.error('Update cart error:', error)
-          toast({
-            title: "Error",
-            description: "Failed to update cart item",
-            variant: "destructive"
-          })
+          // Suppress duplicate error toast
+          console.error("Failed to update cart item:", error)
           resolve(false)
         } finally {
           // Remove from pending operations

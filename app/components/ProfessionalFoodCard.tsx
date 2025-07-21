@@ -267,6 +267,8 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
       return;
     }
 
+    if (isUpdating) return; // Prevent multiple operations
+
     if (newQuantity > 0) {
       setIsUpdating(true);
       try {
@@ -275,7 +277,7 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
         // Error handling is done in cart context
       } finally {
         // Clear loading state after a brief delay to show feedback
-        setTimeout(() => setIsUpdating(false), 200);
+        setTimeout(() => setIsUpdating(false), 150);
       }
     }
   }
@@ -289,6 +291,8 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
       });
       return;
     }
+
+    if (isUpdating) return; // Prevent multiple operations
 
     setIsUpdating(true);
     try {
@@ -320,15 +324,17 @@ export function ProfessionalFoodCard({ item, index = 0, onFavoriteRemoved, isFav
       });
     } finally {
       // Clear loading state after a brief delay to show feedback
-      setTimeout(() => setIsUpdating(false), 200);
+      setTimeout(() => setIsUpdating(false), 150);
     }
   }
 
   const handleIncrement = async () => {
+    if (isUpdating) return; // Prevent multiple operations
     await handleQuantityChange(currentQuantity + 1)
   }
 
   const handleDecrement = async () => {
+    if (isUpdating) return; // Prevent multiple operations
     if (currentQuantity > 1) {
       await handleQuantityChange(currentQuantity - 1)
     } else if (currentQuantity === 1) {
