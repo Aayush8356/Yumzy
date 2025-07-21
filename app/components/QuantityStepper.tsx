@@ -8,22 +8,24 @@ interface QuantityStepperProps {
   onQuantityChange: (newQuantity: number) => void
   minQuantity?: number
   maxQuantity?: number
+  isUpdating?: boolean
 }
 
-export function QuantityStepper({ 
-  quantity, 
-  onQuantityChange, 
-  minQuantity = 0, 
-  maxQuantity = 99 
+export function QuantityStepper({
+  quantity,
+  onQuantityChange,
+  minQuantity = 0,
+  maxQuantity = 99,
+  isUpdating = false
 }: QuantityStepperProps) {
   const handleIncrement = () => {
-    if (quantity < maxQuantity) {
+    if (!isUpdating && quantity < maxQuantity) {
       onQuantityChange(quantity + 1)
     }
   }
 
   const handleDecrement = () => {
-    if (quantity > minQuantity) {
+    if (!isUpdating && quantity > minQuantity) {
       onQuantityChange(quantity - 1)
     }
   }
@@ -34,7 +36,7 @@ export function QuantityStepper({
         variant="outline"
         size="sm"
         onClick={handleDecrement}
-        disabled={quantity <= minQuantity}
+        disabled={isUpdating || quantity <= minQuantity}
         className="h-8 w-8 p-0 hover:bg-primary/20 transition-none"
         suppressHydrationWarning
       >
@@ -47,7 +49,7 @@ export function QuantityStepper({
         variant="outline"
         size="sm"
         onClick={handleIncrement}
-        disabled={quantity >= maxQuantity}
+        disabled={isUpdating || quantity >= maxQuantity}
         className="h-8 w-8 p-0 hover:bg-primary/20 transition-none"
         suppressHydrationWarning
       >
